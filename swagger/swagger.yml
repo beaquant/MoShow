@@ -1,0 +1,114 @@
+swagger: "2.0"
+info:
+  title: beego Test API
+  description: beego has a very cool tools to autogenerate documents for your API
+  version: 1.0.0
+  termsOfService: http://beego.me/
+  contact:
+    email: astaxie@gmail.com
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+basePath: /v1
+paths:
+  /user/{userid}:
+    get:
+      tags:
+      - user
+      description: 读取用户
+      operationId: UserController.读取用户
+      parameters:
+      - in: path
+        name: userid
+        description: The email for login
+        required: true
+        type: string
+      responses:
+        "200":
+          description: ""
+          schema:
+            $ref: '#/definitions/utils.ResultDTO'
+    post:
+      tags:
+      - user
+      description: 更新用户
+      operationId: UserController.更新用户
+      parameters:
+      - in: path
+        name: userid
+        description: The email for login
+        required: true
+        type: string
+      responses:
+        "200":
+          description: ""
+          schema:
+            $ref: '#/definitions/utils.ResultDTO'
+    delete:
+      tags:
+      - user
+      description: 删除用户
+      operationId: UserController.删除用户
+      parameters:
+      - in: path
+        name: userid
+        description: The email for login
+        required: true
+        type: string
+      responses:
+        "200":
+          description: ""
+          schema:
+            $ref: '#/definitions/utils.ResultDTO'
+  /user/create:
+    post:
+      tags:
+      - user
+      description: 创建用户
+      operationId: UserController.创建用户
+      responses:
+        "200":
+          description: ""
+          schema:
+            $ref: '#/definitions/utils.ResultDTO'
+  /user/login:
+    post:
+      tags:
+      - user
+      description: 登陆或者注册
+      operationId: UserController.登陆或者注册
+      parameters:
+      - in: path
+        name: key
+        description: The email for login
+        required: true
+        type: string
+      responses:
+        "200":
+          description: ""
+          schema:
+            $ref: '#/definitions/utils.ResultDTO'
+definitions:
+  .false:
+    type: object
+  utils.ResultDTO:
+    title: ResultDTO
+    type: object
+    properties:
+      Code:
+        description: API调用状态码
+        type: integer
+        format: int64
+      Data:
+        $ref: '#/definitions/746.0xc04227cf30.false'
+        description: API返回的结果数据
+      Message:
+        description: API返回的消息
+        type: string
+      Sucess:
+        description: API调用成功与否
+        type: boolean
+tags:
+- name: user
+  description: |
+    UserController 用户节点

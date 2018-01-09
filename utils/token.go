@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/astaxie/beego"
+	"github.com/astaxie/beego/context"
 )
 
 var (
@@ -18,8 +19,8 @@ var (
 )
 
 func init() {
-	cookieName = beego.AppConfig.String("cookieName")
-	keyStr := beego.AppConfig.String("authKey")
+	cookieName = "tk"
+	keyStr := "0123456789melody0123456789melody"
 	key = []byte(keyStr)
 }
 
@@ -29,6 +30,39 @@ type Token struct {
 	Name       string
 	UserType   int
 	ExpireTime time.Time
+}
+
+//SetToken 在cookie里添加token字段
+func SetToken(ctx *context.Context, tk *Token) error {
+	tkStr, err := tk.Encrypt()
+	if err != nil {
+		return err
+	}
+
+	ctx.SetCookie(cookieName, tkStr)
+	return nil
+}
+
+//GetToken 校验token失败时，直接返回错误
+func GetToken(ctx *context.Context) *Token {
+	ckStr := ctx.GetCookie(cookieName)
+
+	b := &Token{}
+	err := b.Decrypt(ckStr)
+
+	if err != nil || b.ExpireTime.Before(time.Now()) || b.UserType != 0 {
+		beego.Error(err)
+
+		dto := &ResultDTO{Sucess: false, Message: "Token校验失败,请先登录", Code: StatusAuthError}
+		ctx.Output.JSON(dto, false, false)
+		return nil
+	}
+	return b
+}
+
+//ClearToken 清除token字段
+func ClearToken(ctr *beego.Controller) {
+	ctr.Ctx.SetCookie(cookieName, "")
 }
 
 //Encrypt .
@@ -42,7 +76,7 @@ func (tk *Token) Encrypt() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	result := base64.StdEncoding.EncodeToString(data)
+	result := base64.URLEncoding.EncodeToString(data)
 	return result, nil
 }
 
@@ -52,7 +86,7 @@ func (tk *Token) Decrypt(str string) error {
 		return errors.New("未能读取token")
 	}
 
-	result, err := base64.StdEncoding.DecodeString(str)
+	result, err := base64.URLEncoding.DecodeString(str)
 	if err != nil {
 		return err
 	}
