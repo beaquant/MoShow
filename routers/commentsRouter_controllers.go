@@ -7,6 +7,22 @@ import (
 
 func init() {
 
+	beego.GlobalControllerRouter["MoShow/controllers:AuthController"] = append(beego.GlobalControllerRouter["MoShow/controllers:AuthController"],
+		beego.ControllerComments{
+			Method: "Login",
+			Router: `/login`,
+			AllowHTTPMethods: []string{"post"},
+			MethodParams: param.Make(),
+			Params: nil})
+
+	beego.GlobalControllerRouter["MoShow/controllers:AuthController"] = append(beego.GlobalControllerRouter["MoShow/controllers:AuthController"],
+		beego.ControllerComments{
+			Method: "WechatLogin",
+			Router: `/wechatlogin`,
+			AllowHTTPMethods: []string{"post"},
+			MethodParams: param.Make(),
+			Params: nil})
+
 	beego.GlobalControllerRouter["MoShow/controllers:UserController"] = append(beego.GlobalControllerRouter["MoShow/controllers:UserController"],
 		beego.ControllerComments{
 			Method: "Read",
@@ -36,14 +52,6 @@ func init() {
 			Method: "Create",
 			Router: `/create`,
 			AllowHTTPMethods: []string{"put"},
-			MethodParams: param.Make(),
-			Params: nil})
-
-	beego.GlobalControllerRouter["MoShow/controllers:UserController"] = append(beego.GlobalControllerRouter["MoShow/controllers:UserController"],
-		beego.ControllerComments{
-			Method: "Login",
-			Router: `/login`,
-			AllowHTTPMethods: []string{"post"},
 			MethodParams: param.Make(),
 			Params: nil})
 

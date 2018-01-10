@@ -23,15 +23,6 @@ func (c *UserController) Create() {
 	c.ServeJSON()
 }
 
-//Login .
-// @Title 登陆或者注册
-// @Description 登陆或者注册
-// @Param   key     path    string  true        "The email for login"
-// @Success 200 {object} utils.ResultDTO
-// @router /login [post]
-func (c *UserController) Login() {
-}
-
 //Read .
 // @Title 读取用户
 // @Description 读取用户
