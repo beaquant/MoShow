@@ -19,3 +19,4 @@ debug
 .glide/
 
 conf/app.conf
+swagger
