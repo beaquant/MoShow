@@ -10,7 +10,7 @@ const (
 //ResultDTO .
 type ResultDTO struct {
 	Sucess  bool        `description:"API调用成功与否"`
-	Data    interface{} `description:"API返回的结果数据"`
+	Data    interface{} `description:"API返回的结果数据" json:"omitempty"`
 	Message string      `description:"API返回的消息"`
 	Code    int         `description:"API调用状态码"`
 }

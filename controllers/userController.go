@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"MoShow/utils"
+
 	"github.com/astaxie/beego"
 )
 
@@ -13,9 +15,12 @@ type UserController struct {
 // @Title 创建用户
 // @Description 创建用户
 // @Success 200 {object} utils.ResultDTO
-// @router /create [post]
+// @router /create [put]
 func (c *UserController) Create() {
+	dto := utils.ResultDTO{}
 
+	c.Data["json"] = dto
+	c.ServeJSON()
 }
 
 //Login .
@@ -30,7 +35,7 @@ func (c *UserController) Login() {
 //Read .
 // @Title 读取用户
 // @Description 读取用户
-// @Param   userid     path    string  true        "The email for login"
+// @Param   userid     path    string  true        "用户id,填me表示获取当前账号的用户信息"
 // @Success 200 {object} utils.ResultDTO
 // @router /:userid [get]
 func (c *UserController) Read() {

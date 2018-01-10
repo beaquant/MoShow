@@ -13,8 +13,8 @@ func JSONMarshal(v interface{}) ([]byte, error) {
 	return json.Marshal(v)
 }
 
-//JSONMarshalTostring .
-func JSONMarshalTostring(v interface{}) (string, error) {
+//JSONMarshalToString .
+func JSONMarshalToString(v interface{}) (string, error) {
 	return jsonTool.MarshalToString(v)
 }
 

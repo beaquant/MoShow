@@ -1,5 +1,5 @@
-// @APIVersion 1.0.0
-// @Title beego Test API
+// @APIVersion 0.1.0
+// @Title MoShow Api
 // @Description beego has a very cool tools to autogenerate documents for your API
 // @Contact astaxie@gmail.com
 // @TermsOfServiceUrl http://beego.me/
