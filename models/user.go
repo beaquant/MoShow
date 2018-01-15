@@ -14,19 +14,20 @@ const (
 const (
 	//AcctStatusNormal 正常账号
 	AcctStatusNormal = iota
-	//AcctStatusDisable 注销账号
-	AcctStatusDisable
+	//AcctStatusDeleted 注销账号
+	AcctStatusDeleted
 	//AcctStatusShield 屏蔽账号
 	AcctStatusShield
 )
 
 //User .
 type User struct {
-	ID         uint64    `json:"user_id" gorm:"column:id;primary_key"`
-	UserName   string    `json:"user_name" gorm:"column:name"`
-	AcctType   int       `json:"acct_type" gorm:"column:acct_type"`
-	AcctStatus int       `json:"acct_status" gorm:"column:acct_status"`
-	CreatedAt  time.Time `json:"create_at" gorm:"column:create_at"`
+	ID          uint64    `json:"user_id" gorm:"column:id;primary_key"`
+	PhoneNumber string    `json:"phone_number" gorm:"column:phone_number"`
+	WeChatID    string    `json:"wechat_id" gorm:"column:wechat_id"`
+	AcctType    int       `json:"acct_type" gorm:"column:acct_type"`
+	AcctStatus  int       `json:"acct_status" gorm:"column:acct_status"`
+	CreatedAt   time.Time `json:"create_at" gorm:"column:create_at"`
 }
 
 //TableName .
@@ -39,7 +40,24 @@ func (u *User) Add() error {
 	return db.Create(u).Error
 }
 
-//ReadFromUserName .
-func (u *User) ReadFromUserName() error {
-	return db.Where("name = ?", u.UserName).Find(u).Error
+//ReadFromPhoneNumber .
+func (u *User) ReadFromPhoneNumber() (err error) {
+	var ul []User
+	err = db.Where("phone_number = ?", u.PhoneNumber).Find(&ul).Error
+	if ul != nil && len(ul) > 0 {
+		*u = ul[0]
+	}
+
+	return
+}
+
+//ReadFromWechatID .
+func (u *User) ReadFromWechatID() (err error) {
+	var ul []User
+	err = db.Where("wechat_id = ?", u.WeChatID).Find(&ul).Error
+	if ul != nil && len(ul) > 0 {
+		*u = ul[0]
+	}
+
+	return
 }

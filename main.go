@@ -3,8 +3,6 @@ package main
 import (
 	_ "MoShow/routers"
 
-	_ "github.com/go-sql-driver/mysql"
-
 	"github.com/astaxie/beego"
 )
 

@@ -3,13 +3,15 @@ package models
 import (
 	"github.com/astaxie/beego"
 	"github.com/jinzhu/gorm"
+	//.
+	_ "github.com/jinzhu/gorm/dialects/mysql"
 )
 
 var db *gorm.DB
 
 func init() {
 	var err error
-	db, err = gorm.Open("mysql", "root:1314melodysong@/MoShow?charset=utf8mb4&parseTime=True&loc=Local")
+	db, err = gorm.Open("mysql", beego.AppConfig.String("db"))
 	if err != nil {
 		panic(err)
 	}

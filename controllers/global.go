@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"regexp"
 	"time"
 
 	"github.com/astaxie/beego/context"
@@ -15,13 +16,12 @@ import (
 var (
 	key        []byte
 	cookieName string
+	r          *regexp.Regexp
 )
 
 //Token .
 type Token struct {
 	ID         uint64
-	Name       string
-	UserType   int
 	ExpireTime time.Time
 }
 
@@ -29,16 +29,22 @@ func init() {
 	cookieName = "tk"
 	key = []byte("0123456789melody0123456789melody")
 
+	r, _ = regexp.Compile("/api/.+?/")
 	beego.InsertFilter("/*", beego.BeforeRouter, FilterUser)
 }
 
 //FilterUser .
 func FilterUser(ctx *context.Context) {
-	var exclude map[string]struct{}
-	exclude["/user/login"] = struct{}{}
+	exclude := make(map[string]struct{})
+	exclude["/api/auth/"] = struct{}{}
 
-	_, ok := exclude[ctx.Request.RequestURI]
-	if !ok {
+	ss := r.FindStringSubmatch(ctx.Request.RequestURI)
+	if ss != nil && len(ss) > 0 {
+		_, ok := exclude[ss[0]]
+		if !ok {
+			GetToken(ctx)
+		}
+	} else {
 		GetToken(ctx)
 	}
 }
@@ -61,10 +67,10 @@ func GetToken(ctx *context.Context) *Token {
 	b := &Token{}
 	err := b.Decrypt(ckStr)
 
-	if err != nil || b.ExpireTime.Before(time.Now()) || b.UserType != 0 {
+	if err != nil || b.ExpireTime.Before(time.Now()) {
 		beego.Error(err)
 
-		dto := &utils.ResultDTO{Sucess: false, Message: "Token校验失败,请先登录", Code: utils.StatusAuthError}
+		dto := &utils.ResultDTO{Sucess: false, Message: "Token校验失败,请先登录", Code: utils.DtoStatusAuthError}
 		ctx.Output.JSON(dto, false, false)
 		return nil
 	}

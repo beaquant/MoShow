@@ -11,18 +11,6 @@ type UserController struct {
 	beego.Controller
 }
 
-//Create .
-// @Title 创建用户
-// @Description 创建用户
-// @Success 200 {object} utils.ResultDTO
-// @router /create [put]
-func (c *UserController) Create() {
-	dto := utils.ResultDTO{}
-
-	c.Data["json"] = dto
-	c.ServeJSON()
-}
-
 //Read .
 // @Title 读取用户
 // @Description 读取用户
@@ -30,7 +18,10 @@ func (c *UserController) Create() {
 // @Success 200 {object} utils.ResultDTO
 // @router /:userid [get]
 func (c *UserController) Read() {
+	dto := utils.ResultDTO{}
 
+	c.Data["json"] = dto
+	c.ServeJSON()
 }
 
 //Update .

@@ -10,8 +10,24 @@ func init() {
 	beego.GlobalControllerRouter["MoShow/controllers:AuthController"] = append(beego.GlobalControllerRouter["MoShow/controllers:AuthController"],
 		beego.ControllerComments{
 			Method: "Login",
-			Router: `/login`,
+			Router: `/:phone/login`,
 			AllowHTTPMethods: []string{"post"},
+			MethodParams: param.Make(),
+			Params: nil})
+
+	beego.GlobalControllerRouter["MoShow/controllers:AuthController"] = append(beego.GlobalControllerRouter["MoShow/controllers:AuthController"],
+		beego.ControllerComments{
+			Method: "SendCode",
+			Router: `/:phone/sendcode`,
+			AllowHTTPMethods: []string{"post"},
+			MethodParams: param.Make(),
+			Params: nil})
+
+	beego.GlobalControllerRouter["MoShow/controllers:AuthController"] = append(beego.GlobalControllerRouter["MoShow/controllers:AuthController"],
+		beego.ControllerComments{
+			Method: "Logout",
+			Router: `/logout`,
+			AllowHTTPMethods: []string{"get"},
 			MethodParams: param.Make(),
 			Params: nil})
 
@@ -44,14 +60,6 @@ func init() {
 			Method: "Del",
 			Router: `/:userid`,
 			AllowHTTPMethods: []string{"delete"},
-			MethodParams: param.Make(),
-			Params: nil})
-
-	beego.GlobalControllerRouter["MoShow/controllers:UserController"] = append(beego.GlobalControllerRouter["MoShow/controllers:UserController"],
-		beego.ControllerComments{
-			Method: "Create",
-			Router: `/create`,
-			AllowHTTPMethods: []string{"put"},
 			MethodParams: param.Make(),
 			Params: nil})
 

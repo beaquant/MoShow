@@ -1,16 +1,33 @@
 package utils
 
+import (
+	"github.com/astaxie/beego"
+)
+
 const (
-	//StatusNormal 正常状态
-	StatusNormal int = iota
-	//StatusAuthError 登录验证失败
-	StatusAuthError
+	//DtoStatusNormal 正常状态
+	DtoStatusNormal int = iota
+	//DtoStatusAuthError 登录验证失败
+	DtoStatusAuthError
 )
 
 //ResultDTO .
 type ResultDTO struct {
 	Sucess  bool        `description:"API调用成功与否"`
-	Data    interface{} `description:"API返回的结果数据" json:"omitempty"`
+	Data    interface{} `description:"API返回的结果数据"`
 	Message string      `description:"API返回的消息"`
 	Code    int         `description:"API调用状态码"`
+}
+
+//JSONResult .
+func (dto *ResultDTO) JSONResult(c *beego.Controller) {
+	if err := recover(); err != nil {
+		if e, ok := err.(error); ok {
+			dto.Message = e.Error()
+		}
+		dto.Sucess = false
+	}
+
+	c.Data["json"] = dto
+	c.ServeJSON()
 }
