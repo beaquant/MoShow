@@ -3,11 +3,11 @@ package controllers
 import (
 	"MoShow/models"
 	"MoShow/utils"
-	"errors"
 	"strconv"
 	"time"
 
 	"github.com/astaxie/beego"
+	"github.com/garyburd/redigo/redis"
 	"github.com/silenceper/wechat/oauth"
 )
 
@@ -20,6 +20,11 @@ func init() {
 //AuthController .
 type AuthController struct {
 	beego.Controller
+}
+
+type codeInfo struct {
+	Code string
+	Time time.Time
 }
 
 //SendCode .
@@ -35,39 +40,31 @@ func (c *AuthController) SendCode() {
 	defer con.Close()
 
 	ip := c.Ctx.Input.IP()
-	val, err := con.Do("GET", ip)
-	if err != nil {
-		dto.Message = err.Error()
-		beego.Error(err)
+	val, _ := redis.String(con.Do("GET", ip))
+
+	num := c.Ctx.Input.Param(":phone")
+	if len(val) > 0 {
+		if num == val {
+			dto.Message = "验证码已发送，请检查手机短信"
+		} else {
+			dto.Message = "验证码请求太频繁，请稍等"
+		}
 		return
 	}
 
-	if val != nil {
-		t, err := time.Parse(timeFormat, val.(string))
-		if err != nil {
-			beego.Error(err)
-			return
-		}
-
-		if t.After(time.Now().Add(time.Minute * 13)) {
-			dto.Message = "验证码已发送，请检查手机短信"
-			return
-		}
-	}
-
-	num := c.Ctx.Input.Param(":phone")
 	code := strconv.Itoa(utils.RandNumber(1000, 9999))
 
 	if res, err := utils.SendMsgByAPIKey(num, code); err != nil {
 		beego.Error("发送验证码失败:\t" + res + "\r\n" + err.Error())
 		dto.Message = err.Error()
 	} else {
-		con.Do("SET", ip, time.Now().Add(time.Minute*15).Format(timeFormat), "EX", 60*15)
-		con.Do("HMSET", "code", num, code)
+		cs, _ := utils.JSONMarshalToString(&codeInfo{Code: code, Time: time.Now().Add(time.Minute * 15)})
+
+		con.Do("SET", ip, num, "EX", 60*2)
+		con.Do("HMSET", "code", num, cs)
 		dto.Sucess = true
 		dto.Message = "验证码发送成功"
 	}
-
 }
 
 //Login .
@@ -83,24 +80,25 @@ func (c *AuthController) Login() {
 	con := utils.RedisPool.Get()
 	defer con.Close()
 
-	ip := c.Ctx.Input.IP()
 	phoneNum := c.Ctx.Input.Param(":phone")
 	code := c.GetString("code")
 
-	if val, err := con.Do("GET", ip); val == nil || err != nil {
-		if err != nil {
-			beego.Error(err)
-			panic(err)
-		}
-		panic(errors.New("验证码已过期,请重新获取"))
+	if codeEx, err := redis.Strings(con.Do("HMGET", "code", phoneNum)); err != nil {
+		beego.Error(err)
+		dto.Message = err.Error()
+		return
 	} else {
-		codeEx, err := con.Do("HMGET", "code", phoneNum)
-		if err != nil {
-			panic(err)
+		ci := &codeInfo{}
+		utils.JSONUnMarshal(codeEx[0], ci)
+
+		if ci.Time.Before(time.Now()) {
+			dto.Message = "验证码已过期,请重新获取"
+			return
 		}
 
-		if codeEx.([]interface{})[0].(string) != code {
-			panic(errors.New("验证码错误"))
+		if ci.Code != code {
+			dto.Message = "验证码错误"
+			return
 		}
 	}
 
@@ -118,6 +116,7 @@ func (c *AuthController) Login() {
 
 		if err := u.Add(); err == nil {
 			tk.ID = u.ID
+			dto.Message = "注册成功"
 			dto.Sucess = true
 			SetToken(c.Ctx, tk)
 		} else {
@@ -128,6 +127,7 @@ func (c *AuthController) Login() {
 		if u.AcctStatus != models.AcctStatusDeleted {
 			tk.ID = u.ID
 			dto.Sucess = true
+			dto.Message = "登陆成功"
 			SetToken(c.Ctx, tk)
 		} else {
 			dto.Message = "该账号已被注销"
@@ -143,11 +143,54 @@ func (c *AuthController) Login() {
 // @Success 200 {object} utils.ResultDTO
 // @router /wechatlogin [post]
 func (c *AuthController) WechatLogin() {
+	dto := utils.ResultDTO{Sucess: false}
+	defer dto.JSONResult(&c.Controller)
+
 	AccessToken := c.GetString("AccessToken")
 	OpenID := c.GetString("OpenID")
 
 	o := oauth.NewOauth(nil)
-	o.GetUserInfo(AccessToken, OpenID)
+	info, err := o.GetUserInfo(AccessToken, OpenID)
+	if err != nil {
+		dto.Message = err.Error()
+		beego.Error(err)
+		return
+	}
+
+	u := &models.User{WeChatID: info.OpenID}
+	err = u.ReadFromWechatID()
+	if err != nil {
+		dto.Message = err.Error()
+		beego.Error(err)
+		return
+	}
+
+	tk := &Token{}
+	if u.ID == 0 { //执行微信注册
+		u.AcctType = models.AcctTypeWechat
+		u.AcctStatus = models.AcctStatusNormal
+		u.CreatedAt = time.Now()
+		u.Add()
+
+		if err := u.Add(); err == nil {
+			tk.ID = u.ID
+			dto.Message = "注册成功"
+			dto.Sucess = true
+			SetToken(c.Ctx, tk)
+		} else {
+			beego.Error(err)
+			dto.Message = err.Error()
+		}
+	} else {
+		if u.AcctStatus != models.AcctStatusDeleted {
+			tk.ID = u.ID
+			dto.Sucess = true
+			dto.Message = "登陆成功"
+			SetToken(c.Ctx, tk)
+		} else {
+			dto.Message = "该账号已被注销"
+		}
+	}
 }
 
 //Logout .
@@ -156,5 +199,7 @@ func (c *AuthController) WechatLogin() {
 // @Success 200 {object} utils.ResultDTO
 // @router /logout [get]
 func (c *AuthController) Logout() {
-
+	ClearToken(&c.Controller)
+	dto := utils.ResultDTO{Sucess: false, Message: "退出登陆成功"}
+	dto.JSONResult(&c.Controller)
 }
