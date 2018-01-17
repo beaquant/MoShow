@@ -24,6 +24,10 @@ func init() {
 			beego.NSInclude(
 				&controllers.AuthController{},
 			),
+		), beego.NSNamespace("/ws",
+			beego.NSInclude(
+				&controllers.WebsocketController{},
+			),
 		),
 	)
 	beego.AddNamespace(ns)

@@ -22,3 +22,8 @@ func JSONMarshalToString(v interface{}) (string, error) {
 func JSONUnMarshal(str string, v interface{}) error {
 	return jsonTool.UnmarshalFromString(str, v)
 }
+
+//JSONUnMarshalFromByte .
+func JSONUnMarshalFromByte(bt []byte, v interface{}) error {
+	return jsonTool.Unmarshal(bt, v)
+}

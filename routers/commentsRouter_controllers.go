@@ -63,4 +63,20 @@ func init() {
 			MethodParams: param.Make(),
 			Params: nil})
 
+	beego.GlobalControllerRouter["MoShow/controllers:WebsocketController"] = append(beego.GlobalControllerRouter["MoShow/controllers:WebsocketController"],
+		beego.ControllerComments{
+			Method: "Join",
+			Router: `/:channelid/join`,
+			AllowHTTPMethods: []string{"get"},
+			MethodParams: param.Make(),
+			Params: nil})
+
+	beego.GlobalControllerRouter["MoShow/controllers:WebsocketController"] = append(beego.GlobalControllerRouter["MoShow/controllers:WebsocketController"],
+		beego.ControllerComments{
+			Method: "Create",
+			Router: `/:parterid/create`,
+			AllowHTTPMethods: []string{"get"},
+			MethodParams: param.Make(),
+			Params: nil})
+
 }

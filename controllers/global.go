@@ -14,8 +14,8 @@ import (
 )
 
 var (
-	key        []byte
-	cookieName string
+	key        = []byte("0123456789melody0123456789melody")
+	cookieName = "tk"
 	r          *regexp.Regexp
 )
 
@@ -26,9 +26,6 @@ type Token struct {
 }
 
 func init() {
-	cookieName = "tk"
-	key = []byte("0123456789melody0123456789melody")
-
 	r, _ = regexp.Compile("/api/.+?/")
 	beego.InsertFilter("/*", beego.BeforeRouter, FilterUser)
 }

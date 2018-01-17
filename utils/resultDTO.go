@@ -22,10 +22,12 @@ type ResultDTO struct {
 //JSONResult .
 func (dto *ResultDTO) JSONResult(c *beego.Controller) {
 	if err := recover(); err != nil {
+		dto.Sucess = false
+
 		if e, ok := err.(error); ok {
 			dto.Message = e.Error()
+			beego.Error(err)
 		}
-		dto.Sucess = false
 	}
 
 	c.Data["json"] = dto
