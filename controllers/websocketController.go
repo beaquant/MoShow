@@ -76,13 +76,18 @@ func (c *WebsocketController) Create() {
 		return
 	}
 
+	tk := GetToken(c.Ctx)
+	_, ok := chatChannels[tk.ID]
+	if ok {
+		return
+	}
+
 	conn, err := upgrader.Upgrade(c.Ctx.ResponseWriter, c.Ctx.Request, nil)
 	if err != nil {
 		beego.Error(err)
 		return
 	}
 
-	tk := GetToken(c.Ctx)
 	client := &ChatClient{UserID: tk.ID, Conn: conn, Send: make(chan *WsMessage)}
 	channel := &ChatChannel{Src: client, Send: make(chan *WsMessage), Close: make(chan *ChatClient), ID: tk.ID, DstID: parter}
 
@@ -107,7 +112,7 @@ func (c *WebsocketController) Join() {
 
 	tk := GetToken(c.Ctx)
 	cn, ok := chatChannels[channelid]
-	if !ok || cn.DstID != tk.ID {
+	if !ok || cn.DstID != tk.ID || cn.Dst != nil {
 		return
 	}
 
