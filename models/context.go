@@ -3,7 +3,6 @@ package models
 import (
 	"github.com/astaxie/beego"
 	"github.com/jinzhu/gorm"
-	//.
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 )
 
