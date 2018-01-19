@@ -43,3 +43,15 @@ func (c *UserController) Update() {
 func (c *UserController) Del() {
 
 }
+
+//SendGift .
+// @Title 赠送礼物
+// @Description 赠送礼物
+// @Param   userid     path    		string  true        "赠送礼物的目标"
+// @Param   giftid	   formData     uint     true		 "礼物id"
+// @Param   count	   formData     uint     true		 "数量"
+// @Success 200 {object} utils.ResultDTO
+// @router /:userid [post]
+func (c *UserController) SendGift() {
+
+}

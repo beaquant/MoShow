@@ -4,6 +4,7 @@ import (
 	_ "MoShow/routers"
 
 	"github.com/astaxie/beego"
+	_ "github.com/jinzhu/gorm/dialects/mysql"
 )
 
 func main() {

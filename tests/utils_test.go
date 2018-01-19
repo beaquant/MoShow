@@ -4,6 +4,7 @@ import (
 	"MoShow/utils"
 	"fmt"
 	"regexp"
+	"strings"
 	"testing"
 )
 
@@ -29,4 +30,9 @@ func TestRegex(t *testing.T) {
 		panic(ss)
 	}
 	panic(ss[0])
+}
+
+func TestArrayJoin(t *testing.T) {
+	array := []string{"1", "2", "3"}
+	t.Log(strings.Join(array, "','"))
 }

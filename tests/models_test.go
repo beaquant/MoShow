@@ -1,6 +1,8 @@
 package test
 
 import (
+	_ "github.com/jinzhu/gorm/dialects/mysql"
+
 	"MoShow/models"
 	"testing"
 )

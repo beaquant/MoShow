@@ -1,7 +1,10 @@
 package models
 
 import (
+	"errors"
 	"time"
+
+	"github.com/jinzhu/gorm"
 )
 
 const (
@@ -19,6 +22,7 @@ type UserProfile struct {
 	Description string    `json:"description" gorm:"column:description"`
 	Birthday    time.Time `json:"birthday" gorm:"column:birthday"`
 	Location    string    `json:"location" gorm:"column:location"`
+	Balance     int       `json:"balance" gorm:"column:balance"`
 }
 
 //TableName .
@@ -32,10 +36,22 @@ func (u *UserProfile) Add() error {
 }
 
 func (u *UserProfile) Read() error {
+	if u.ID == 0 {
+		return errors.New("必须只能user_profile的id")
+	}
 	return db.Where("id = ?", u.ID).Find(u).Error
 }
 
 //Update .
-func (u *UserProfile) Update() {
+func (u *UserProfile) Update(col ...string) {
 
+}
+
+//AddBalance .
+func (u *UserProfile) AddBalance(amount int, trans *gorm.DB) {
+	if trans != nil {
+		trans.Model(u).Update("balance", gorm.Expr("balance +", amount))
+	} else {
+		db.Model(u).Update("balance", gorm.Expr("balance +", amount))
+	}
 }

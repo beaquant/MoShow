@@ -67,7 +67,7 @@ func (c *AuthController) SendCode() {
 // @Title 登陆或者注册
 // @Description 登陆或者注册
 // @Param   phone     path    	  string  true	 "手机号"
-// @Param   code             formData     string  true	 "验证码"
+// @Param   code	  formData     string  true	 "验证码"
 // @Success 200 {object} utils.ResultDTO
 // @router /:phone/login [post]
 func (c *AuthController) Login() {

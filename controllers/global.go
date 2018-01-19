@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"MoShow/models"
 	"MoShow/utils"
 	"encoding/base64"
 	"encoding/json"
@@ -14,7 +15,7 @@ import (
 )
 
 var (
-	key        = []byte("0123456789melody0123456789melody")
+	key        = []byte(beego.AppConfig.String("aesKey"))
 	cookieName = "tk"
 	r          *regexp.Regexp
 )
@@ -22,6 +23,7 @@ var (
 //Token .
 type Token struct {
 	ID         uint64
+	AcctStatus int
 	ExpireTime time.Time
 }
 
@@ -64,10 +66,22 @@ func GetToken(ctx *context.Context) *Token {
 	b := &Token{}
 	err := b.Decrypt(ckStr)
 
-	if err != nil || b.ExpireTime.Before(time.Now()) {
+	if err != nil {
 		beego.Error(err)
 
 		dto := &utils.ResultDTO{Sucess: false, Message: "Token校验失败,请先登录", Code: utils.DtoStatusAuthError}
+		ctx.Output.JSON(dto, false, false)
+		return nil
+	}
+
+	if b.ExpireTime.Before(time.Now()) {
+		dto := &utils.ResultDTO{Sucess: false, Message: "Token已过期,请重新登录", Code: utils.DtoStatusAuthError}
+		ctx.Output.JSON(dto, false, false)
+		return nil
+	}
+
+	if b.AcctStatus == models.AcctStatusDeleted {
+		dto := &utils.ResultDTO{Sucess: false, Message: "您的账号已被注销,请联系客服", Code: utils.DtoStatusAuthError}
 		ctx.Output.JSON(dto, false, false)
 		return nil
 	}
