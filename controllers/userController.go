@@ -1,7 +1,10 @@
 package controllers
 
 import (
+	"MoShow/models"
 	"MoShow/utils"
+	"strconv"
+	"strings"
 
 	"github.com/astaxie/beego"
 )
@@ -18,20 +21,45 @@ type UserController struct {
 // @Success 200 {object} utils.ResultDTO
 // @router /:userid [get]
 func (c *UserController) Read() {
-	dto := utils.ResultDTO{}
+	dto := utils.ResultDTO{Sucess: false}
+	defer dto.JSONResult(&c.Controller)
 
-	c.Data["json"] = dto
-	c.ServeJSON()
+	var uid uint64
+	var err error
+	tk := GetToken(c.Ctx)
+	uidStr := strings.TrimSpace(c.Ctx.Input.Param(":userid"))
+	if uidStr == "me" {
+		uid = tk.ID
+	} else {
+		uid, err = strconv.ParseUint(uidStr, 10, 64)
+		if err != nil {
+			beego.Error(err)
+			dto.Message = err.Error()
+			return
+		}
+	}
+
+	up := &models.UserProfile{ID: uid}
+	err = up.Read()
+	if err != nil {
+		beego.Error(err)
+		dto.Message = err.Error()
+		return
+	}
+
+	dto.Data = up
+	dto.Sucess = true
 }
 
 //Update .
 // @Title 更新用户
 // @Description 更新用户
-// @Param   userid     path    string  true        "The email for login"
 // @Success 200 {object} utils.ResultDTO
-// @router /:userid [post]
+// @router /update [post]
 func (c *UserController) Update() {
-
+	dto := utils.ResultDTO{Sucess: false}
+	defer dto.JSONResult(&c.Controller)
+	dto.Sucess = true
 }
 
 //Del .
@@ -51,7 +79,7 @@ func (c *UserController) Del() {
 // @Param   giftid	   formData     uint     true		 "礼物id"
 // @Param   count	   formData     uint     true		 "数量"
 // @Success 200 {object} utils.ResultDTO
-// @router /:userid [post]
+// @router /:userid/sendgift [post]
 func (c *UserController) SendGift() {
 
 }

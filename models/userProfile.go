@@ -37,7 +37,7 @@ func (u *UserProfile) Add() error {
 
 func (u *UserProfile) Read() error {
 	if u.ID == 0 {
-		return errors.New("必须只能user_profile的id")
+		return errors.New("必须指定user_profile的id")
 	}
 	return db.Where("id = ?", u.ID).Find(u).Error
 }
@@ -50,8 +50,8 @@ func (u *UserProfile) Update(col ...string) {
 //AddBalance .
 func (u *UserProfile) AddBalance(amount int, trans *gorm.DB) {
 	if trans != nil {
-		trans.Model(u).Update("balance", gorm.Expr("balance +", amount))
+		trans.Model(u).Update("balance", gorm.Expr("balance + ?", amount))
 	} else {
-		db.Model(u).Update("balance", gorm.Expr("balance +", amount))
+		db.Model(u).Update("balance", gorm.Expr("balance + ?", amount))
 	}
 }
