@@ -23,6 +23,7 @@ type UserProfile struct {
 	Birthday    time.Time `json:"birthday" gorm:"column:birthday"`
 	Location    string    `json:"location" gorm:"column:location"`
 	Balance     int       `json:"balance" gorm:"column:balance"`
+	Price       int       `json:"price" gorm:"column:price"`
 }
 
 //TableName .
