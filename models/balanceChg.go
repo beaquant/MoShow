@@ -1,6 +1,11 @@
 package models
 
-import "time"
+import (
+	"errors"
+	"time"
+
+	"github.com/jinzhu/gorm"
+)
 
 const (
 	//BalanceChgTypeRecharge 充值增加余额
@@ -26,4 +31,16 @@ type BalanceChg struct {
 //TableName .
 func (BalanceChg) TableName() string {
 	return "balance_chg"
+}
+
+//Add .
+func (b *BalanceChg) Add(trans *gorm.DB) error {
+	if b.UserID == 0 {
+		return errors.New("余额变动记录必须指定用户ID")
+	}
+
+	if trans != nil {
+		return trans.Create(b).Error
+	}
+	return db.Create(b).Error
 }
