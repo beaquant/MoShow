@@ -44,8 +44,8 @@ func (u *UserProfile) Read() error {
 }
 
 //Update .
-func (u *UserProfile) Update(col ...string) {
-
+func (u *UserProfile) Update(fields map[string]interface{}) error {
+	return db.Model(u).Updates(fields).Error
 }
 
 //AddBalance .

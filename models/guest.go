@@ -14,3 +14,8 @@ type Guest struct {
 func (Guest) TableName() string {
 	return "guest"
 }
+
+//Add .
+func (g *Guest) Add() error {
+	return db.Model(g).Create(g).Error
+}

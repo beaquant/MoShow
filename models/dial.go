@@ -18,3 +18,8 @@ type Dial struct {
 func (Dial) TableName() string {
 	return "dial"
 }
+
+//Add .
+func (d *Dial) Add() error {
+	return db.Model(d).Create(d).Error
+}

@@ -14,3 +14,19 @@ type Invitation struct {
 func (Invitation) TableName() string {
 	return "invitation"
 }
+
+//Add .
+func (i *Invitation) Add() error {
+	return db.Model(i).Create(i).Error
+}
+
+//CheckIfInvited .
+func (i *Invitation) CheckIfInvited(uid uint64) (bool, error) {
+	var il []Invitation
+	err := db.Where("to_user_id = ?", uid).Find(&il).Error
+	if il != nil && len(il) > 0 {
+		return true, err
+	}
+
+	return false, err
+}

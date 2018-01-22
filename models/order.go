@@ -20,3 +20,8 @@ type Order struct {
 func (Order) TableName() string {
 	return "order"
 }
+
+//Add .
+func (o *Order) Add() error {
+	return db.Model(o).Create(o).Error
+}

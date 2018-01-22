@@ -19,3 +19,8 @@ type FeedBack struct {
 func (FeedBack) TableName() string {
 	return "feedback"
 }
+
+//Add .
+func (f *FeedBack) Add() error {
+	return db.Model(f).Create(f).Error
+}
