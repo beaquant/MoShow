@@ -12,6 +12,8 @@ import (
 )
 
 var timeFormat = "2006-01-02T15:04:05.000Z"
+var adminPhone = beego.AppConfig.String("adminPhoneNum")
+var adminCode = beego.AppConfig.String("adminCode")
 
 //AuthController .
 type AuthController struct {
@@ -79,7 +81,7 @@ func (c *AuthController) Login() {
 	phoneNum := c.Ctx.Input.Param(":phone")
 	code := c.GetString("code")
 
-	if phoneNum != "18868875634" && code != "8888" {
+	if phoneNum != adminPhone && code != adminCode {
 		if codeEx, err := redis.Strings(con.Do("HMGET", "code", phoneNum)); err != nil {
 			beego.Error(err)
 			dto.Message = err.Error()

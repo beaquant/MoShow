@@ -14,6 +14,35 @@ type UserController struct {
 	beego.Controller
 }
 
+//Create .
+// @Title 创建用户信息
+// @Description 创建用户信息
+// @Param   alias     		formData    string  	true        "昵称"
+// @Param   gender    		formData    int     	true        "性别，男(1),女(0)"
+// @Param   cover_pic	    formData    string  	true        "照片"
+// @Param   description     formData    string  	true        "签名"
+// @Param   birthday     	formData    time.Time  	true        "生日"
+// @Param   location     	formData    string  	true        "地区"
+// @Param   price	     	formData    uint	  	false       "价格"
+// @Success 200 {object} 	utils.ResultDTO
+// @router /create [put]
+func (c *UserController) Create() {
+	tk := GetToken(c.Ctx)
+	dto := &utils.ResultDTO{}
+	defer dto.JSONResult(&c.Controller)
+
+	up := &models.UserProfile{ID: tk.ID}
+	if alias := c.GetString("alias"); len(alias) > 0 {
+		up.Alias = alias
+	}
+
+	err := up.Add()
+	if err != nil {
+		beego.Error(err)
+		dto.Message = err.Error()
+	}
+}
+
 //Read .
 // @Title 读取用户
 // @Description 读取用户
