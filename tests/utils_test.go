@@ -3,6 +3,7 @@ package test
 import (
 	"MoShow/utils"
 	"fmt"
+	"net/url"
 	"regexp"
 	"strings"
 	"testing"
@@ -35,4 +36,10 @@ func TestRegex(t *testing.T) {
 func TestArrayJoin(t *testing.T) {
 	array := []string{"1", "2", "3"}
 	t.Log(strings.Join(array, "','"))
+}
+
+func TestURLParse(t *testing.T) {
+	if _, err := url.ParseRequestURI(""); err != nil {
+		t.Error(err)
+	}
 }

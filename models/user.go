@@ -28,6 +28,7 @@ type User struct {
 	AcctType    int       `json:"acct_type" gorm:"column:acct_type"`
 	AcctStatus  int       `json:"acct_status" gorm:"column:acct_status"`
 	CreatedAt   time.Time `json:"create_at" gorm:"column:create_at"`
+	InvitedBy   uint64    `json:"invited_by" gorm:"column:invited_by"`
 }
 
 //TableName .

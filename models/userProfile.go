@@ -22,16 +22,33 @@ type UserProfile struct {
 	ID          uint64    `json:"user_id" gorm:"column:id;primary_key"`
 	Alias       string    `json:"alias" gorm:"column:alias"`
 	Gender      int       `json:"gender" gorm:"column:gender"`
-	CoverPic    string    `json:"cover_pic" gorm:"column:cover_pic"`
+	CoverPic    string    `json:"-" gorm:"column:cover_pic"`
 	Description string    `json:"description" gorm:"column:description"`
 	Birthday    time.Time `json:"birthday" gorm:"column:birthday"`
 	Location    string    `json:"location" gorm:"column:location"`
-	Balance     int       `json:"balance" gorm:"column:balance"`
-	Price       int       `json:"price" gorm:"column:price"`
+	Balance     uint64    `json:"balance" gorm:"column:balance"`
+	Price       uint64    `json:"price" gorm:"column:price"`
 }
 
-//UserCoverPic .
-type UserCoverPic struct {
+//UserCoverInfo .
+type UserCoverInfo struct {
+	CoverPicture *Picture  `json:"cover_pic_info"`
+	DesVideo     *Video    `json:"video_info"`
+	Gallery      []Picture `json:"gallery"`
+}
+
+//Picture .
+type Picture struct {
+	ImageURL string `json:"image_url"`
+	Disable  bool   `json:"disable"`
+	Checked  bool   `json:"checked"`
+}
+
+//Video .
+type Video struct {
+	VideoURL string `json:"video_url"`
+	Disable  bool   `json:"disable"`
+	Checked  bool   `json:"checked"`
 }
 
 //TableName .
@@ -40,7 +57,7 @@ func (UserProfile) TableName() string {
 }
 
 //ToString .
-func (u *UserCoverPic) ToString() string {
+func (u *UserCoverInfo) ToString() string {
 	str, err := utils.JSONMarshalToString(u)
 	if err != nil {
 		beego.Error(err)
@@ -67,9 +84,9 @@ func (u *UserProfile) Update(fields map[string]interface{}) error {
 }
 
 //GetCover .
-func (u *UserProfile) GetCover() *UserCoverPic {
+func (u *UserProfile) GetCover() *UserCoverInfo {
 	if len(u.CoverPic) > 0 {
-		ucp := &UserCoverPic{}
+		ucp := &UserCoverInfo{}
 		if err := utils.JSONUnMarshal(u.CoverPic, ucp); err != nil {
 			beego.Error(err)
 			return nil
