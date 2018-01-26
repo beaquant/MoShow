@@ -3,6 +3,7 @@ package controllers
 import (
 	"MoShow/models"
 	"MoShow/utils"
+	"errors"
 	"net/url"
 	"strconv"
 	"strings"
@@ -131,6 +132,11 @@ func (c *UserController) Read() {
 			beego.Error(err)
 			dto.Message = err.Error()
 			return
+		}
+
+		if err := (&models.Guest{}).AddView(uid, tk.ID); err != nil { //增加访客记录
+			beego.Error(err)
+			dto.Message = "增加访客记录失败\t" + err.Error()
 		}
 	}
 
@@ -263,14 +269,100 @@ func (c *UserController) Del() {
 //SendGift .
 // @Title 赠送礼物
 // @Description 赠送礼物
-// @Param   userid     path    		string  true        "赠送礼物的目标"
-// @Param   giftid	   formData     uint     true		 "礼物id"
-// @Param   count	   formData     uint     true		 "数量"
+// @Param   userid     path    		string  	true        "赠送礼物的目标"
+// @Param   giftkey	   formData     string     	true		 "礼物id"
+// @Param   count	   formData     uint     	true		 "数量"
 // @Success 200 {object} utils.ResultDTO
 // @router /:userid/sendgift [post]
 func (c *UserController) SendGift() {
-	// tk := GetToken(c.Ctx)
-	// uidStr := strings.TrimSpace(c.Ctx.Input.Param(":userid"))
+	tk, dto, uidStr := GetToken(c.Ctx), &utils.ResultDTO{}, strings.TrimSpace(c.Ctx.Input.Param(":userid"))
+	defer dto.JSONResult(&c.Controller)
+
+	giftkey := c.GetString("giftkey")
+	if len(giftkey) == 0 {
+		dto.Message = "必须指定礼物key"
+		return
+	}
+
+	giftCount, err := c.GetUint64("count")
+	if err != nil {
+		beego.Error(err)
+		dto.Message = "礼物数量解析失败\t" + err.Error()
+		return
+	}
+
+	toID, err := strconv.ParseUint(uidStr, 10, 64)
+	if err != nil {
+		beego.Error(err)
+		dto.Message = "赠送礼物的目标用户ID格式错误\t" + err.Error()
+		return
+	}
+
+	gft, err := (&models.Config{}).GetCommonGiftInfo()
+	if err != nil {
+		beego.Error(err)
+		dto.Message = "获取礼物列表失败\t" + err.Error()
+		return
+	}
+
+	fromUserProfile := &models.UserProfile{ID: tk.ID}
+	if err = fromUserProfile.Read(); err != nil {
+		beego.Error(err)
+		dto.Message = "获取用户信息失败\t" + err.Error()
+		return
+	}
+
+	toUserProfile := &models.UserProfile{ID: toID}
+	if err := toUserProfile.Read(); err != nil {
+		beego.Error(err)
+		dto.Message = "获取用户信息失败\t" + err.Error()
+		return
+	}
+
+	gift, ok := gft[giftkey]
+	if !ok {
+		beego.Error("未能找到指定的礼物" + giftkey)
+		dto.Message = "未能找到指定的礼物\t" + giftkey
+		return
+	}
+
+	giftChg := &models.GiftChgInfo{Count: giftCount, GiftInfo: &gift}
+	if err := sendGift(fromUserProfile, toUserProfile, giftChg); err != nil {
+		beego.Error(err)
+		dto.Message = "支付过程出现异常\t" + err.Error()
+		return
+	}
+
+	dto.Sucess = true
+}
+
+//赠送礼物,流程包括 源用户扣款，目标用户增加余额，邀请人分成，以及分别添加余额变动记录,过程中任何一部出错，事务回滚并返回失败
+//赠送礼物不参与分成
+func sendGift(from, to *models.UserProfile, gift *models.GiftChgInfo) error {
+	amount := uint64(gift.GiftInfo.Price) * gift.Count
+	if from.Balance < amount { //检查余额
+		return errors.New("用户余额不足，送礼失败,余额:" + strconv.FormatUint(from.Balance, 64))
+	}
+
+	trans := models.TransactionGen() //开始事务
+	if err := from.AllocateFund(to, nil, amount, 0, trans); err != nil {
+		models.TransactionRollback(trans)
+		return err
+	}
+
+	fuChg := &models.BalanceChg{UserID: from.ID, FromUserID: to.ID, ChgType: models.BalanceChgTypeSendGift, Amount: -int(amount)} //源用户扣款变动
+	fuChg.ChgInfo, _ = utils.JSONMarshalToString(gift)
+
+	tuchg := &models.BalanceChg{UserID: to.ID, FromUserID: from.ID, ChgType: models.BalanceChgTypeReceiveGift, Amount: int(amount)} //目标用户余额增加 变动
+	tuchg.ChgInfo, _ = utils.JSONMarshalToString(gift)
+
+	if err := fuChg.AddChg(trans, fuChg, tuchg); err != nil {
+		models.TransactionRollback(trans)
+		return err
+	}
+
+	models.TransactionCommit(trans) //提交事务
+	return nil
 }
 
 func selectPic(imgURL string, arr []models.Picture) *models.Picture {

@@ -10,12 +10,14 @@ import (
 const (
 	//BalanceChgTypeRecharge 充值增加余额
 	BalanceChgTypeRecharge = iota
-	//BalanceChgTypeInvitationIncome 邀请分成
-	BalanceChgTypeInvitationIncome
 	//BalanceChgTypeSendGift 赠送礼物消费
 	BalanceChgTypeSendGift
 	//BalanceChgTypeReceiveGift 收到礼物
 	BalanceChgTypeReceiveGift
+	//BalanceChgTypeInvitationRechargeIncome 邀请用户充值分成
+	BalanceChgTypeInvitationRechargeIncome
+	//BalanceChgTypeInvitationVideoIncome 邀请用户视频通话分成
+	BalanceChgTypeInvitationVideoIncome
 )
 
 //BalanceChg .
@@ -27,6 +29,17 @@ type BalanceChg struct {
 	ChgInfo    string    `json:"chg_info" gorm:"column:chg_info"`
 	Amount     int       `json:"amount" gorm:"column:amount"`
 	Time       time.Time `json:"time" gorm:"column:time"`
+}
+
+//GiftChgInfo .
+type GiftChgInfo struct {
+	Count    uint64
+	GiftInfo *Gift
+}
+
+//VideoChgInfo .
+type VideoChgInfo struct {
+	TimeLong uint64
 }
 
 //BalanceChgInfo .
@@ -49,4 +62,18 @@ func (b *BalanceChg) Add(trans *gorm.DB) error {
 		return trans.Create(b).Error
 	}
 	return db.Create(b).Error
+}
+
+//AddChg .
+func (b *BalanceChg) AddChg(trans *gorm.DB, chg ...*BalanceChg) error {
+	if trans == nil {
+		return errors.New("事务不能为空")
+	}
+
+	for index := range chg {
+		if err := chg[index].Add(trans); err != nil {
+			return err
+		}
+	}
+	return nil
 }

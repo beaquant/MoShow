@@ -82,23 +82,24 @@ func (c *AuthController) Login() {
 	code := c.GetString("code")
 
 	if phoneNum != adminPhone && code != adminCode {
-		if codeEx, err := redis.Strings(con.Do("HMGET", "code", phoneNum)); err != nil {
+		codeEx, err := redis.Strings(con.Do("HMGET", "code", phoneNum))
+		if err != nil {
 			beego.Error(err)
 			dto.Message = err.Error()
 			return
-		} else {
-			ci := &codeInfo{}
-			utils.JSONUnMarshal(codeEx[0], ci)
+		}
 
-			if ci.Time.Before(time.Now()) {
-				dto.Message = "验证码已过期,请重新获取"
-				return
-			}
+		ci := &codeInfo{}
+		utils.JSONUnMarshal(codeEx[0], ci)
 
-			if ci.Code != code {
-				dto.Message = "验证码错误"
-				return
-			}
+		if ci.Time.Before(time.Now()) {
+			dto.Message = "验证码已过期,请重新获取"
+			return
+		}
+
+		if ci.Code != code {
+			dto.Message = "验证码错误"
+			return
 		}
 	}
 

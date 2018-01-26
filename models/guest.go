@@ -22,13 +22,13 @@ func (Guest) TableName() string {
 
 //AddView .
 func (g *Guest) AddView(uid, guest uint64) error {
-	var count int
-	if err := db.Model(g).Where("user_id = ? and guest_id = ?", uid, guest).Count(&count).Error; err != nil {
+	var gg []Guest
+	if err := db.Where("user_id = ? and guest_id = ?", uid, guest).Find(&gg).Error; err != nil {
 		return err
 	}
 
-	if count > 0 {
-		return db.Model(g).Where("user_id = ? and guest_id = ?", uid, guest).Updates(map[string]interface{}{"count": gorm.Expr("count + ?", 1), "time": time.Now()}).Error
+	if gg != nil && len(gg) > 0 {
+		return db.Model(gg[0]).Updates(map[string]interface{}{"count": gorm.Expr("count + ?", 1), "time": time.Now()}).Error
 	}
 
 	gst := &Guest{UserID: uid, GuestID: guest, Time: time.Now(), Count: 1}

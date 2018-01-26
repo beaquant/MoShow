@@ -1,6 +1,8 @@
 package test
 
 import (
+	_ "github.com/jinzhu/gorm/dialects/mysql"
+
 	_ "MoShow/routers"
 	"net/http"
 	"net/http/httptest"

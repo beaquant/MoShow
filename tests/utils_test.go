@@ -43,3 +43,9 @@ func TestURLParse(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+func TestCompute(t *testing.T) {
+	var a uint64
+	a = 5
+	t.Log(a * 3 / 10)
+}

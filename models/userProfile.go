@@ -3,6 +3,7 @@ package models
 import (
 	"MoShow/utils"
 	"errors"
+	"strconv"
 	"time"
 
 	"github.com/astaxie/beego"
@@ -97,10 +98,32 @@ func (u *UserProfile) GetCover() *UserCoverInfo {
 }
 
 //AddBalance .
-func (u *UserProfile) AddBalance(amount int, trans *gorm.DB) {
+func (u *UserProfile) AddBalance(amount int, trans *gorm.DB) error {
 	if trans != nil {
-		trans.Model(u).Update("balance", gorm.Expr("balance + ?", amount))
-	} else {
-		db.Model(u).Update("balance", gorm.Expr("balance + ?", amount))
+		return trans.Model(u).Update("balance", gorm.Expr("balance + ?", amount)).Error
 	}
+	return db.Model(u).Update("balance", gorm.Expr("balance + ?", amount)).Error
+}
+
+//AllocateFund 划款
+func (u *UserProfile) AllocateFund(to, invitation *UserProfile, amount, inviteAmount uint64, trans *gorm.DB) error {
+	if u.Balance < amount { //检查余额
+		return errors.New("用户余额不足，扣款(" + strconv.FormatUint(amount, 64) + ")失败,余额:" + strconv.FormatUint(u.Balance, 64))
+	}
+
+	if err := u.AddBalance(-int(amount), trans); err != nil { //扣款
+		return errors.New("发起人扣款失败\t" + err.Error())
+	}
+
+	if err := to.AddBalance(int(amount), trans); err != nil { //增加余额
+		return errors.New("接受人增加余额失败\t" + err.Error())
+	}
+
+	if invitation != nil && uint64(amount*3/10) > inviteAmount {
+		if err := invitation.AddBalance(int(inviteAmount), trans); err != nil { //增加余额
+			return errors.New("邀请人增加余额失败\t" + err.Error())
+		}
+	}
+
+	return nil
 }
