@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"MoShow/models"
 	"MoShow/utils"
 	"strconv"
 	"time"
@@ -51,7 +52,7 @@ type ChatChannel struct {
 
 //ChatClient .
 type ChatClient struct {
-	UserID  uint64
+	User    *models.UserProfile
 	Channel *ChatChannel
 	Conn    *websocket.Conn
 	Send    chan *WsMessage
@@ -88,7 +89,15 @@ func (c *WebsocketController) Create() {
 		return
 	}
 
-	client := &ChatClient{UserID: tk.ID, Conn: conn, Send: make(chan *WsMessage)}
+	up := &models.UserProfile{ID: tk.ID}
+	if err := up.Read(); err != nil {
+		if err != nil {
+			beego.Error(err)
+			return
+		}
+	}
+
+	client := &ChatClient{User: up, Conn: conn, Send: make(chan *WsMessage)}
 	channel := &ChatChannel{Src: client, Send: make(chan *WsMessage), Close: make(chan *ChatClient), ID: tk.ID, DstID: parter}
 
 	client.Channel = channel
@@ -122,7 +131,15 @@ func (c *WebsocketController) Join() {
 		return
 	}
 
-	client := &ChatClient{UserID: tk.ID, Channel: cn, Conn: conn, Send: make(chan *WsMessage)}
+	up := &models.UserProfile{ID: tk.ID}
+	if err := up.Read(); err != nil {
+		if err != nil {
+			beego.Error(err)
+			return
+		}
+	}
+
+	client := &ChatClient{User: up, Channel: cn, Conn: conn, Send: make(chan *WsMessage)}
 	cn.Dst = client
 
 	go client.Read()
@@ -150,7 +167,7 @@ func (c *ChatChannel) Run() {
 		case msg := <-c.Send:
 			beego.Info(utils.JSONMarshalToString(msg))
 
-			if msg.FromID == c.Src.UserID {
+			if msg.FromID == c.DstID {
 				c.Src.Send <- msg
 			} else if c.Dst != nil {
 				c.Dst.Send <- msg
@@ -174,7 +191,7 @@ func (c *ChatClient) Read() {
 	})
 
 	for {
-		m := &WsMessage{FromID: c.UserID}
+		m := &WsMessage{FromID: c.User.ID}
 		_, message, err := c.Conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {

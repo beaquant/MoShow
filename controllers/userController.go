@@ -256,16 +256,6 @@ func (c *UserController) Update() {
 	dto.Sucess = true
 }
 
-//Del .
-// @Title 删除用户
-// @Description 删除用户
-// @Param   userid     path    string  true        "The email for login"
-// @Success 200 {object} utils.ResultDTO
-// @router /:userid [delete]
-func (c *UserController) Del() {
-
-}
-
 //SendGift .
 // @Title 赠送礼物
 // @Description 赠送礼物
