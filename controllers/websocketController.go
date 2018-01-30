@@ -146,6 +146,38 @@ func (c *WebsocketController) Join() {
 	go client.Write()
 }
 
+//Reject .
+// @Title 拒绝聊天请求
+// @Description 拒绝聊天请求
+// @Param   channelid     path    int  true        "聊天对象的ID"
+// @router /:channelid/reject [post]
+func (c *WebsocketController) Reject() {
+	dto := &utils.ResultDTO{}
+	defer dto.JSONResult(&c.Controller)
+
+	channelid, err := strconv.ParseUint(c.Ctx.Input.Param(":channelid"), 10, 64)
+	if err != nil {
+		beego.Error(err)
+		return
+	}
+
+	tk := GetToken(c.Ctx)
+	cn, ok := chatChannels[channelid]
+	if !ok || cn.DstID != tk.ID {
+		dto.Message = "未找到指定频道，或者当前用户不在指定频道中"
+		return
+	}
+
+	cn.Close <- nil
+	dl := &models.Dial{FromUserID: channelid, ToUserID: tk.ID, Duration: 0, CreateAt: time.Now(), Success: false}
+	if err := dl.Add(); err != nil {
+		dto.Message = "websocket关闭成功，添加通话记录失败\t" + err.Error()
+		return
+	}
+
+	dto.Sucess = true
+}
+
 //Run .
 func (c *ChatChannel) Run() {
 	defer func() {
@@ -186,7 +218,9 @@ func (c *ChatClient) Read() {
 	c.Conn.SetReadLimit(maxMessageSize)
 	c.Conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.Conn.SetPongHandler(func(string) error {
-		c.Conn.SetReadDeadline(time.Now().Add(pongWait))
+		if _, ok := chatChannels[c.Channel.ID]; ok {
+			c.Conn.SetReadDeadline(time.Now().Add(pongWait))
+		}
 		return nil
 	})
 
