@@ -169,7 +169,7 @@ func (c *WebsocketController) Reject() {
 	}
 
 	cn.Close <- nil
-	dl := &models.Dial{FromUserID: channelid, ToUserID: tk.ID, Duration: 0, CreateAt: time.Now(), Success: false}
+	dl := &models.Dial{FromUserID: channelid, ToUserID: tk.ID, Duration: 0, CreateAt: time.Now().Unix(), Success: false}
 	if err := dl.Add(); err != nil {
 		dto.Message = "websocket关闭成功，添加通话记录失败\t" + err.Error()
 		return

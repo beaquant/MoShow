@@ -2,7 +2,6 @@ package models
 
 import (
 	"errors"
-	"time"
 
 	"github.com/jinzhu/gorm"
 )
@@ -22,13 +21,13 @@ const (
 
 //BalanceChg .
 type BalanceChg struct {
-	ID         uint64    `json:"id" gorm:"column:id;primary_key"`
-	UserID     uint64    `json:"user_id" gorm:"column:user_id"`
-	FromUserID uint64    `json:"from_user_id" gorm:"column:from_user_id"`
-	ChgType    int       `json:"chg_type" gorm:"column:chg_type"`
-	ChgInfo    string    `json:"chg_info" gorm:"column:chg_info"`
-	Amount     int       `json:"amount" gorm:"column:amount"`
-	Time       time.Time `json:"time" gorm:"column:time"`
+	ID         uint64 `json:"id" gorm:"column:id;primary_key"`
+	UserID     uint64 `json:"user_id" gorm:"column:user_id"`
+	FromUserID uint64 `json:"from_user_id" gorm:"column:from_user_id"`
+	ChgType    int    `json:"chg_type" gorm:"column:chg_type"`
+	ChgInfo    string `json:"chg_info" gorm:"column:chg_info"`
+	Amount     int    `json:"amount" gorm:"column:amount"`
+	Time       int64  `json:"time" gorm:"column:time"`
 }
 
 //GiftChgInfo .

@@ -1,6 +1,7 @@
 package test
 
 import (
+	"MoShow/models"
 	"MoShow/utils"
 	"fmt"
 	"net/url"
@@ -48,4 +49,9 @@ func TestCompute(t *testing.T) {
 	var a uint64
 	a = 5
 	t.Log(a * 3 / 10)
+}
+
+func TestJson(t *testing.T) {
+	g := &models.Gift{}
+	t.Log(utils.JSONMarshalToString(g))
 }

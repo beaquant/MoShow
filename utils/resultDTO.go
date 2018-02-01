@@ -9,6 +9,8 @@ const (
 	DtoStatusNormal int = iota
 	//DtoStatusAuthError 登录验证失败
 	DtoStatusAuthError
+	//DtoStatusDatabaseError 数据库操作错误
+	DtoStatusDatabaseError
 )
 
 //ResultDTO .

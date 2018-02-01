@@ -8,11 +8,11 @@ import (
 
 //Guest .
 type Guest struct {
-	ID      uint64    `json:"id" gorm:"column:id;primary_key"`
-	UserID  uint64    `json:"user_id" gorm:"column:user_id"`
-	GuestID uint64    `json:"guest_id" gorm:"column:guest_id"`
-	Time    time.Time `json:"time" gorm:"column:time"`
-	Count   uint64    `json:"count" gorm:"column:count"`
+	ID      uint64 `json:"id" gorm:"column:id;primary_key"`
+	UserID  uint64 `json:"user_id" gorm:"column:user_id"`
+	GuestID uint64 `json:"guest_id" gorm:"column:guest_id"`
+	Time    int64  `json:"time" gorm:"column:time"`
+	Count   uint64 `json:"count" gorm:"column:count"`
 }
 
 //TableName .
@@ -28,9 +28,9 @@ func (g *Guest) AddView(uid, guest uint64) error {
 	}
 
 	if gg != nil && len(gg) > 0 {
-		return db.Model(gg[0]).Updates(map[string]interface{}{"count": gorm.Expr("count + ?", 1), "time": time.Now()}).Error
+		return db.Model(gg[0]).Updates(map[string]interface{}{"count": gorm.Expr("count + ?", 1), "time": time.Now().Unix()}).Error
 	}
 
-	gst := &Guest{UserID: uid, GuestID: guest, Time: time.Now(), Count: 1}
+	gst := &Guest{UserID: uid, GuestID: guest, Time: time.Now().Unix(), Count: 1}
 	return db.Model(g).Create(gst).Error
 }

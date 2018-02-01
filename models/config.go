@@ -17,14 +17,13 @@ var (
 //Config .
 type Config struct {
 	ID    uint64 `json:"id" gorm:"column:id;primary_key"`
-	Key   string `json:"key" gorm:"column:key"`
+	Key   string `json:"key" gorm:"column:conf_key"`
 	Value string `json:"val" gorm:"column:val"`
 }
 
 //Gift .
 type Gift struct {
 	GiftName string `json:"name"`
-	GiftKey  string `json:"key"`
 	Code     string `json:"code"`
 	Price    uint   `json:"price"`
 	ImgURL   string `json:"img"`
@@ -44,15 +43,16 @@ func (Config) TableName() string {
 //GetCommonGiftInfo .
 func (c *Config) GetCommonGiftInfo() (map[string]Gift, error) {
 	if tm, ok := updateTime[configTypeGift]; giftList == nil || !ok || tm.Add(time.Minute*5).Before(time.Now()) {
-		if err := db.Model(c).Where("key = ?", configTypeGift).First(c).Error; err != nil {
+		if err := db.Debug().Where("conf_key = ?", configTypeGift).First(c).Error; err != nil {
 			return nil, err
 		}
 
-		var gf map[string]Gift
-		if err := utils.JSONUnMarshal(c.Value, gf); err != nil {
+		gf := make(map[string]Gift)
+		if err := utils.JSONUnMarshal(c.Value, &gf); err != nil {
 			return nil, err
 		}
 
+		giftList = gf
 		updateTime[configTypeGift] = time.Now()
 		return gf, nil
 	}
@@ -62,7 +62,7 @@ func (c *Config) GetCommonGiftInfo() (map[string]Gift, error) {
 //GetIncomeRate .
 func (c *Config) GetIncomeRate() (*IncomeRate, error) {
 	if tm, ok := updateTime[configTypeIncomeRate]; incomeRate == nil || !ok || tm.Add(time.Minute*5).Before(time.Now()) {
-		if err := db.Model(c).Where("key = ?", configTypeIncomeRate).First(c).Error; err != nil {
+		if err := db.Model(c).Where("conf_key = ?", configTypeIncomeRate).First(c).Error; err != nil {
 			return nil, err
 		}
 
@@ -72,6 +72,7 @@ func (c *Config) GetIncomeRate() (*IncomeRate, error) {
 		}
 
 		updateTime[configTypeIncomeRate] = time.Now()
+		incomeRate = &ir
 		return &ir, nil
 	}
 	return incomeRate, nil

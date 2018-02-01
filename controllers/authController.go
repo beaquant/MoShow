@@ -114,7 +114,7 @@ func (c *AuthController) Login() {
 	if u.ID == 0 { //该手机号未注册，执行注册逻辑
 		u.AcctStatus = models.AcctStatusNormal
 		u.AcctType = models.AcctTypeTelephone
-		u.CreatedAt = time.Now()
+		u.CreatedAt = time.Now().Unix()
 
 		if err := u.Add(); err == nil {
 			tk.ID = u.ID
@@ -171,7 +171,7 @@ func (c *AuthController) WechatLogin() {
 	if u.ID == 0 { //执行微信注册
 		u.AcctType = models.AcctTypeWechat
 		u.AcctStatus = models.AcctStatusNormal
-		u.CreatedAt = time.Now()
+		u.CreatedAt = time.Now().Unix()
 		u.Add()
 
 		if err := u.Add(); err == nil {

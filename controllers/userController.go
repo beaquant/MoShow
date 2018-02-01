@@ -57,14 +57,14 @@ func (c *UserController) Create() {
 
 	if birth := c.GetString("birthday"); len(birth) > 0 {
 		if dt, err := time.Parse("2006-01-02", birth); err == nil {
-			up.Birthday = dt
+			up.Birthday = dt.Unix()
 		} else {
 			beego.Error(err)
 			dto.Message = err.Error()
 			return
 		}
 	} else {
-		up.Birthday = time.Date(1993, 1, 1, 0, 0, 0, 0, nil)
+		up.Birthday = time.Date(1993, 1, 1, 0, 0, 0, 0, nil).Unix()
 	}
 
 	if location := c.GetString("location"); len(location) > 0 {
@@ -220,7 +220,7 @@ func (c *UserController) Update() {
 
 	if birth := c.GetString("birthday"); len(birth) > 0 {
 		if dt, err := time.Parse("2006-01-02", birth); err == nil {
-			param["birthday"], up.Birthday = dt, dt
+			param["birthday"], up.Birthday = dt.Unix(), dt.Unix()
 		} else {
 			beego.Error(err)
 			dto.Message = err.Error()

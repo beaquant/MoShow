@@ -1,7 +1,5 @@
 package models
 
-import "time"
-
 //账号类型
 const (
 	//AcctTypeTelephone 手机号账户
@@ -22,13 +20,13 @@ const (
 
 //User .
 type User struct {
-	ID          uint64    `json:"user_id" gorm:"column:id;primary_key"`
-	PhoneNumber string    `json:"phone_number" gorm:"column:phone_number"`
-	WeChatID    string    `json:"wechat_id" gorm:"column:wechat_id"`
-	AcctType    int       `json:"acct_type" gorm:"column:acct_type"`
-	AcctStatus  int       `json:"acct_status" gorm:"column:acct_status"`
-	CreatedAt   time.Time `json:"create_at" gorm:"column:create_at"`
-	InvitedBy   uint64    `json:"invited_by" gorm:"column:invited_by"`
+	ID          uint64 `json:"user_id" gorm:"column:id;primary_key"`
+	PhoneNumber string `json:"phone_number" gorm:"column:phone_number"`
+	WeChatID    string `json:"wechat_id" gorm:"column:wechat_id"`
+	AcctType    int    `json:"acct_type" gorm:"column:acct_type"`
+	AcctStatus  int    `json:"acct_status" gorm:"column:acct_status"`
+	CreatedAt   int64  `json:"create_at" gorm:"column:create_at"`
+	InvitedBy   uint64 `json:"invited_by" gorm:"column:invited_by"`
 }
 
 //TableName .
