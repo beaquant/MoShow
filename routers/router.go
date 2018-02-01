@@ -1,6 +1,6 @@
 // @APIVersion 0.1.0
 // @Title MoShow Api
-// @Description beego has a very cool tools to autogenerate documents for your API
+// @Description api的所有返回结果均为json格式,{"Sucess":true,"Data":{},"Message":"","Code":0},所有api的结果，只有Data的类型根据API改变,其他字段均不变
 // @Contact mrsong0607@gmail.com
 // @TermsOfServiceUrl http://beego.me/
 // @License Apache 2.0
@@ -32,6 +32,26 @@ func init() {
 		beego.NSNamespace("/config",
 			beego.NSInclude(
 				&controllers.ConfigController{},
+			),
+		),
+		beego.NSNamespace("/im",
+			beego.NSInclude(
+				&controllers.ImController{},
+			),
+		),
+		beego.NSNamespace("/order",
+			beego.NSInclude(
+				&controllers.OrderController{},
+			),
+		),
+		beego.NSNamespace("/timeline",
+			beego.NSInclude(
+				&controllers.TimelineController{},
+			),
+		),
+		beego.NSNamespace("/feedback",
+			beego.NSInclude(
+				&controllers.FeedbackController{},
 			),
 		),
 	)

@@ -20,7 +20,7 @@ type UserController struct {
 //UserPorfileInfo 用户信息
 type UserPorfileInfo struct {
 	models.UserProfile
-	CoverInfo *models.UserCoverInfo `json:"cover_info"`
+	CoverInfo *models.UserCoverInfo `json:"cover_info"  description:"形象展示,包括头像,相册,视频"`
 }
 
 //Create .
@@ -114,7 +114,7 @@ func (c *UserController) Create() {
 // @Title 读取用户
 // @Description 读取用户
 // @Param   userid     path    string  true        "用户id,填me表示获取当前账号的用户信息"
-// @Success 200 {object} utils.ResultDTO
+// @Success 200 {object} models.UserProfile
 // @router /:userid [get]
 func (c *UserController) Read() {
 	dto := utils.ResultDTO{Sucess: false}
@@ -166,7 +166,7 @@ func (c *UserController) Read() {
 // @Param   birthday     	formData    time.Time  	false       "生日,格式:2006-01-02"
 // @Param   location     	formData    string  	false       "地区"
 // @Param   price	     	formData    uint	  	false       "价格"
-// @Success 200 {object} utils.ResultDTO
+// @Success 200 {object} models.UserProfile
 // @router /update [post]
 func (c *UserController) Update() {
 	tk, dto := GetToken(c.Ctx), &utils.ResultDTO{}
@@ -324,6 +324,18 @@ func (c *UserController) SendGift() {
 	}
 
 	dto.Sucess = true
+}
+
+//Report .
+// @Title 举报用户
+// @Description 举报用户
+// @Param   userid     		path    	string  	true        "用户id"
+// @Param   content     	formData    string  	true       "反馈内容"
+// @Param   img		    	formData    string  	true       "图片"
+// @Success 200 {object} utils.ResultDTO
+// @router /:userid/report [post]
+func (c *UserController) Report() {
+	// tk, dto, uidStr := GetToken(c.Ctx), &utils.ResultDTO{}, strings.TrimSpace(c.Ctx.Input.Param(":userid"))
 }
 
 //赠送礼物,流程包括 源用户扣款，目标用户增加余额，邀请人分成，以及分别添加余额变动记录,过程中任何一部出错，事务回滚并返回失败

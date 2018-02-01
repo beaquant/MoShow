@@ -2,19 +2,34 @@ package models
 
 //TimelineUser .
 type TimelineUser struct {
-	ID          uint64 `json:"user_id" gorm:"column:id;primary_key"`
-	Alias       string `json:"alias" gorm:"column:alias"`
-	Gender      int    `json:"gender" gorm:"column:gender"`
-	CoverPic    string `json:"-" gorm:"column:cover_pic"`
-	Description string `json:"description" gorm:"column:description"`
-	Birthday    int64  `json:"birthday" gorm:"column:birthday"`
-	Location    string `json:"location" gorm:"column:location"`
-	Balance     uint64 `json:"balance" gorm:"column:balance"`
-	Price       uint64 `json:"price" gorm:"column:price"`
-	Duration    uint64 `json:"duration" gorm:"column:duration"`
+	UserProfile
+	CreatedAt int64  `json:"create_at" gorm:"column:create_at"`
+	Duration  uint64 `json:"duration" gorm:"column:duration"`
 }
 
 //TableName .
 func (TimelineUser) TableName() string {
 	return "time_line"
+}
+
+//QueryAll .
+func (t *TimelineUser) QueryAll(gender, skip, limit int) ([]TimelineUser, error) {
+	var tl []TimelineUser
+	return tl, db.Offset(skip).Limit(limit).Where("gender = ?", gender).Find(&tl).Error
+}
+
+//QueryRecent .
+func (t *TimelineUser) QueryRecent(timestamp int64, gender, skip, limit int) ([]TimelineUser, error) {
+	var tl []TimelineUser
+
+	if gender == 1 {
+		return tl, db.Offset(skip).Limit(limit).Where("create_at > ? and gender = ?", timestamp, gender).Find(&tl).Error
+	}
+	return tl, db.Offset(skip).Limit(limit).Where("create_at > ? and gender = ? and user_type = ?", timestamp, gender, UserTypeAnchor).Find(&tl).Error
+}
+
+//QueryHot .
+func (t *TimelineUser) QueryHot(skip, limit int) ([]TimelineUser, error) {
+	var tl []TimelineUser
+	return tl, db.Offset(skip).Limit(limit).Where("user_status = ? and gender = ?", UserStatusHot, GenderWoman).Find(&tl).Error
 }

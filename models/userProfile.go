@@ -4,6 +4,7 @@ import (
 	"MoShow/utils"
 	"errors"
 	"strconv"
+	"time"
 
 	"github.com/astaxie/beego"
 
@@ -17,17 +18,36 @@ const (
 	GenderMan
 )
 
+const (
+	//UserTypeNormal 普通用户
+	UserTypeNormal = iota
+	//UserTypeAnchor 主播
+	UserTypeAnchor
+)
+
+const (
+	//UserStatusNormal 正常
+	UserStatusNormal = iota
+	//UserStatusHot 推荐
+	UserStatusHot
+	//UserStatusBlock 屏蔽
+	UserStatusBlock
+)
+
 //UserProfile .
 type UserProfile struct {
-	ID          uint64 `json:"user_id" gorm:"column:id;primary_key"`
-	Alias       string `json:"alias" gorm:"column:alias"`
-	Gender      int    `json:"gender" gorm:"column:gender"`
-	CoverPic    string `json:"-" gorm:"column:cover"`
-	Description string `json:"description" gorm:"column:description"`
-	Birthday    int64  `json:"birthday" gorm:"column:birthday"`
-	Location    string `json:"location" gorm:"column:location"`
-	Balance     uint64 `json:"balance" gorm:"column:balance"`
-	Price       uint64 `json:"price" gorm:"column:price"`
+	ID          uint64 `json:"user_id" gorm:"column:id;primary_key" description:"用户ID"`
+	Alias       string `json:"alias" gorm:"column:alias" description:"昵称"`
+	Gender      int    `json:"gender" gorm:"column:gender" description:"性别"`
+	CoverPic    string `json:"-" gorm:"column:cover" description:"形象展示,包括头像,相册,视频"`
+	Description string `json:"description" gorm:"column:description" description:"签名"`
+	Birthday    int64  `json:"birthday" gorm:"column:birthday" description:"生日"`
+	Location    string `json:"location" gorm:"column:location" description:"地区"`
+	Balance     uint64 `json:"balance" gorm:"column:balance" description:"余额"`
+	Price       uint64 `json:"price" gorm:"column:price" description:"视频价格/分"`
+	UserType    int    `json:"user_type" gorm:"column:user_type" description:"用户类型"`
+	UserStatus  int    `json:"-" gorm:"column:user_status" description:"用户状态"`
+	UpdateAt    int64  `json:"update_at" gorm:"column:update_at" description:"更新时间"`
 }
 
 //UserCoverInfo .
@@ -80,6 +100,7 @@ func (u *UserProfile) Read() error {
 
 //Update .
 func (u *UserProfile) Update(fields map[string]interface{}) error {
+	fields["update_at"] = time.Now().Unix()
 	return db.Model(u).Updates(fields).Error
 }
 
