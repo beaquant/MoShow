@@ -1,6 +1,9 @@
 package controllers
 
 import (
+	"MoShow/models"
+	"MoShow/utils"
+
 	"github.com/astaxie/beego"
 )
 
@@ -17,5 +20,19 @@ type FeedbackController struct {
 // @Success 200 {object} utils.ResultDTO
 // @router /suggestion [post]
 func (c *FeedbackController) Suggestion() {
+	tk, dto := GetToken(c.Ctx), &utils.ResultDTO{}
+	defer dto.JSONResult(&c.Controller)
 
+	f := &models.FeedBack{UserID: tk.ID}
+	r := &models.FeedBackSuggestion{}
+	r.Img = c.GetString("img")
+	r.Content = c.GetString("content")
+
+	if err := f.AddSuggestion(r); err != nil {
+		beego.Error(err)
+		dto.Message = "添加反馈记录失败\t" + err.Error()
+		return
+	}
+
+	dto.Sucess = true
 }

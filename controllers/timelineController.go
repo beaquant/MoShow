@@ -8,7 +8,7 @@ import (
 	"github.com/astaxie/beego"
 )
 
-//TimelineController .
+//TimelineController 首页专区推荐相关接口
 type TimelineController struct {
 	beego.Controller
 }

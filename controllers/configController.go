@@ -7,7 +7,7 @@ import (
 	"github.com/astaxie/beego"
 )
 
-//ConfigController .
+//ConfigController 获取礼物列表，系统设置等
 type ConfigController struct {
 	beego.Controller
 }

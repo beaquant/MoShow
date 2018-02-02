@@ -12,7 +12,7 @@ import (
 	"github.com/astaxie/beego"
 )
 
-//UserController 用户节点
+//UserController 用户信息查询，更新等接口
 type UserController struct {
 	beego.Controller
 }
@@ -134,9 +134,11 @@ func (c *UserController) Read() {
 			return
 		}
 
-		if err := (&models.Guest{}).AddView(uid, tk.ID); err != nil { //增加访客记录
-			beego.Error(err)
-			dto.Message = "增加访客记录失败\t" + err.Error()
+		if uid != tk.ID { //自己查看自己时不增加记录
+			if err := (&models.Guest{}).AddView(uid, tk.ID); err != nil { //增加访客记录
+				beego.Error(err)
+				dto.Message = "增加访客记录失败\t" + err.Error()
+			}
 		}
 	}
 
@@ -335,7 +337,27 @@ func (c *UserController) SendGift() {
 // @Success 200 {object} utils.ResultDTO
 // @router /:userid/report [post]
 func (c *UserController) Report() {
-	// tk, dto, uidStr := GetToken(c.Ctx), &utils.ResultDTO{}, strings.TrimSpace(c.Ctx.Input.Param(":userid"))
+	tk, dto, uidStr := GetToken(c.Ctx), &utils.ResultDTO{}, strings.TrimSpace(c.Ctx.Input.Param(":userid"))
+	defer dto.JSONResult(&c.Controller)
+
+	toID, err := strconv.ParseUint(uidStr, 10, 64)
+	if err != nil {
+		beego.Error(err)
+		dto.Message = "举报用户的ID格式错误\t" + err.Error()
+		return
+	}
+
+	f := &models.FeedBack{UserID: tk.ID}
+	r := &models.FeedBackReport{TgUserID: toID}
+	r.Img = c.GetString("img")
+	r.Content = c.GetString("content")
+	if err := f.AddReport(r); err != nil {
+		beego.Error(err)
+		dto.Message = "添加举报记录失败\t" + err.Error()
+		return
+	}
+
+	dto.Sucess = true
 }
 
 //赠送礼物,流程包括 源用户扣款，目标用户增加余额，邀请人分成，以及分别添加余额变动记录,过程中任何一部出错，事务回滚并返回失败

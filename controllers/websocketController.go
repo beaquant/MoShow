@@ -42,12 +42,13 @@ type WebsocketController struct {
 
 //ChatChannel .
 type ChatChannel struct {
-	ID    uint64
-	DstID uint64
-	Src   *ChatClient
-	Dst   *ChatClient
-	Send  chan *WsMessage
-	Close chan *ChatClient
+	ID       uint64
+	DstID    uint64
+	Timelong uint64 //聊天时长
+	Src      *ChatClient
+	Dst      *ChatClient
+	Send     chan *WsMessage
+	Close    chan *ChatClient
 }
 
 //ChatClient .

@@ -15,7 +15,7 @@ var timeFormat = "2006-01-02T15:04:05.000Z"
 var adminPhone = beego.AppConfig.String("adminPhoneNum")
 var adminCode = beego.AppConfig.String("adminCode")
 
-//AuthController .
+//AuthController 短信登陆，微信登陆，发送验证码，退出登陆等
 type AuthController struct {
 	beego.Controller
 }

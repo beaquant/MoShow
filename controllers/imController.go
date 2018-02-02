@@ -8,7 +8,7 @@ import (
 	"github.com/astaxie/beego"
 )
 
-//ImController .
+//ImController 网易云信相关接口
 type ImController struct {
 	beego.Controller
 }

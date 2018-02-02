@@ -4,7 +4,7 @@ import (
 	"github.com/astaxie/beego"
 )
 
-//OrderController .
+//OrderController 充值，支付，提现等接口
 type OrderController struct {
 	beego.Controller
 }
