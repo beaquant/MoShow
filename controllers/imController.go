@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"MoShow/models"
 	"MoShow/utils"
 	"strconv"
 
@@ -48,6 +49,13 @@ func (c *ImController) CreateImUser() {
 		return
 	}
 
+	up := &models.UserProfile{ID: tk.ID}
+	fields := map[string]interface{}{"im_token": imtk.Token}
+	if err := up.Update(fields); err != nil {
+		dto.Message = err.Error()
+		return
+	}
+
 	dto.Data = imtk
 	dto.Sucess = true
 }
@@ -65,6 +73,13 @@ func (c *ImController) RefreshToken() {
 
 	imtk, err := utils.ImRefreshToken(strconv.FormatUint(tk.ID, 10))
 	if err != nil {
+		dto.Message = err.Error()
+		return
+	}
+
+	up := &models.UserProfile{ID: tk.ID}
+	fields := map[string]interface{}{"im_token": imtk.Token}
+	if err := up.Update(fields); err != nil {
 		dto.Message = err.Error()
 		return
 	}

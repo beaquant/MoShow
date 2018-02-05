@@ -44,10 +44,12 @@ type UserProfile struct {
 	Birthday    int64  `json:"birthday" gorm:"column:birthday" description:"生日"`
 	Location    string `json:"location" gorm:"column:location" description:"地区"`
 	Balance     uint64 `json:"balance" gorm:"column:balance" description:"余额"`
+	Income      uint64 `json:"income" gorm:"column:income" description:"收益"`
 	Price       uint64 `json:"price" gorm:"column:price" description:"视频价格/分"`
 	UserType    int    `json:"user_type" gorm:"column:user_type" description:"用户类型"`
 	UserStatus  int    `json:"-" gorm:"column:user_status" description:"用户状态"`
 	UpdateAt    int64  `json:"update_at" gorm:"column:update_at" description:"更新时间"`
+	ImToken     string `json:"-" gorm:"column:im_token" description:"网易云信token"`
 }
 
 //UserCoverInfo .

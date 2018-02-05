@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	netease "github.com/MrSong0607/netease-im"
 	"github.com/astaxie/beego"
 )
 
@@ -20,6 +21,7 @@ type UserController struct {
 //UserPorfileInfo 用户信息
 type UserPorfileInfo struct {
 	models.UserProfile
+	ImTk      string                `json:"im_token,omitempty"`
 	CoverInfo *models.UserCoverInfo `json:"cover_info"  description:"形象展示,包括头像,相册,视频"`
 }
 
@@ -40,9 +42,11 @@ func (c *UserController) Create() {
 	tk, dto := GetToken(c.Ctx), &utils.ResultDTO{}
 	defer dto.JSONResult(&c.Controller)
 
+	imUser := &netease.ImUser{ID: strconv.FormatUint(tk.ID, 10)}
 	up := &models.UserProfile{ID: tk.ID}
 	if alias := c.GetString("alias"); len(alias) > 0 {
 		up.Alias = alias
+		imUser.Name = alias
 	}
 
 	if gender := c.GetString("gender"); len(gender) > 0 {
@@ -84,6 +88,7 @@ func (c *UserController) Create() {
 	uci := &models.UserCoverInfo{}
 	if coverPic := c.GetString("cover_pic"); len(coverPic) > 0 {
 		uci.CoverPicture = &models.Picture{ImageURL: coverPic}
+		imUser.IconURL = coverPic
 	}
 
 	if gallery := c.GetStrings("gallery"); gallery != nil && len(gallery) > 0 {
@@ -98,7 +103,14 @@ func (c *UserController) Create() {
 	}
 
 	up.CoverPic = uci.ToString()
-	err := up.Add()
+	imtk, err := utils.ImCreateUser(imUser)
+	if err != nil {
+		dto.Message = err.Error()
+		return
+	}
+	up.ImToken = imtk.Token
+
+	err = up.Add()
 	if err != nil {
 		beego.Error(err)
 		dto.Message = err.Error()
@@ -152,6 +164,9 @@ func (c *UserController) Read() {
 
 	upi := &UserPorfileInfo{UserProfile: *up}
 	upi.CoverInfo = up.GetCover()
+	if uid == tk.ID {
+		upi.ImTk = up.ImToken
+	}
 
 	dto.Data = upi
 	dto.Sucess = true

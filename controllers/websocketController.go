@@ -195,6 +195,8 @@ func (c *ChatChannel) Run() {
 		}
 	}()
 
+	reconnect := make(chan int, 1)
+
 	for {
 		select {
 		case msg := <-c.Send:
@@ -205,8 +207,22 @@ func (c *ChatChannel) Run() {
 			} else if c.Dst != nil {
 				c.Dst.Send <- msg
 			}
-		case <-c.Close:
-			return
+		case client := <-c.Close:
+			if client.User.ID == c.ID {
+				c.Src = nil
+			} else {
+				c.Dst = nil
+			}
+
+			//等待重连,区分主动挂断和意外挂断
+			go func() {
+				time.Sleep(30 * time.Second)
+				reconnect <- 1
+			}()
+		case <-reconnect:
+			if c.Src == nil || c.Dst == nil {
+				return
+			}
 		}
 	}
 }
@@ -253,7 +269,7 @@ func (c *ChatClient) Write() {
 		case message, ok := <-c.Send:
 			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
-				// The hub closed the channel.
+				// The hub closed the channel.关闭聊天室
 				c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
