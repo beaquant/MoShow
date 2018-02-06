@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/astaxie/beego/context"
@@ -34,6 +35,10 @@ func init() {
 
 //FilterUser .
 func FilterUser(ctx *context.Context) {
+	if !strings.HasPrefix(ctx.Request.RequestURI, "/api") {
+		return
+	}
+
 	exclude := make(map[string]struct{})
 	exclude["/api/auth/"] = struct{}{}
 

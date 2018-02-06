@@ -127,10 +127,18 @@ func (u *UserProfile) AddBalance(amount int, trans *gorm.DB) error {
 	return db.Model(u).Update("balance", gorm.Expr("balance + ?", amount)).Error
 }
 
+//AddIncome .
+func (u *UserProfile) AddIncome(amount int, trans *gorm.DB) error {
+	if trans != nil {
+		return trans.Model(u).Update("income", gorm.Expr("income + ?", amount)).Error
+	}
+	return db.Model(u).Update("income", gorm.Expr("income + ?", amount)).Error
+}
+
 //AllocateFund 划款
 func (u *UserProfile) AllocateFund(to, invitation *UserProfile, amount, inviteAmount uint64, trans *gorm.DB) error {
-	if u.Balance < amount { //检查余额
-		return errors.New("用户余额不足，扣款(" + strconv.FormatUint(amount, 64) + ")失败,余额:" + strconv.FormatUint(u.Balance, 64))
+	if u.Balance+u.Income < amount { //检查余额
+		return errors.New("用户余额不足，扣款(" + strconv.FormatUint(amount, 64) + ")失败,所有钱包余额合计:" + strconv.FormatUint(u.Balance+u.Income, 64))
 	}
 
 	if err := u.AddBalance(-int(amount), trans); err != nil { //扣款

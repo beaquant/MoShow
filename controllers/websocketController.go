@@ -209,8 +209,10 @@ func (c *ChatChannel) Run() {
 			}
 		case client := <-c.Close:
 			if client.User.ID == c.ID {
+				close(c.Src.Send)
 				c.Src = nil
 			} else {
+				close(c.Dst.Send)
 				c.Dst = nil
 			}
 
