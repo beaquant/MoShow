@@ -50,6 +50,7 @@ type UserProfile struct {
 	UserStatus  int    `json:"-" gorm:"column:user_status" description:"用户状态"`
 	UpdateAt    int64  `json:"update_at" gorm:"column:update_at" description:"更新时间"`
 	ImToken     string `json:"-" gorm:"column:im_token" description:"网易云信token"`
+	Followers   string `json:"-" gorm:"column:follower" description:"关注者"`
 }
 
 //UserCoverInfo .
@@ -106,6 +107,11 @@ func (u *UserProfile) Update(fields map[string]interface{}) error {
 	return db.Model(u).Updates(fields).Error
 }
 
+//AddFollow .
+func (u *UserProfile) AddFollow(id uint64) error {
+	return db.Model(u).Updates(map[string]interface{}{"follower": `JSON_SET(COALESCE(follower,'{}'),'$."` + strconv.FormatUint(id, 10) + `"',null) `}).Error
+}
+
 //GetCover .
 func (u *UserProfile) GetCover() *UserCoverInfo {
 	if len(u.CoverPic) > 0 {
@@ -115,6 +121,19 @@ func (u *UserProfile) GetCover() *UserCoverInfo {
 			return nil
 		}
 		return ucp
+	}
+	return nil
+}
+
+//GetFollowers .
+func (u *UserProfile) GetFollowers() map[string]interface{} {
+	if len(u.Followers) > 0 {
+		fl := make(map[string]interface{})
+		if err := utils.JSONUnMarshal(u.Followers, fl); err != nil {
+			beego.Error(err)
+			return nil
+		}
+		return fl
 	}
 	return nil
 }
@@ -136,21 +155,35 @@ func (u *UserProfile) AddIncome(amount int, trans *gorm.DB) error {
 }
 
 //AllocateFund 划款
-func (u *UserProfile) AllocateFund(to, invitation *UserProfile, amount, inviteAmount uint64, trans *gorm.DB) error {
+func (u *UserProfile) AllocateFund(to, invitation *UserProfile, amount, incomeAmount, inviteAmount uint64, trans *gorm.DB) error {
 	if u.Balance+u.Income < amount { //检查余额
-		return errors.New("用户余额不足，扣款(" + strconv.FormatUint(amount, 64) + ")失败,所有钱包余额合计:" + strconv.FormatUint(u.Balance+u.Income, 64))
+		return errors.New("用户余额不足，扣款(" + strconv.FormatUint(amount, 10) + ")失败,所有钱包余额合计:" + strconv.FormatUint(u.Balance+u.Income, 10))
 	}
 
-	if err := u.AddBalance(-int(amount), trans); err != nil { //扣款
-		return errors.New("发起人扣款失败\t" + err.Error())
+	if u.Balance < amount { //余额钱包金额足够扣款
+		if err := u.AddBalance(-int(amount), trans); err != nil { //扣款
+			return errors.New("发起人扣款失败\t" + err.Error())
+		}
+	} else { //余额钱包金额不足以扣款
+		if err := u.AddBalance(-int(u.Balance), trans); err != nil { //从余额钱包扣款
+			return errors.New("发起人扣款失败\t" + err.Error())
+		}
+
+		if err := u.AddIncome(-int(amount-u.Balance), trans); err != nil { //从收益钱包扣款
+			return errors.New("发起人扣款失败\t" + err.Error())
+		}
 	}
 
-	if err := to.AddBalance(int(amount), trans); err != nil { //增加余额
+	if err := to.AddIncome(int(incomeAmount), trans); err != nil { //增加余额
 		return errors.New("接受人增加余额失败\t" + err.Error())
 	}
 
-	if invitation != nil && uint64(amount*3/10) > inviteAmount {
-		if err := invitation.AddBalance(int(inviteAmount), trans); err != nil { //增加余额
+	if invitation != nil {
+		if uint64(incomeAmount*3/10) < inviteAmount {
+			return errors.New("收益分成比例异常,收入:" + strconv.FormatUint(incomeAmount, 10) + ",分成:" + strconv.FormatUint(inviteAmount, 10))
+		}
+
+		if err := invitation.AddIncome(int(inviteAmount), trans); err != nil { //增加余额
 			return errors.New("邀请人增加余额失败\t" + err.Error())
 		}
 	}

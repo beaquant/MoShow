@@ -23,6 +23,7 @@ type UserPorfileInfo struct {
 	models.UserProfile
 	ImTk      string                `json:"im_token,omitempty"`
 	CoverInfo *models.UserCoverInfo `json:"cover_info"  description:"形象展示,包括头像,相册,视频"`
+	Followed  bool                  `json:"followed" description:"是否已关注"`
 }
 
 //Create .
@@ -166,6 +167,12 @@ func (c *UserController) Read() {
 	upi.CoverInfo = up.GetCover()
 	if uid == tk.ID {
 		upi.ImTk = up.ImToken
+	}
+
+	if fl := up.GetFollowers(); fl != nil {
+		if _, ok := fl[strconv.FormatUint(tk.ID, 10)]; ok {
+			upi.Followed = true
+		}
 	}
 
 	dto.Data = upi
@@ -343,6 +350,33 @@ func (c *UserController) SendGift() {
 	dto.Sucess = true
 }
 
+//Follow .
+// @Title 关注用户
+// @Description 关注用户
+// @Param   userid     		path    	string  	true        "用户id"
+// @Success 200 {object} utils.ResultDTO
+// @router /:userid/follow [post]
+func (c *UserController) Follow() {
+	tk, dto, uidStr := GetToken(c.Ctx), &utils.ResultDTO{}, strings.TrimSpace(c.Ctx.Input.Param(":userid"))
+	defer dto.JSONResult(&c.Controller)
+
+	toID, err := strconv.ParseUint(uidStr, 10, 64)
+	if err != nil {
+		beego.Error(err)
+		dto.Message = "关注用户的ID格式错误\t" + err.Error()
+		return
+	}
+
+	up := models.UserProfile{ID: toID}
+	if err := up.AddFollow(tk.ID); err != nil {
+		beego.Error(err)
+		dto.Message = "添加关注失败\t" + err.Error()
+		return
+	}
+
+	dto.Sucess = true
+}
+
 //Report .
 // @Title 举报用户
 // @Description 举报用户
@@ -378,30 +412,63 @@ func (c *UserController) Report() {
 //赠送礼物,流程包括 源用户扣款，目标用户增加余额，邀请人分成，以及分别添加余额变动记录,过程中任何一部出错，事务回滚并返回失败
 //赠送礼物不参与分成
 func sendGift(from, to *models.UserProfile, gift *models.GiftChgInfo) error {
-	amount := uint64(gift.GiftInfo.Price) * gift.Count
-	if from.Balance < amount { //检查余额
-		return errors.New("用户余额不足，送礼失败,余额:" + strconv.FormatUint(from.Balance, 64))
+	u := &models.User{ID: to.ID}
+	if err := u.Read(); err != nil {
+		return errors.New("获取目标用户信息失败,id:" + strconv.FormatUint(to.ID, 10) + "\t" + err.Error())
 	}
 
+	chgInfo, _ := utils.JSONMarshalToString(gift)
+
+	amount := uint64(gift.GiftInfo.Price) * gift.Count //消费金额
+	income, inviteIncome, err := computeIncome(amount) //收益金额,分成金额
+	if err != nil {
+		return err
+	}
+
+	iu, iuchg := genInvitationIncome(to.ID, u.InvitedBy, inviteIncome, chgInfo)
+
 	trans := models.TransactionGen() //开始事务
-	if err := from.AllocateFund(to, nil, amount, 0, trans); err != nil {
+	if err := from.AllocateFund(to, iu, amount, uint64(income), uint64(inviteIncome), trans); err != nil {
 		models.TransactionRollback(trans)
 		return err
 	}
 
 	fuChg := &models.BalanceChg{UserID: from.ID, FromUserID: to.ID, ChgType: models.BalanceChgTypeSendGift, Amount: -int(amount)} //源用户扣款变动
-	fuChg.ChgInfo, _ = utils.JSONMarshalToString(gift)
+	fuChg.ChgInfo = chgInfo
 
-	tuchg := &models.BalanceChg{UserID: to.ID, FromUserID: from.ID, ChgType: models.BalanceChgTypeReceiveGift, Amount: int(amount)} //目标用户余额增加 变动
-	tuchg.ChgInfo, _ = utils.JSONMarshalToString(gift)
+	tuchg := &models.BalanceChg{UserID: to.ID, FromUserID: from.ID, ChgType: models.BalanceChgTypeReceiveGift, Amount: income} //目标用户余额增加 变动
+	tuchg.ChgInfo = chgInfo
 
-	if err := fuChg.AddChg(trans, fuChg, tuchg); err != nil {
+	if err := fuChg.AddChg(trans, fuChg, tuchg, iuchg); err != nil {
 		models.TransactionRollback(trans)
 		return err
 	}
 
 	models.TransactionCommit(trans) //提交事务
 	return nil
+}
+
+//计算收益
+func computeIncome(amount uint64) (income, inviteIncome int, err error) {
+	rate, err := (&models.Config{}).GetIncomeRate()
+	if err != nil {
+		err = errors.New("获取收益分成率失败" + err.Error())
+		return
+	}
+
+	income = int(float64(amount) * (rate.IncomeFee))                //收益金额
+	inviteIncome = int(float64(income) * (rate.InviteIncomegeRate)) //分成金额
+	return
+}
+
+//生成邀请人收益变动
+func genInvitationIncome(uid, invitedByid uint64, inviteIncome int, chgInfo string) (iu *models.UserProfile, iuchg *models.BalanceChg) {
+	if invitedByid != 0 { //邀请人分成
+		iuchg = &models.BalanceChg{UserID: invitedByid, FromUserID: uid, ChgType: models.BalanceChgTypeInvitationIncome, Amount: inviteIncome}
+		iuchg.ChgInfo = chgInfo
+		iu = &models.UserProfile{ID: invitedByid}
+	}
+	return
 }
 
 func selectPic(imgURL string, arr []models.Picture) *models.Picture {

@@ -5,13 +5,17 @@ import (
 	"time"
 )
 
-const configTypeGift = "gifts"
-const configTypeIncomeRate = "income_rate"
+const (
+	configTypeGift       = "gifts"
+	configTypeIncomeRate = "income_rate"
+	configTypeBanner     = "banner"
+)
 
 var (
 	giftList   map[string]Gift
 	updateTime = make(map[string]time.Time)
 	incomeRate *IncomeRate
+	banners    []Banner
 )
 
 //Config .
@@ -31,8 +35,23 @@ type Gift struct {
 
 //IncomeRate 分成比例
 type IncomeRate struct {
-	RechargeIncomeRate float64 //充值分成率
-	VideoIncomeRate    float64 //视频聊天消费分成率
+	InviteRechargeRate float64 `json:"invite_recharge_rate"` //被邀请人充值分成率
+	InviteIncomegeRate float64 `json:"invite_income_rate"`   //被邀请人收益分成
+	IncomeFee          float64 `json:"income_fee"`           //收益手续费
+}
+
+const (
+	//BannerTypeImg 纯图片banner
+	BannerTypeImg = iota
+	//BannerTypeLink 链接跳转banner
+	BannerTypeLink
+)
+
+//Banner 首页banner
+type Banner struct {
+	Image      string
+	URL        string
+	BannerType int
 }
 
 //TableName .
@@ -40,7 +59,7 @@ func (Config) TableName() string {
 	return "config"
 }
 
-//GetCommonGiftInfo .
+//GetCommonGiftInfo 获取礼物列表
 func (c *Config) GetCommonGiftInfo() (map[string]Gift, error) {
 	if tm, ok := updateTime[configTypeGift]; giftList == nil || !ok || tm.Add(time.Minute*5).Before(time.Now()) {
 		if err := db.Debug().Where("conf_key = ?", configTypeGift).First(c).Error; err != nil {
@@ -59,7 +78,7 @@ func (c *Config) GetCommonGiftInfo() (map[string]Gift, error) {
 	return giftList, nil
 }
 
-//GetIncomeRate .
+//GetIncomeRate 获取分成比例
 func (c *Config) GetIncomeRate() (*IncomeRate, error) {
 	if tm, ok := updateTime[configTypeIncomeRate]; incomeRate == nil || !ok || tm.Add(time.Minute*5).Before(time.Now()) {
 		if err := db.Model(c).Where("conf_key = ?", configTypeIncomeRate).First(c).Error; err != nil {
@@ -76,4 +95,10 @@ func (c *Config) GetIncomeRate() (*IncomeRate, error) {
 		return &ir, nil
 	}
 	return incomeRate, nil
+}
+
+//GetBanners 获取banner
+func (c *Config) GetBanners() {
+	if tm, ok := updateTime[configTypeBanner]; banners == nil || !ok || tm.Add(time.Minute*5).Before(time.Now()) {
+	}
 }

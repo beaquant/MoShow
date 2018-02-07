@@ -25,6 +25,7 @@ type FeedBack struct {
 type FeedBackReport struct {
 	FeedBackSuggestion
 	TgUserID uint64 `json:"target_user_id"`
+	Cate     string `json:"cate"`
 }
 
 //FeedBackSuggestion 意见反馈

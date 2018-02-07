@@ -39,6 +39,10 @@ func (u *User) Add() error {
 	return db.Create(u).Error
 }
 
+func (u *User) Read() error {
+	return db.First(u, u.ID).Error
+}
+
 //ReadFromPhoneNumber .
 func (u *User) ReadFromPhoneNumber() (err error) {
 	var ul []User

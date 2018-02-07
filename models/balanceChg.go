@@ -15,8 +15,8 @@ const (
 	BalanceChgTypeReceiveGift
 	//BalanceChgTypeInvitationRechargeIncome 邀请用户充值分成
 	BalanceChgTypeInvitationRechargeIncome
-	//BalanceChgTypeInvitationVideoIncome 邀请用户视频通话分成
-	BalanceChgTypeInvitationVideoIncome
+	//BalanceChgTypeInvitationIncome 邀请用户收益分成
+	BalanceChgTypeInvitationIncome
 )
 
 //BalanceChg .
@@ -70,6 +70,10 @@ func (b *BalanceChg) AddChg(trans *gorm.DB, chg ...*BalanceChg) error {
 	}
 
 	for index := range chg {
+		if chg[index] == nil {
+			break
+		}
+
 		if err := chg[index].Add(trans); err != nil {
 			return err
 		}
