@@ -103,7 +103,6 @@ func (c *WebsocketController) Create() {
 
 	client.Channel = channel
 	chatChannels[tk.ID] = channel
-	go channel.Run()
 	go client.Read()
 	go client.Write()
 }
@@ -145,6 +144,7 @@ func (c *WebsocketController) Join() {
 
 	go client.Read()
 	go client.Write()
+	go cn.Run()
 }
 
 //Reject .
@@ -181,19 +181,7 @@ func (c *WebsocketController) Reject() {
 
 //Run .
 func (c *ChatChannel) Run() {
-	defer func() {
-		close(c.Send)
-		close(c.Close)
-		delete(chatChannels, c.ID)
-
-		if c.Src != nil {
-			close(c.Src.Send)
-		}
-
-		if c.Dst != nil {
-			close(c.Dst.Send)
-		}
-	}()
+	defer c.CloseChannel()
 
 	reconnect := make(chan int, 1)
 
@@ -226,6 +214,21 @@ func (c *ChatChannel) Run() {
 				return
 			}
 		}
+	}
+}
+
+//CloseChannel 关闭频道,通道,websocket链接
+func (c *ChatChannel) CloseChannel() {
+	close(c.Send)
+	close(c.Close)
+	delete(chatChannels, c.ID)
+
+	if c.Src != nil {
+		close(c.Src.Send)
+	}
+
+	if c.Dst != nil {
+		close(c.Dst.Send)
 	}
 }
 

@@ -9,10 +9,10 @@ import (
 const (
 	//BalanceChgTypeRecharge 充值增加余额
 	BalanceChgTypeRecharge = iota
-	//BalanceChgTypeSendGift 赠送礼物消费
-	BalanceChgTypeSendGift
-	//BalanceChgTypeReceiveGift 收到礼物
-	BalanceChgTypeReceiveGift
+	//BalanceChgTypeGift 礼物消费
+	BalanceChgTypeGift
+	//BalanceChgTypeVideo 视频结算
+	BalanceChgTypeVideo
 	//BalanceChgTypeInvitationRechargeIncome 邀请用户充值分成
 	BalanceChgTypeInvitationRechargeIncome
 	//BalanceChgTypeInvitationIncome 邀请用户收益分成
@@ -32,13 +32,14 @@ type BalanceChg struct {
 
 //GiftChgInfo .
 type GiftChgInfo struct {
-	Count    uint64
-	GiftInfo *Gift
+	Count    uint64 `json:"count"`
+	GiftInfo *Gift  `json:"gift_info"`
 }
 
 //VideoChgInfo .
 type VideoChgInfo struct {
-	TimeLong uint64
+	TimeLong uint64 `json:"time_long"`
+	Price    uint64 `json:"price"`
 }
 
 //BalanceChgInfo .

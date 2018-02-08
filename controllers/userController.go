@@ -419,7 +419,7 @@ func sendGift(from, to *models.UserProfile, gift *models.GiftChgInfo) error {
 
 	chgInfo, _ := utils.JSONMarshalToString(gift)
 
-	amount := uint64(gift.GiftInfo.Price) * gift.Count //消费金额
+	amount := gift.GiftInfo.Price * gift.Count         //消费金额
 	income, inviteIncome, err := computeIncome(amount) //收益金额,分成金额
 	if err != nil {
 		return err
@@ -433,10 +433,48 @@ func sendGift(from, to *models.UserProfile, gift *models.GiftChgInfo) error {
 		return err
 	}
 
-	fuChg := &models.BalanceChg{UserID: from.ID, FromUserID: to.ID, ChgType: models.BalanceChgTypeSendGift, Amount: -int(amount)} //源用户扣款变动
+	fuChg := &models.BalanceChg{UserID: from.ID, FromUserID: to.ID, ChgType: models.BalanceChgTypeGift, Amount: -int(amount)} //源用户扣款变动
 	fuChg.ChgInfo = chgInfo
 
-	tuchg := &models.BalanceChg{UserID: to.ID, FromUserID: from.ID, ChgType: models.BalanceChgTypeReceiveGift, Amount: income} //目标用户余额增加 变动
+	tuchg := &models.BalanceChg{UserID: to.ID, FromUserID: from.ID, ChgType: models.BalanceChgTypeGift, Amount: income} //目标用户余额增加 变动
+	tuchg.ChgInfo = chgInfo
+
+	if err := fuChg.AddChg(trans, fuChg, tuchg, iuchg); err != nil {
+		models.TransactionRollback(trans)
+		return err
+	}
+
+	models.TransactionCommit(trans) //提交事务
+	return nil
+}
+
+//视频聊天结算
+func videoDone(from, to *models.UserProfile, video *models.VideoChgInfo) error {
+	u := &models.User{ID: to.ID}
+	if err := u.Read(); err != nil {
+		return errors.New("获取目标用户信息失败,id:" + strconv.FormatUint(to.ID, 10) + "\t" + err.Error())
+	}
+
+	chgInfo, _ := utils.JSONMarshalToString(video)
+
+	amount := video.Price * video.TimeLong             //消费金额
+	income, inviteIncome, err := computeIncome(amount) //收益金额,分成金额
+	if err != nil {
+		return err
+	}
+
+	iu, iuchg := genInvitationIncome(to.ID, u.InvitedBy, inviteIncome, chgInfo)
+
+	trans := models.TransactionGen() //开始事务
+	if err := from.AllocateFund(to, iu, amount, uint64(income), uint64(inviteIncome), trans); err != nil {
+		models.TransactionRollback(trans)
+		return err
+	}
+
+	fuChg := &models.BalanceChg{UserID: from.ID, FromUserID: to.ID, ChgType: models.BalanceChgTypeVideo, Amount: -int(amount)} //源用户扣款变动
+	fuChg.ChgInfo = chgInfo
+
+	tuchg := &models.BalanceChg{UserID: to.ID, FromUserID: from.ID, ChgType: models.BalanceChgTypeVideo, Amount: income} //目标用户余额增加 变动
 	tuchg.ChgInfo = chgInfo
 
 	if err := fuChg.AddChg(trans, fuChg, tuchg, iuchg); err != nil {

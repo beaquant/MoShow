@@ -29,7 +29,7 @@ type Config struct {
 type Gift struct {
 	GiftName string `json:"name"`
 	Code     string `json:"code"`
-	Price    uint   `json:"price"`
+	Price    uint64 `json:"price"`
 	ImgURL   string `json:"img"`
 }
 
