@@ -59,3 +59,9 @@ func TestJson(t *testing.T) {
 func TestContains(t *testing.T) {
 	t.Log(strings.Contains("blueMr/1.1.0 (iPhone; iOS 11.2.5; Scale/2.00)", "iPhone"))
 }
+
+func TestPointAddr(t *testing.T) {
+	a := &struct{}{}
+	b := &struct{}{}
+	t.Log(a == b)
+}

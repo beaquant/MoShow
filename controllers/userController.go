@@ -448,6 +448,23 @@ func sendGift(from, to *models.UserProfile, gift *models.GiftChgInfo) error {
 	return nil
 }
 
+func videoAllocateFund(from, to *models.UserProfile, price uint64) error {
+	income, inviteIncome, err := computeIncome(price) //收益金额,分成金额
+	if err != nil {
+		return err
+	}
+
+	trans := models.TransactionGen() //开始事务
+
+	if err := from.AllocateFund(to, nil, price, uint64(income), uint64(inviteIncome), trans); err != nil {
+		models.TransactionRollback(trans)
+		return err
+	}
+
+	models.TransactionCommit(trans) //提交事务
+	return nil
+}
+
 //视频聊天结算
 func videoDone(from, to *models.UserProfile, video *models.VideoChgInfo) error {
 	u := &models.User{ID: to.ID}
@@ -466,7 +483,9 @@ func videoDone(from, to *models.UserProfile, video *models.VideoChgInfo) error {
 	iu, iuchg := genInvitationIncome(to.ID, u.InvitedBy, inviteIncome, chgInfo)
 
 	trans := models.TransactionGen() //开始事务
-	if err := from.AllocateFund(to, iu, amount, uint64(income), uint64(inviteIncome), trans); err != nil {
+	//视频结算只生成变动，金额已在websocket中扣除
+
+	if err := iu.AddBalance(inviteIncome, trans); err != nil { //邀请人收益
 		models.TransactionRollback(trans)
 		return err
 	}

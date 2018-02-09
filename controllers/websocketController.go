@@ -3,6 +3,7 @@ package controllers
 import (
 	"MoShow/models"
 	"MoShow/utils"
+	"errors"
 	"strconv"
 	"time"
 
@@ -28,6 +29,7 @@ const (
 	wsMessageTypeText = iota
 	wsMessageTypeGift
 	wsMessageTypeSystem
+	wsMessageTypeClose
 )
 
 var (
@@ -42,13 +44,17 @@ type WebsocketController struct {
 
 //ChatChannel .
 type ChatChannel struct {
-	ID       uint64
-	DstID    uint64
-	Timelong uint64 //聊天时长
-	Src      *ChatClient
-	Dst      *ChatClient
-	Send     chan *WsMessage
-	Close    chan *ChatClient
+	ID        uint64
+	DstID     uint64
+	StartTime int64
+	Timelong  uint64 //聊天时长,单位:秒
+	StopTime  int64
+	Price     uint64
+	Src       *ChatClient
+	Dst       *ChatClient
+	Send      chan *WsMessage
+	Join      chan *ChatClient
+	Exit      chan *ChatClient
 }
 
 //ChatClient .
@@ -98,11 +104,15 @@ func (c *WebsocketController) Create() {
 		}
 	}
 
-	client := &ChatClient{User: up, Conn: conn, Send: make(chan *WsMessage)}
-	channel := &ChatChannel{Src: client, Send: make(chan *WsMessage), Close: make(chan *ChatClient), ID: tk.ID, DstID: parter}
+	channel := &ChatChannel{Join: make(chan *ChatClient), Send: make(chan *WsMessage), Exit: make(chan *ChatClient, 1), ID: tk.ID, DstID: parter}
+	go channel.Run()
 
+	client := &ChatClient{User: up, Conn: conn, Send: make(chan *WsMessage)}
 	client.Channel = channel
 	chatChannels[tk.ID] = channel
+
+	channel.Join <- client //加入频道
+
 	go client.Read()
 	go client.Write()
 }
@@ -121,7 +131,7 @@ func (c *WebsocketController) Join() {
 
 	tk := GetToken(c.Ctx)
 	cn, ok := chatChannels[channelid]
-	if !ok || cn.DstID != tk.ID || cn.Dst != nil {
+	if !ok || (cn.DstID != tk.ID && cn.ID != tk.ID) {
 		return
 	}
 
@@ -131,20 +141,33 @@ func (c *WebsocketController) Join() {
 		return
 	}
 
-	up := &models.UserProfile{ID: tk.ID}
-	if err := up.Read(); err != nil {
-		if err != nil {
-			beego.Error(err)
-			return
+	var client *ChatClient
+	if tk.ID == cn.ID {
+		cn.Src.Conn.Close()
+		cn.Src.Conn = conn
+		client = cn.Src
+	} else if tk.ID == cn.DstID {
+		if cn.Dst == nil {
+			up := &models.UserProfile{ID: tk.ID}
+			if err := up.Read(); err != nil {
+				if err != nil {
+					beego.Error(err)
+					return
+				}
+			}
+
+			client = &ChatClient{User: up, Channel: cn, Conn: conn, Send: make(chan *WsMessage)}
+
+			cn.Join <- client
+		} else {
+			cn.Dst.Conn.Close()
+			cn.Dst.Conn = conn
+			client = cn.Dst
 		}
 	}
 
-	client := &ChatClient{User: up, Channel: cn, Conn: conn, Send: make(chan *WsMessage)}
-	cn.Dst = client
-
 	go client.Read()
 	go client.Write()
-	go cn.Run()
 }
 
 //Reject .
@@ -169,7 +192,7 @@ func (c *WebsocketController) Reject() {
 		return
 	}
 
-	cn.Close <- nil
+	cn.Exit <- nil
 	dl := &models.Dial{FromUserID: channelid, ToUserID: tk.ID, Duration: 0, CreateAt: time.Now().Unix(), Success: false}
 	if err := dl.Add(); err != nil {
 		dto.Message = "websocket关闭成功，添加通话记录失败\t" + err.Error()
@@ -183,36 +206,69 @@ func (c *WebsocketController) Reject() {
 func (c *ChatChannel) Run() {
 	defer c.CloseChannel()
 
-	reconnect := make(chan int, 1)
-
 	for {
 		select {
+		case client := <-c.Join:
+			if client.User.ID == c.ID {
+				c.Src = client
+			} else if client.User.ID == c.DstID {
+				c.Dst = client
+
+				if c.StartTime == 0 { //开始计时
+					c.StartTime = time.Now().Unix()
+
+					ticker := time.NewTicker(60 * time.Second)
+					//扣费
+					if err := videoAllocateFund(c.Src.User, c.Dst.User, c.Price); err != nil {
+						beego.Error(err)
+						c.Exit <- nil
+					}
+
+					go func() {
+						defer ticker.Stop()
+
+						for {
+							if c.StopTime == 0 { //若频道未关闭,每隔60秒扣费一次
+								<-ticker.C
+								c.Timelong += 60
+								//扣费
+								if err := videoAllocateFund(c.Src.User, c.Dst.User, c.Price); err != nil { //扣费失败关闭聊天频道
+									beego.Error(err)
+									c.Exit <- nil
+								}
+							}
+						}
+					}()
+				}
+			}
 		case msg := <-c.Send:
 			beego.Info(utils.JSONMarshalToString(msg))
 
-			if msg.FromID == c.DstID {
+			if msg.MessageType == wsMessageTypeClose {
+				c.Exit <- nil
+				return
+			}
+
+			if msg.FromID == c.DstID && c.Src != nil {
 				c.Src.Send <- msg
 			} else if c.Dst != nil {
 				c.Dst.Send <- msg
 			}
-		case client := <-c.Close:
-			if client.User.ID == c.ID {
-				close(c.Src.Send)
-				c.Src = nil
-			} else {
-				close(c.Dst.Send)
-				c.Dst = nil
+		case <-c.Exit:
+			c.StopTime = time.Now().Unix()
+
+			//生成变动
+			if err := videoDone(c.Src.User, c.Dst.User, &models.VideoChgInfo{TimeLong: c.Timelong, Price: c.Price}); err != nil {
+				beego.Error(errors.New("视频结算生成余额变动错误\t" + err.Error()))
 			}
 
-			//等待重连,区分主动挂断和意外挂断
-			go func() {
-				time.Sleep(30 * time.Second)
-				reconnect <- 1
-			}()
-		case <-reconnect:
-			if c.Src == nil || c.Dst == nil {
-				return
+			//生成通话记录
+			dl := &models.Dial{FromUserID: c.ID, ToUserID: c.DstID, Duration: int(c.Timelong), CreateAt: c.StartTime, Success: true}
+			if err := dl.Add(); err != nil {
+				beego.Error(errors.New("通话记录生成失败\t" + err.Error()))
 			}
+
+			return
 		}
 	}
 }
@@ -220,7 +276,8 @@ func (c *ChatChannel) Run() {
 //CloseChannel 关闭频道,通道,websocket链接
 func (c *ChatChannel) CloseChannel() {
 	close(c.Send)
-	close(c.Close)
+	close(c.Exit)
+	close(c.Join)
 	delete(chatChannels, c.ID)
 
 	if c.Src != nil {
@@ -234,8 +291,16 @@ func (c *ChatChannel) CloseChannel() {
 
 func (c *ChatClient) Read() {
 	defer func() {
-		c.Conn.Close()
-		c.Channel.Close <- c
+		if c.Channel.StopTime == 0 { //聊天通道未结束
+			oldConnection := c.Conn
+			time.Sleep(30 * time.Second) //等待30秒,如过连接没有恢复,执行退出
+
+			if oldConnection != c.Conn { //重连成功
+				return
+			}
+		}
+
+		c.Channel.Exit <- c //发送退出信号,关闭通道后write方法会立即退出
 	}()
 	c.Conn.SetReadLimit(maxMessageSize)
 	c.Conn.SetReadDeadline(time.Now().Add(pongWait))
