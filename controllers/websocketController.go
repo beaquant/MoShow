@@ -193,7 +193,7 @@ func (c *WebsocketController) Reject() {
 	}
 
 	cn.Exit <- nil
-	dl := &models.Dial{FromUserID: channelid, ToUserID: tk.ID, Duration: 0, CreateAt: time.Now().Unix(), Success: false}
+	dl := &models.Dial{FromUserID: channelid, ToUserID: tk.ID, Duration: 0, CreateAt: time.Now().Unix(), Status: models.DialStatusFail}
 	if err := dl.Add(); err != nil {
 		dto.Message = "websocket关闭成功，添加通话记录失败\t" + err.Error()
 		return
@@ -263,7 +263,7 @@ func (c *ChatChannel) Run() {
 			}
 
 			//生成通话记录
-			dl := &models.Dial{FromUserID: c.ID, ToUserID: c.DstID, Duration: int(c.Timelong), CreateAt: c.StartTime, Success: true}
+			dl := &models.Dial{FromUserID: c.ID, ToUserID: c.DstID, Duration: int(c.Timelong), CreateAt: c.StartTime, Status: models.DialStatusSuccess}
 			if err := dl.Add(); err != nil {
 				beego.Error(errors.New("通话记录生成失败\t" + err.Error()))
 			}
