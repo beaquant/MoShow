@@ -10,10 +10,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/astaxie/beego/context"
-
 	"github.com/astaxie/beego"
+	"github.com/astaxie/beego/context"
+	"github.com/garyburd/redigo/redis"
 )
+
+//SmsCodeRedisKey 短信验证码的redis哈希表key
+const SmsCodeRedisKey = "code"
+
+//FrequencyRedisKey IP调用接口频率限制的redis哈希表key
+const FrequencyRedisKey = "frequency"
+
+//TokenRedisKey .
+const TokenRedisKey = "token"
 
 var (
 	key        = []byte(beego.AppConfig.String("aesKey"))
@@ -28,6 +37,12 @@ type Token struct {
 	ExpireTime time.Time
 }
 
+//FreqRecord 记录某个ip在某个时间段内的调用频率
+type FreqRecord struct {
+	ExpireTime time.Time
+	Count      uint64
+}
+
 func init() {
 	r, _ = regexp.Compile("/api/.+?/")
 	beego.InsertFilter("/*", beego.BeforeRouter, FilterUser)
@@ -35,6 +50,10 @@ func init() {
 
 //FilterUser .
 func FilterUser(ctx *context.Context) {
+	if !FrequencyCheck(ctx) {
+		return
+	}
+
 	if !strings.HasPrefix(ctx.Request.RequestURI, "/api") {
 		return
 	}
@@ -51,6 +70,38 @@ func FilterUser(ctx *context.Context) {
 	} else {
 		GetToken(ctx)
 	}
+}
+
+//FrequencyCheck 检查调用频率
+func FrequencyCheck(ctx *context.Context) bool {
+	con := utils.RedisPool.Get()
+	defer con.Close()
+
+	count := uint64(100) //每分钟100次
+	ip := ctx.Input.IP()
+	f := &FreqRecord{}
+	val, _ := redis.String(con.Do("HGET", FrequencyRedisKey, ip))
+	if len(val) > 0 {
+		if err := utils.JSONUnMarshal(val, f); err == nil && f.ExpireTime.After(time.Now()) {
+			if f.Count > count {
+				dto := &utils.ResultDTO{Sucess: false, Message: "您访问频率太快，请稍后再试", Code: utils.DtoStatusFrequencyError}
+				ctx.Output.JSON(dto, false, false)
+				return false
+			}
+			f.Count++
+		} else {
+			f.Count = 1
+			f.ExpireTime = time.Now().Add(time.Minute)
+		}
+	} else {
+		f.Count = 1
+		f.ExpireTime = time.Now().Add(time.Minute)
+	}
+
+	if str, err := utils.JSONMarshalToString(f); err == nil {
+		con.Do("HSET", FrequencyRedisKey, ip, str)
+	}
+	return true
 }
 
 //SetToken 在cookie里添加token字段

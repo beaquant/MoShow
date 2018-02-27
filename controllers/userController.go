@@ -409,6 +409,34 @@ func (c *UserController) Report() {
 	dto.Sucess = true
 }
 
+//ReduceAmount .
+// @Param   amount     	formData    int  	true       "扣款金额"
+// @router /cutamount [post]
+func (c *UserController) ReduceAmount() {
+	tk, dto := GetToken(c.Ctx), &utils.ResultDTO{}
+	defer dto.JSONResult(&c.Controller)
+	amount, err := c.GetInt("amount")
+	if amount > 0 {
+		amount = -amount
+	}
+
+	if err != nil || amount == 0 || amount < -100 { //小额扣款，不生成变动，但是数量不能超过100
+		beego.Error(err, c.Ctx.Request.UserAgent(), amount)
+		dto.Message = "扣款金额参数异常\t" + err.Error()
+		return
+	}
+
+	up := &models.UserProfile{ID: tk.ID}
+	if err := up.AddBalance(amount, nil); err != nil {
+		beego.Error(err, c.Ctx.Request.UserAgent())
+		dto.Message = "扣款过程发生错误\t" + err.Error()
+		dto.Code = utils.DtoStatusDatabaseError
+		return
+	}
+
+	dto.Sucess = true
+}
+
 //赠送礼物,流程包括 源用户扣款，目标用户增加余额，邀请人分成，以及分别添加余额变动记录,过程中任何一部出错，事务回滚并返回失败
 //赠送礼物不参与分成
 func sendGift(from, to *models.UserProfile, gift *models.GiftChgInfo) error {

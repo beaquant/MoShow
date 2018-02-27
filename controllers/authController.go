@@ -26,8 +26,8 @@ type codeInfo struct {
 }
 
 //SendCode .
-// @Title 登陆或者注册
-// @Description 登陆或者注册
+// @Title 发送验证码
+// @Description 发送验证码
 // @Param   phone     path    string  true        "接收验证码的手机号"
 // @Success 200 {object} utils.ResultDTO
 // @router /:phone/sendcode [post]
@@ -37,16 +37,19 @@ func (c *AuthController) SendCode() {
 	con := utils.RedisPool.Get()
 	defer con.Close()
 
-	ip := c.Ctx.Input.IP()
-	val, _ := redis.String(con.Do("GET", ip))
-
 	num := c.Ctx.Input.Param(":phone")
-	if len(val) > 0 {
-		if num == val {
-			dto.Message = "验证码已发送，请检查手机短信"
-		} else {
-			dto.Message = "验证码请求太频繁，请稍等"
-		}
+	codeEx, err := redis.String(con.Do("HGET", SmsCodeRedisKey, num))
+	if err != nil {
+		beego.Error(err)
+		dto.Message = err.Error()
+		return
+	}
+
+	ci := &codeInfo{}
+	utils.JSONUnMarshal(codeEx, ci)
+
+	if ci != nil && ci.Time.After(time.Now().Add(time.Minute*13)) {
+		dto.Message = "验证码请求太频繁，请稍等"
 		return
 	}
 
@@ -58,8 +61,7 @@ func (c *AuthController) SendCode() {
 	} else {
 		cs, _ := utils.JSONMarshalToString(&codeInfo{Code: code, Time: time.Now().Add(time.Minute * 15)})
 
-		con.Do("SET", ip, num, "EX", 60*2)
-		con.Do("HMSET", "code", num, cs)
+		con.Do("HSET", SmsCodeRedisKey, num, cs)
 		dto.Sucess = true
 		dto.Message = "验证码发送成功"
 	}
@@ -82,7 +84,7 @@ func (c *AuthController) Login() {
 	code := c.GetString("code")
 
 	if phoneNum != adminPhone && code != adminCode {
-		codeEx, err := redis.Strings(con.Do("HMGET", "code", phoneNum))
+		codeEx, err := redis.String(con.Do("HGET", SmsCodeRedisKey, phoneNum))
 		if err != nil {
 			beego.Error(err)
 			dto.Message = err.Error()
@@ -90,7 +92,7 @@ func (c *AuthController) Login() {
 		}
 
 		ci := &codeInfo{}
-		utils.JSONUnMarshal(codeEx[0], ci)
+		utils.JSONUnMarshal(codeEx, ci)
 
 		if ci.Time.Before(time.Now()) {
 			dto.Message = "验证码已过期,请重新获取"

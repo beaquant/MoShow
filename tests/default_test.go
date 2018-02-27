@@ -1,14 +1,18 @@
 package test
 
 import (
-	_ "github.com/jinzhu/gorm/dialects/mysql"
-
-	_ "MoShow/routers"
+	"MoShow/utils"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
 	"runtime"
 	"testing"
+
+	_ "github.com/jinzhu/gorm/dialects/mysql"
+
+	_ "MoShow/routers"
+
+	"MoShow/models"
 
 	"github.com/astaxie/beego"
 	. "github.com/smartystreets/goconvey/convey"
@@ -40,4 +44,10 @@ func TestGet(t *testing.T) {
 
 func TestByteString(t *testing.T) {
 
+}
+
+func TestJSONNil(t *testing.T) {
+	var u *models.User
+	utils.JSONUnMarshal("", u)
+	t.Log(u)
 }

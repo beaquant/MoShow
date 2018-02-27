@@ -9,6 +9,8 @@ const (
 	DtoStatusNormal int = iota
 	//DtoStatusAuthError 登录验证失败
 	DtoStatusAuthError
+	//DtoStatusFrequencyError 访问频率错误
+	DtoStatusFrequencyError
 	//DtoStatusDatabaseError 数据库操作错误
 	DtoStatusDatabaseError
 )
@@ -28,8 +30,8 @@ func (dto *ResultDTO) JSONResult(c *beego.Controller) {
 
 		if e, ok := err.(error); ok {
 			dto.Message = e.Error()
-			beego.Error(err)
 		}
+		beego.Error(err)
 	}
 
 	c.Data["json"] = dto

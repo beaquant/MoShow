@@ -73,24 +73,8 @@ func init() {
 
 	beego.GlobalControllerRouter["MoShow/controllers:TimelineController"] = append(beego.GlobalControllerRouter["MoShow/controllers:TimelineController"],
 		beego.ControllerComments{
-			Method: "Active",
-			Router: `/active`,
-			AllowHTTPMethods: []string{"get"},
-			MethodParams: param.Make(),
-			Params: nil})
-
-	beego.GlobalControllerRouter["MoShow/controllers:TimelineController"] = append(beego.GlobalControllerRouter["MoShow/controllers:TimelineController"],
-		beego.ControllerComments{
 			Method: "NewCommers",
-			Router: `/newcomer`,
-			AllowHTTPMethods: []string{"get"},
-			MethodParams: param.Make(),
-			Params: nil})
-
-	beego.GlobalControllerRouter["MoShow/controllers:TimelineController"] = append(beego.GlobalControllerRouter["MoShow/controllers:TimelineController"],
-		beego.ControllerComments{
-			Method: "Suggestion",
-			Router: `/suggestion`,
+			Router: `/users`,
 			AllowHTTPMethods: []string{"get"},
 			MethodParams: param.Make(),
 			Params: nil})
