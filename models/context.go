@@ -14,6 +14,8 @@ func init() {
 		panic(err)
 	}
 
+	db = db.Debug()
+
 	beego.Info("数据库连接初始化完成")
 }
 

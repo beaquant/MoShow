@@ -8,6 +8,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/silenceper/wechat/oauth"
 )
 
 func TestMsgSend(t *testing.T) {
@@ -64,4 +66,10 @@ func TestPointAddr(t *testing.T) {
 	a := &struct{}{}
 	b := &struct{}{}
 	t.Log(a == b)
+}
+
+func TestWechatLogin(t *testing.T) {
+	o := oauth.NewOauth(nil)
+	info, err := o.GetUserInfo("7_9P0JWuyX3Hq6iQfDzfZEISor6ErwjfKD7Hz61sErhK819sP7-j4oe30881axlSORBSDX_XU98K4oepcvgaZK05ZLCT1XCae5pts_tNk8LbU", "oaGlO1gTBzsnPbDWEyZgZdrq17Do")
+	t.Log(info, err)
 }
