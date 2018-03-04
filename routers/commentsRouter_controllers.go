@@ -71,6 +71,14 @@ func init() {
 			MethodParams: param.Make(),
 			Params: nil})
 
+	beego.GlobalControllerRouter["MoShow/controllers:OrderController"] = append(beego.GlobalControllerRouter["MoShow/controllers:OrderController"],
+		beego.ControllerComments{
+			Method: "Detail",
+			Router: `/:orderid/detail`,
+			AllowHTTPMethods: []string{"get"},
+			MethodParams: param.Make(),
+			Params: nil})
+
 	beego.GlobalControllerRouter["MoShow/controllers:TimelineController"] = append(beego.GlobalControllerRouter["MoShow/controllers:TimelineController"],
 		beego.ControllerComments{
 			Method: "NewCommers",
@@ -113,9 +121,33 @@ func init() {
 
 	beego.GlobalControllerRouter["MoShow/controllers:UserController"] = append(beego.GlobalControllerRouter["MoShow/controllers:UserController"],
 		beego.ControllerComments{
-			Method: "Create",
-			Router: `/create`,
-			AllowHTTPMethods: []string{"put"},
+			Method: "UnFollow",
+			Router: `/:userid/unfollow`,
+			AllowHTTPMethods: []string{"post"},
+			MethodParams: param.Make(),
+			Params: nil})
+
+	beego.GlobalControllerRouter["MoShow/controllers:UserController"] = append(beego.GlobalControllerRouter["MoShow/controllers:UserController"],
+		beego.ControllerComments{
+			Method: "ReduceAmount",
+			Router: `/cutamount`,
+			AllowHTTPMethods: []string{"post"},
+			MethodParams: param.Make(),
+			Params: nil})
+
+	beego.GlobalControllerRouter["MoShow/controllers:UserController"] = append(beego.GlobalControllerRouter["MoShow/controllers:UserController"],
+		beego.ControllerComments{
+			Method: "GetFollowedLst",
+			Router: `/fanslist`,
+			AllowHTTPMethods: []string{"get"},
+			MethodParams: param.Make(),
+			Params: nil})
+
+	beego.GlobalControllerRouter["MoShow/controllers:UserController"] = append(beego.GlobalControllerRouter["MoShow/controllers:UserController"],
+		beego.ControllerComments{
+			Method: "GetFollowingLst",
+			Router: `/sublist`,
+			AllowHTTPMethods: []string{"get"},
 			MethodParams: param.Make(),
 			Params: nil})
 

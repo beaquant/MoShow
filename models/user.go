@@ -1,5 +1,7 @@
 package models
 
+import "github.com/jinzhu/gorm"
+
 //账号类型
 const (
 	//AcctTypeTelephone 手机号账户
@@ -35,7 +37,10 @@ func (User) TableName() string {
 }
 
 //Add .
-func (u *User) Add() error {
+func (u *User) Add(trans *gorm.DB) error {
+	if trans != nil {
+		return trans.Create(u).Error
+	}
 	return db.Create(u).Error
 }
 

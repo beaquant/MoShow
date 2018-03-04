@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	netease "github.com/MrSong0607/netease-im"
 	"github.com/astaxie/beego"
 	"github.com/garyburd/redigo/redis"
 	"github.com/silenceper/wechat/oauth"
@@ -114,19 +115,43 @@ func (c *AuthController) Login() {
 
 	tk := &Token{ExpireTime: time.Now().AddDate(0, 0, 15)}
 	if u.ID == 0 { //该手机号未注册，执行注册逻辑
-		u.AcctStatus = models.AcctStatusNormal
+		trans := models.TransactionGen()
+
 		u.AcctType = models.AcctTypeTelephone
+		u.AcctStatus = models.AcctStatusNormal
 		u.CreatedAt = time.Now().Unix()
 
-		if err := u.Add(); err == nil {
-			tk.ID = u.ID
-			dto.Message = "注册成功"
-			dto.Sucess = true
-			SetToken(c.Ctx, tk)
-		} else {
-			beego.Error(err)
+		if err := u.Add(trans); err != nil {
+			beego.Error(err, c.Ctx.Request.UserAgent())
 			dto.Message = err.Error()
+			models.TransactionRollback(trans)
+			return
 		}
+
+		imUser := &netease.ImUser{ID: strconv.FormatUint(u.ID, 10)}
+		imtk, err := utils.ImCreateUser(imUser)
+		if err != nil {
+			beego.Error("创建IMUser失败", err, c.Ctx.Request.UserAgent())
+			dto.Message = "创建IMUser失败\t" + err.Error()
+			models.TransactionRollback(trans)
+			return
+		}
+
+		up := models.UserProfile{ID: u.ID}
+		up.ImToken = imtk.Token
+		if err := up.Add(trans); err != nil {
+			beego.Error(err, c.Ctx.Request.UserAgent())
+			dto.Message = err.Error()
+			models.TransactionRollback(trans)
+			return
+		}
+
+		models.TransactionCommit(trans)
+		tk.ID = u.ID
+		dto.Message = "注册成功"
+		dto.Data = up
+		dto.Sucess = true
+		SetToken(c.Ctx, tk)
 	} else {
 		if u.AcctStatus != models.AcctStatusDeleted {
 			tk.ID = u.ID
@@ -171,20 +196,43 @@ func (c *AuthController) WechatLogin() {
 
 	tk := &Token{}
 	if u.ID == 0 { //执行微信注册
+		trans := models.TransactionGen()
+
 		u.AcctType = models.AcctTypeWechat
 		u.AcctStatus = models.AcctStatusNormal
 		u.CreatedAt = time.Now().Unix()
-		u.Add()
 
-		if err := u.Add(); err == nil {
-			tk.ID = u.ID
-			dto.Message = "注册成功"
-			dto.Sucess = true
-			SetToken(c.Ctx, tk)
-		} else {
-			beego.Error(err)
+		if err := u.Add(trans); err != nil {
+			beego.Error(err, c.Ctx.Request.UserAgent())
 			dto.Message = err.Error()
+			models.TransactionRollback(trans)
+			return
 		}
+
+		imUser := &netease.ImUser{ID: strconv.FormatUint(u.ID, 10)}
+		imtk, err := utils.ImCreateUser(imUser)
+		if err != nil {
+			beego.Error("创建IMUser失败", err, c.Ctx.Request.UserAgent())
+			dto.Message = "创建IMUser失败\t" + err.Error()
+			models.TransactionRollback(trans)
+			return
+		}
+
+		up := models.UserProfile{ID: u.ID}
+		up.ImToken = imtk.Token
+		if err := up.Add(trans); err != nil {
+			beego.Error(err, c.Ctx.Request.UserAgent())
+			dto.Message = err.Error()
+			models.TransactionRollback(trans)
+			return
+		}
+
+		models.TransactionCommit(trans)
+		tk.ID = u.ID
+		dto.Message = "注册成功"
+		dto.Data = up
+		dto.Sucess = true
+		SetToken(c.Ctx, tk)
 	} else {
 		if u.AcctStatus != models.AcctStatusDeleted {
 			tk.ID = u.ID

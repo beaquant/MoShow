@@ -12,10 +12,12 @@ import (
 )
 
 const (
-	//GenderWoman .
-	GenderWoman = iota
+	//GenderDefault .
+	GenderDefault = iota
 	//GenderMan .
 	GenderMan
+	//GenderWoman .
+	GenderWoman
 )
 
 const (
@@ -51,6 +53,7 @@ type UserProfile struct {
 	UpdateAt    int64  `json:"update_at" gorm:"column:update_at" description:"更新时间"`
 	ImToken     string `json:"-" gorm:"column:im_token" description:"网易云信token"`
 	Followers   string `json:"-" gorm:"column:follower" description:"关注者"`
+	Following   string `json:"-" gorm:"column:following" description:"正在关注"`
 }
 
 //UserCoverInfo .
@@ -90,7 +93,10 @@ func (u *UserCoverInfo) ToString() string {
 }
 
 //Add .
-func (u *UserProfile) Add() error {
+func (u *UserProfile) Add(trans *gorm.DB) error {
+	if trans != nil {
+		return trans.Create(u).Error
+	}
 	return db.Create(u).Error
 }
 
@@ -107,9 +113,40 @@ func (u *UserProfile) Update(fields map[string]interface{}) error {
 	return db.Model(u).Updates(fields).Error
 }
 
-//AddFollow .
+//AddFollow 添加关注
 func (u *UserProfile) AddFollow(id uint64) error {
-	return db.Model(u).Updates(map[string]interface{}{"follower": `JSON_SET(COALESCE(follower,'{}'),'$."` + strconv.FormatUint(id, 10) + `"',null) `}).Error
+	idStr := strconv.FormatUint(id, 10)
+	trans := db.Begin()
+	if err := trans.Model(u).Updates(map[string]interface{}{"following": `JSON_SET(COALESCE(following,'{}'),'$."` + idStr + `"',null) `}).Error; err != nil {
+		trans.Rollback()
+		return err
+	}
+
+	if err := trans.Model(&UserProfile{ID: id}).Updates(map[string]interface{}{"follower": `JSON_SET(COALESCE(follower,'{}'),'$."` + idStr + `"',null) `}).Error; err != nil {
+		trans.Rollback()
+		return err
+	}
+
+	trans.Commit()
+	return nil
+}
+
+//UnFollow 取消关注
+func (u *UserProfile) UnFollow(id uint64) error {
+	idStr := strconv.FormatUint(id, 10)
+	trans := db.Begin()
+	if err := trans.Model(u).Updates(map[string]interface{}{"following": `JSON_REMOVE(follower,'$."` + idStr + `"')`}).Error; err != nil {
+		trans.Rollback()
+		return err
+	}
+
+	if err := trans.Model(&UserProfile{ID: id}).Updates(map[string]interface{}{"follower": `JSON_REMOVE(follower,'$."` + idStr + `"')`}).Error; err != nil {
+		trans.Rollback()
+		return err
+	}
+
+	trans.Commit()
+	return nil
 }
 
 //GetCover .
@@ -136,6 +173,28 @@ func (u *UserProfile) GetFollowers() map[string]interface{} {
 		return fl
 	}
 	return nil
+}
+
+//GetFollowing .
+func (u *UserProfile) GetFollowing() map[string]interface{} {
+	if len(u.Following) > 0 {
+		fl := make(map[string]interface{})
+		if err := utils.JSONUnMarshal(u.Following, fl); err != nil {
+			beego.Error(err)
+			return nil
+		}
+		return fl
+	}
+	return nil
+}
+
+//GetInviteList 获取我邀请的用户列表
+func (u *UserProfile) GetInviteList() (ul []UserProfile, err error) {
+	if err = db.Joins("left join users on user_profile.id = users.id").Where("invited_by = ?", u.ID).Find(&ul).Error; err != nil {
+		return nil, err
+	}
+
+	return
 }
 
 //AddBalance .

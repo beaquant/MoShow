@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	netease "github.com/MrSong0607/netease-im"
 	"github.com/astaxie/beego"
 )
 
@@ -26,102 +25,102 @@ type UserPorfileInfo struct {
 	Followed  bool                  `json:"followed" description:"是否已关注"`
 }
 
-//Create .
-// @Title 创建用户信息
-// @Description 创建用户信息
-// @Param   alias     		formData    string  	true        "昵称"
-// @Param   gender    		formData    int     	true        "性别，男(1),女(0)"
-// @Param   cover_pic	    formData    string  	false       "头像"
-// @Param   gallery		    formData    string  	false       "相册"
-// @Param   description     formData    string  	false       "签名"
-// @Param   birthday     	formData    time.Time  	false       "生日,格式:2006-01-02"
-// @Param   location     	formData    string  	false       "地区"
-// @Param   price	     	formData    uint	  	false       "价格"
-// @Success 200 {object} 	utils.ResultDTO
-// @router /create [put]
-func (c *UserController) Create() {
-	tk, dto := GetToken(c.Ctx), &utils.ResultDTO{}
-	defer dto.JSONResult(&c.Controller)
+// //Create .
+// // @Title 创建用户信息
+// // @Description 创建用户信息
+// // @Param   alias     		formData    string  	true        "昵称"
+// // @Param   gender    		formData    int     	true        "性别，男(1),女(0)"
+// // @Param   cover_pic	    formData    string  	false       "头像"
+// // @Param   gallery		    formData    string  	false       "相册"
+// // @Param   description     formData    string  	false       "签名"
+// // @Param   birthday     	formData    time.Time  	false       "生日,格式:2006-01-02"
+// // @Param   location     	formData    string  	false       "地区"
+// // @Param   price	     	formData    uint	  	false       "价格"
+// // @Success 200 {object} 	utils.ResultDTO
+// // @router /create [put]
+// func (c *UserController) Create() {
+// 	tk, dto := GetToken(c.Ctx), &utils.ResultDTO{}
+// 	defer dto.JSONResult(&c.Controller)
 
-	imUser := &netease.ImUser{ID: strconv.FormatUint(tk.ID, 10)}
-	up := &models.UserProfile{ID: tk.ID}
-	if alias := c.GetString("alias"); len(alias) > 0 {
-		up.Alias = alias
-		imUser.Name = alias
-	}
+// 	imUser := &netease.ImUser{ID: strconv.FormatUint(tk.ID, 10)}
+// 	up := &models.UserProfile{ID: tk.ID}
+// 	if alias := c.GetString("alias"); len(alias) > 0 {
+// 		up.Alias = alias
+// 		imUser.Name = alias
+// 	}
 
-	if gender := c.GetString("gender"); len(gender) > 0 {
-		if gd, err := strconv.Atoi(gender); err == nil && gd == 0 || gd == 1 {
-			up.Gender = gd
-		}
-	}
+// 	if gender := c.GetString("gender"); len(gender) > 0 {
+// 		if gd, err := strconv.Atoi(gender); err == nil && gd == 0 || gd == 1 {
+// 			up.Gender = gd
+// 		}
+// 	}
 
-	if description := c.GetString("description"); len(description) > 0 {
-		up.Description = description
-	}
+// 	if description := c.GetString("description"); len(description) > 0 {
+// 		up.Description = description
+// 	}
 
-	if birth := c.GetString("birthday"); len(birth) > 0 {
-		if dt, err := time.Parse("2006-01-02", birth); err == nil {
-			up.Birthday = dt.Unix()
-		} else {
-			beego.Error(err)
-			dto.Message = err.Error()
-			return
-		}
-	} else {
-		up.Birthday = time.Date(1993, 1, 1, 0, 0, 0, 0, nil).Unix()
-	}
+// 	if birth := c.GetString("birthday"); len(birth) > 0 {
+// 		if dt, err := time.Parse("2006-01-02", birth); err == nil {
+// 			up.Birthday = dt.Unix()
+// 		} else {
+// 			beego.Error(err)
+// 			dto.Message = err.Error()
+// 			return
+// 		}
+// 	} else {
+// 		up.Birthday = time.Date(1993, 1, 1, 0, 0, 0, 0, nil).Unix()
+// 	}
 
-	if location := c.GetString("location"); len(location) > 0 {
-		up.Location = location
-	}
+// 	if location := c.GetString("location"); len(location) > 0 {
+// 		up.Location = location
+// 	}
 
-	if price := c.GetString("price"); len(price) > 0 {
-		if pr, err := strconv.ParseUint(price, 10, 64); err == nil {
-			up.Price = pr
-		} else {
-			beego.Error(err)
-			dto.Message = err.Error()
-			return
-		}
-	}
+// 	if price := c.GetString("price"); len(price) > 0 {
+// 		if pr, err := strconv.ParseUint(price, 10, 64); err == nil {
+// 			up.Price = pr
+// 		} else {
+// 			beego.Error(err)
+// 			dto.Message = err.Error()
+// 			return
+// 		}
+// 	}
 
-	uci := &models.UserCoverInfo{}
-	if coverPic := c.GetString("cover_pic"); len(coverPic) > 0 {
-		uci.CoverPicture = &models.Picture{ImageURL: coverPic}
-		imUser.IconURL = coverPic
-	}
+// 	uci := &models.UserCoverInfo{}
+// 	if coverPic := c.GetString("cover_pic"); len(coverPic) > 0 {
+// 		uci.CoverPicture = &models.Picture{ImageURL: coverPic}
+// 		imUser.IconURL = coverPic
+// 	}
 
-	if gallery := c.GetStrings("gallery"); gallery != nil && len(gallery) > 0 {
-		for index := range gallery {
-			if _, err := url.ParseRequestURI(gallery[index]); err == nil {
-				uci.Gallery = append(uci.Gallery, models.Picture{ImageURL: gallery[index]})
-			}
-		}
-		if len(uci.Gallery) > 9 {
-			uci.Gallery = uci.Gallery[:9]
-		}
-	}
+// 	if gallery := c.GetStrings("gallery"); gallery != nil && len(gallery) > 0 {
+// 		for index := range gallery {
+// 			if _, err := url.ParseRequestURI(gallery[index]); err == nil {
+// 				uci.Gallery = append(uci.Gallery, models.Picture{ImageURL: gallery[index]})
+// 			}
+// 		}
+// 		if len(uci.Gallery) > 9 {
+// 			uci.Gallery = uci.Gallery[:9]
+// 		}
+// 	}
 
-	up.CoverPic = uci.ToString()
-	imtk, err := utils.ImCreateUser(imUser)
-	if err != nil {
-		dto.Message = err.Error()
-		return
-	}
-	up.ImToken = imtk.Token
+// 	up.CoverPic = uci.ToString()
+// 	imtk, err := utils.ImCreateUser(imUser)
+// 	if err != nil {
+// 		dto.Message = err.Error()
+// 		return
+// 	}
+// 	up.ImToken = imtk.Token
 
-	err = up.Add()
-	if err != nil {
-		beego.Error(err)
-		dto.Message = err.Error()
-		return
-	}
+// 	err = up.Add()
+// 	if err != nil {
+// 		beego.Error(err)
+// 		dto.Message = err.Error()
+// 		return
+// 	}
 
-	go checkPorn(up, uci) //鉴黄
+// 	go checkPorn(up, uci) //鉴黄
 
-	dto.Sucess = true
-}
+// 	dto.Sucess = true
+// }
 
 //Read .
 // @Title 读取用户
@@ -377,6 +376,87 @@ func (c *UserController) Follow() {
 	dto.Sucess = true
 }
 
+//UnFollow .
+// @Title 取消关注用户
+// @Description 取消关注用户
+// @Param   userid     		path    	string  	true        "用户id"
+// @Success 200 {object} utils.ResultDTO
+// @router /:userid/unfollow [post]
+func (c *UserController) UnFollow() {
+	tk, dto, uidStr := GetToken(c.Ctx), &utils.ResultDTO{}, strings.TrimSpace(c.Ctx.Input.Param(":userid"))
+	defer dto.JSONResult(&c.Controller)
+
+	toID, err := strconv.ParseUint(uidStr, 10, 64)
+	if err != nil {
+		beego.Error(err)
+		dto.Message = "用户的ID格式错误\t" + err.Error()
+		return
+	}
+
+	up := models.UserProfile{ID: toID}
+	if err := up.UnFollow(tk.ID); err != nil {
+		beego.Error(err)
+		dto.Message = "取消关注失败\t" + err.Error()
+		return
+	}
+
+	dto.Sucess = true
+}
+
+//GetFollowingLst .
+// @Title 获取关注列表
+// @Description 获取关注列表
+// @router /sublist [get]
+func (c *UserController) GetFollowingLst() {
+	tk, dto := GetToken(c.Ctx), &utils.ResultDTO{}
+	defer dto.JSONResult(&c.Controller)
+
+	up := &models.UserProfile{ID: tk.ID}
+	if err := up.Read(); err != nil {
+		beego.Error(err)
+		dto.Message = "获取用户信息失败\t" + err.Error()
+		return
+	}
+
+	mp := up.GetFollowing()
+	var flst []uint64
+	for k := range mp {
+		if uid, err := strconv.ParseUint(k, 10, 64); err == nil {
+			flst = append(flst, uid)
+		}
+	}
+
+	dto.Data = flst
+	dto.Sucess = true
+}
+
+//GetFollowedLst .
+// @Title 获取粉丝列表
+// @Description 获取粉丝列表
+// @router /fanslist [get]
+func (c *UserController) GetFollowedLst() {
+	tk, dto := GetToken(c.Ctx), &utils.ResultDTO{}
+	defer dto.JSONResult(&c.Controller)
+
+	up := &models.UserProfile{ID: tk.ID}
+	if err := up.Read(); err != nil {
+		beego.Error(err)
+		dto.Message = "获取用户信息失败\t" + err.Error()
+		return
+	}
+
+	mp := up.GetFollowers()
+	var flst []uint64
+	for k := range mp {
+		if uid, err := strconv.ParseUint(k, 10, 64); err == nil {
+			flst = append(flst, uid)
+		}
+	}
+
+	dto.Data = flst
+	dto.Sucess = true
+}
+
 //Report .
 // @Title 举报用户
 // @Description 举报用户
@@ -410,6 +490,8 @@ func (c *UserController) Report() {
 }
 
 //ReduceAmount .
+// @Title 扣款
+// @Description 扣款
 // @Param   amount     	formData    int  	true       "扣款金额"
 // @router /cutamount [post]
 func (c *UserController) ReduceAmount() {

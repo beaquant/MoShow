@@ -21,3 +21,8 @@ func (Order) TableName() string {
 func (o *Order) Add() error {
 	return db.Model(o).Create(o).Error
 }
+
+//Read .
+func (o *Order) Read() error {
+	return db.Where("id = ?", o.ID).Find(o).Error
+}
