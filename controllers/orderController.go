@@ -16,6 +16,8 @@ type OrderController struct {
 //Detail  订单详情
 // @Title 订单详情
 // @Description 订单详情
+// @Param   orderid     		path    	string  	true        "订单id"
+// @Success 200 {object} utils.ResultDTO
 // @router /:orderid/detail [get]
 func (c *OrderController) Detail() {
 	dto, oidStr := &utils.ResultDTO{}, c.Ctx.Input.Param(":userid")
