@@ -406,6 +406,7 @@ func (c *UserController) UnFollow() {
 //GetFollowingLst .
 // @Title 获取关注列表
 // @Description 获取关注列表
+// @Success 200 {object} utils.ResultDTO
 // @router /sublist [get]
 func (c *UserController) GetFollowingLst() {
 	tk, dto := GetToken(c.Ctx), &utils.ResultDTO{}
@@ -433,6 +434,7 @@ func (c *UserController) GetFollowingLst() {
 //GetFollowedLst .
 // @Title 获取粉丝列表
 // @Description 获取粉丝列表
+// @Success 200 {object} utils.ResultDTO
 // @router /fanslist [get]
 func (c *UserController) GetFollowedLst() {
 	tk, dto := GetToken(c.Ctx), &utils.ResultDTO{}
@@ -493,6 +495,7 @@ func (c *UserController) Report() {
 // @Title 扣款
 // @Description 扣款
 // @Param   amount     	formData    int  	true       "扣款金额"
+// @Success 200 {object} utils.ResultDTO
 // @router /cutamount [post]
 func (c *UserController) ReduceAmount() {
 	tk, dto := GetToken(c.Ctx), &utils.ResultDTO{}
