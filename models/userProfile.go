@@ -77,6 +77,11 @@ type Video struct {
 	Checked  bool   `json:"checked"`
 }
 
+//FollowInfo .
+type FollowInfo struct {
+	FollowTime int64
+}
+
 //TableName .
 func (UserProfile) TableName() string {
 	return "user_profile"
@@ -116,13 +121,15 @@ func (u *UserProfile) Update(fields map[string]interface{}) error {
 //AddFollow 添加关注
 func (u *UserProfile) AddFollow(id uint64) error {
 	idStr := strconv.FormatUint(id, 10)
+	fis, _ := utils.JSONMarshalToString(&FollowInfo{FollowTime: time.Now().Unix()})
+
 	trans := db.Begin()
-	if err := trans.Model(u).Updates(map[string]interface{}{"following": `JSON_SET(COALESCE(following,'{}'),'$."` + idStr + `"',null) `}).Error; err != nil {
+	if err := trans.Model(u).Updates(map[string]interface{}{"following": `JSON_SET(COALESCE(following,'{}'),'$."` + idStr + `"',CAST('` + fis + `' AS JSON))`}).Error; err != nil {
 		trans.Rollback()
 		return err
 	}
 
-	if err := trans.Model(&UserProfile{ID: id}).Updates(map[string]interface{}{"follower": `JSON_SET(COALESCE(follower,'{}'),'$."` + idStr + `"',null) `}).Error; err != nil {
+	if err := trans.Model(&UserProfile{ID: id}).Updates(map[string]interface{}{"follower": `JSON_SET(COALESCE(follower,'{}'),'$."` + idStr + `"',CAST('` + fis + `' AS JSON))) `}).Error; err != nil {
 		trans.Rollback()
 		return err
 	}
@@ -163,10 +170,10 @@ func (u *UserProfile) GetCover() *UserCoverInfo {
 }
 
 //GetFollowers .
-func (u *UserProfile) GetFollowers() map[string]interface{} {
+func (u *UserProfile) GetFollowers() map[uint64]FollowInfo {
 	if len(u.Followers) > 0 {
-		fl := make(map[string]interface{})
-		if err := utils.JSONUnMarshal(u.Followers, fl); err != nil {
+		fl := make(map[uint64]FollowInfo)
+		if err := utils.JSONUnMarshal(u.Followers, &fl); err != nil {
 			beego.Error(err)
 			return nil
 		}
@@ -176,10 +183,10 @@ func (u *UserProfile) GetFollowers() map[string]interface{} {
 }
 
 //GetFollowing .
-func (u *UserProfile) GetFollowing() map[string]interface{} {
+func (u *UserProfile) GetFollowing() map[uint64]FollowInfo {
 	if len(u.Following) > 0 {
-		fl := make(map[string]interface{})
-		if err := utils.JSONUnMarshal(u.Following, fl); err != nil {
+		fl := make(map[uint64]FollowInfo)
+		if err := utils.JSONUnMarshal(u.Following, &fl); err != nil {
 			beego.Error(err)
 			return nil
 		}

@@ -139,6 +139,7 @@ func (c *AuthController) Login() {
 
 		up := models.UserProfile{ID: u.ID}
 		up.ImToken = imtk.Token
+		up.Birthday = time.Date(1993, 1, 1, 0, 0, 0, 0, nil).Unix()
 		if err := up.Add(trans); err != nil {
 			beego.Error(err, c.Ctx.Request.UserAgent())
 			dto.Message = err.Error()
@@ -220,6 +221,7 @@ func (c *AuthController) WechatLogin() {
 
 		up := models.UserProfile{ID: u.ID}
 		up.ImToken = imtk.Token
+		up.Birthday = time.Date(1993, 1, 1, 0, 0, 0, 0, nil).Unix()
 		if err := up.Add(trans); err != nil {
 			beego.Error(err, c.Ctx.Request.UserAgent())
 			dto.Message = err.Error()

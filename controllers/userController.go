@@ -169,7 +169,7 @@ func (c *UserController) Read() {
 	}
 
 	if fl := up.GetFollowers(); fl != nil {
-		if _, ok := fl[strconv.FormatUint(tk.ID, 10)]; ok {
+		if _, ok := fl[tk.ID]; ok {
 			upi.Followed = true
 		}
 	}
@@ -422,9 +422,7 @@ func (c *UserController) GetFollowingLst() {
 	mp := up.GetFollowing()
 	var flst []uint64
 	for k := range mp {
-		if uid, err := strconv.ParseUint(k, 10, 64); err == nil {
-			flst = append(flst, uid)
-		}
+		flst = append(flst, k)
 	}
 
 	dto.Data = flst
@@ -450,9 +448,7 @@ func (c *UserController) GetFollowedLst() {
 	mp := up.GetFollowers()
 	var flst []uint64
 	for k := range mp {
-		if uid, err := strconv.ParseUint(k, 10, 64); err == nil {
-			flst = append(flst, uid)
-		}
+		flst = append(flst, k)
 	}
 
 	dto.Data = flst
