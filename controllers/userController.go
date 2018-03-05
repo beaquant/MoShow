@@ -25,103 +25,6 @@ type UserPorfileInfo struct {
 	Followed  bool                  `json:"followed" description:"是否已关注"`
 }
 
-// //Create .
-// // @Title 创建用户信息
-// // @Description 创建用户信息
-// // @Param   alias     		formData    string  	true        "昵称"
-// // @Param   gender    		formData    int     	true        "性别，男(1),女(0)"
-// // @Param   cover_pic	    formData    string  	false       "头像"
-// // @Param   gallery		    formData    string  	false       "相册"
-// // @Param   description     formData    string  	false       "签名"
-// // @Param   birthday     	formData    time.Time  	false       "生日,格式:2006-01-02"
-// // @Param   location     	formData    string  	false       "地区"
-// // @Param   price	     	formData    uint	  	false       "价格"
-// // @Success 200 {object} 	utils.ResultDTO
-// // @router /create [put]
-// func (c *UserController) Create() {
-// 	tk, dto := GetToken(c.Ctx), &utils.ResultDTO{}
-// 	defer dto.JSONResult(&c.Controller)
-
-// 	imUser := &netease.ImUser{ID: strconv.FormatUint(tk.ID, 10)}
-// 	up := &models.UserProfile{ID: tk.ID}
-// 	if alias := c.GetString("alias"); len(alias) > 0 {
-// 		up.Alias = alias
-// 		imUser.Name = alias
-// 	}
-
-// 	if gender := c.GetString("gender"); len(gender) > 0 {
-// 		if gd, err := strconv.Atoi(gender); err == nil && gd == 0 || gd == 1 {
-// 			up.Gender = gd
-// 		}
-// 	}
-
-// 	if description := c.GetString("description"); len(description) > 0 {
-// 		up.Description = description
-// 	}
-
-// 	if birth := c.GetString("birthday"); len(birth) > 0 {
-// 		if dt, err := time.Parse("2006-01-02", birth); err == nil {
-// 			up.Birthday = dt.Unix()
-// 		} else {
-// 			beego.Error(err)
-// 			dto.Message = err.Error()
-// 			return
-// 		}
-// 	} else {
-// 		up.Birthday = time.Date(1993, 1, 1, 0, 0, 0, 0, nil).Unix()
-// 	}
-
-// 	if location := c.GetString("location"); len(location) > 0 {
-// 		up.Location = location
-// 	}
-
-// 	if price := c.GetString("price"); len(price) > 0 {
-// 		if pr, err := strconv.ParseUint(price, 10, 64); err == nil {
-// 			up.Price = pr
-// 		} else {
-// 			beego.Error(err)
-// 			dto.Message = err.Error()
-// 			return
-// 		}
-// 	}
-
-// 	uci := &models.UserCoverInfo{}
-// 	if coverPic := c.GetString("cover_pic"); len(coverPic) > 0 {
-// 		uci.CoverPicture = &models.Picture{ImageURL: coverPic}
-// 		imUser.IconURL = coverPic
-// 	}
-
-// 	if gallery := c.GetStrings("gallery"); gallery != nil && len(gallery) > 0 {
-// 		for index := range gallery {
-// 			if _, err := url.ParseRequestURI(gallery[index]); err == nil {
-// 				uci.Gallery = append(uci.Gallery, models.Picture{ImageURL: gallery[index]})
-// 			}
-// 		}
-// 		if len(uci.Gallery) > 9 {
-// 			uci.Gallery = uci.Gallery[:9]
-// 		}
-// 	}
-
-// 	up.CoverPic = uci.ToString()
-// 	imtk, err := utils.ImCreateUser(imUser)
-// 	if err != nil {
-// 		dto.Message = err.Error()
-// 		return
-// 	}
-// 	up.ImToken = imtk.Token
-
-// 	err = up.Add()
-// 	if err != nil {
-// 		beego.Error(err)
-// 		dto.Message = err.Error()
-// 		return
-// 	}
-
-// 	go checkPorn(up, uci) //鉴黄
-
-// 	dto.Sucess = true
-// }
-
 //Read .
 // @Title 读取用户
 // @Description 读取用户
@@ -490,32 +393,72 @@ func (c *UserController) Report() {
 //ReduceAmount .
 // @Title 扣款
 // @Description 扣款
+// @Param   type     	formData    int  	true       "扣款类型(0:消息,1:视频)"
 // @Param   amount     	formData    int  	true       "扣款金额"
 // @Success 200 {object} utils.ResultDTO
 // @router /cutamount [post]
 func (c *UserController) ReduceAmount() {
 	tk, dto := GetToken(c.Ctx), &utils.ResultDTO{}
 	defer dto.JSONResult(&c.Controller)
-	amount, err := c.GetInt("amount")
-	if amount > 0 {
-		amount = -amount
+
+	amount, err := c.GetUint64("amount")
+	if err != nil {
+		beego.Error(err, c.Ctx.Request.UserAgent())
+		dto.Message = "参数错误\t" + err.Error()
+		dto.Code = utils.DtoStatusParamError
+		return
 	}
 
-	if err != nil || amount == 0 || amount < -100 { //小额扣款，不生成变动，但是数量不能超过100
-		beego.Error(err, c.Ctx.Request.UserAgent(), amount)
-		dto.Message = "扣款金额参数异常\t" + err.Error()
+	dType, err := c.GetInt("type")
+	if err != nil {
+		beego.Error(err, c.Ctx.Request.UserAgent())
+		dto.Message = "参数错误\t" + err.Error()
+		dto.Code = utils.DtoStatusParamError
 		return
 	}
 
 	up := &models.UserProfile{ID: tk.ID}
-	if err := up.AddBalance(amount, nil); err != nil {
+	if err := up.Read(); err != nil {
 		beego.Error(err, c.Ctx.Request.UserAgent())
-		dto.Message = "扣款过程发生错误\t" + err.Error()
+		dto.Message = "获取目标用户信息失败\t" + err.Error()
 		dto.Code = utils.DtoStatusDatabaseError
 		return
 	}
 
+	chg := &models.BalanceChg{UserID: tk.ID, Amount: -int(amount), ChgInfo: "{}"}
+	if dType == 0 {
+		chg.ChgType = models.BalanceChgTypeMessage
+	} else if dType == 1 {
+		chg.ChgType = models.BalanceChgTypeVideoView
+	} else {
+		beego.Error("未知扣款类型", c.Ctx.Request.UserAgent(), dType)
+		dto.Message = "未知扣款类型\t" + strconv.Itoa(dType)
+		dto.Code = utils.DtoStatusParamError
+		return
+	}
+
+	trans := models.TransactionGen() //开始事务
+	if err := up.DeFund(amount, trans); err != nil {
+		models.TransactionRollback(trans)
+		beego.Error(err, c.Ctx.Request.UserAgent())
+		dto.Message = "扣款失败\t" + err.Error()
+		dto.Code = utils.DtoStatusDatabaseError
+		return
+	}
+
+	if err := chg.Add(trans); err != nil {
+		models.TransactionRollback(trans)
+		beego.Error(err, c.Ctx.Request.UserAgent())
+		dto.Message = "添加余额变动失败\t" + err.Error()
+		dto.Code = utils.DtoStatusDatabaseError
+		return
+	}
+
+	models.TransactionCommit(trans)
+
+	dto.Message = "扣款成功"
 	dto.Sucess = true
+	dto.Data = chg
 }
 
 //赠送礼物,流程包括 源用户扣款，目标用户增加余额，邀请人分成，以及分别添加余额变动记录,过程中任何一部出错，事务回滚并返回失败

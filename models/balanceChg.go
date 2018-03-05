@@ -13,6 +13,10 @@ const (
 	BalanceChgTypeGift
 	//BalanceChgTypeVideo 视频结算
 	BalanceChgTypeVideo
+	//BalanceChgTypeMessage 消息扣费
+	BalanceChgTypeMessage
+	//BalanceChgTypeVideoView 查看视频
+	BalanceChgTypeVideoView
 	//BalanceChgTypeInvitationRechargeIncome 邀请用户充值分成
 	BalanceChgTypeInvitationRechargeIncome
 	//BalanceChgTypeInvitationIncome 邀请用户收益分成

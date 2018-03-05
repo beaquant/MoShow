@@ -139,7 +139,10 @@ func (c *AuthController) Login() {
 
 		up := models.UserProfile{ID: u.ID}
 		up.ImToken = imtk.Token
-		up.Birthday = time.Date(1993, 1, 1, 0, 0, 0, 0, nil).Unix()
+		up.Birthday = time.Date(1993, 1, 1, 0, 0, 0, 0, time.Local).Unix()
+		up.Following = "{}"
+		up.Followers = "{}"
+		up.CoverPic = "{}"
 		if err := up.Add(trans); err != nil {
 			beego.Error(err, c.Ctx.Request.UserAgent())
 			dto.Message = err.Error()
@@ -150,7 +153,7 @@ func (c *AuthController) Login() {
 		models.TransactionCommit(trans)
 		tk.ID = u.ID
 		dto.Message = "注册成功"
-		dto.Data = up
+		dto.Data = &UserPorfileInfo{UserProfile: up, ImTk: imtk.Token}
 		dto.Sucess = true
 		SetToken(c.Ctx, tk)
 	} else {
@@ -221,7 +224,10 @@ func (c *AuthController) WechatLogin() {
 
 		up := models.UserProfile{ID: u.ID}
 		up.ImToken = imtk.Token
-		up.Birthday = time.Date(1993, 1, 1, 0, 0, 0, 0, nil).Unix()
+		up.Birthday = time.Date(1993, 1, 1, 0, 0, 0, 0, time.Local).Unix()
+		up.Following = "{}"
+		up.Followers = "{}"
+		up.CoverPic = "{}"
 		if err := up.Add(trans); err != nil {
 			beego.Error(err, c.Ctx.Request.UserAgent())
 			dto.Message = err.Error()
@@ -232,7 +238,7 @@ func (c *AuthController) WechatLogin() {
 		models.TransactionCommit(trans)
 		tk.ID = u.ID
 		dto.Message = "注册成功"
-		dto.Data = up
+		dto.Data = &UserPorfileInfo{UserProfile: up, ImTk: imtk.Token}
 		dto.Sucess = true
 		SetToken(c.Ctx, tk)
 	} else {

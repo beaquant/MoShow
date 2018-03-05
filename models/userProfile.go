@@ -220,24 +220,32 @@ func (u *UserProfile) AddIncome(amount int, trans *gorm.DB) error {
 	return db.Model(u).Update("income", gorm.Expr("income + ?", amount)).Error
 }
 
-//AllocateFund 划款
-func (u *UserProfile) AllocateFund(to, invitation *UserProfile, amount, incomeAmount, inviteAmount uint64, trans *gorm.DB) error {
+//DeFund 用户扣款
+func (u *UserProfile) DeFund(amount uint64, trans *gorm.DB) error {
 	if u.Balance+u.Income < amount { //检查余额
 		return errors.New("用户余额不足，扣款(" + strconv.FormatUint(amount, 10) + ")失败,所有钱包余额合计:" + strconv.FormatUint(u.Balance+u.Income, 10))
 	}
 
 	if u.Balance < amount { //余额钱包金额足够扣款
 		if err := u.AddBalance(-int(amount), trans); err != nil { //扣款
-			return errors.New("发起人扣款失败\t" + err.Error())
+			return errors.New(strconv.FormatUint(u.ID, 10) + "扣款失败\t" + err.Error())
 		}
 	} else { //余额钱包金额不足以扣款
 		if err := u.AddBalance(-int(u.Balance), trans); err != nil { //从余额钱包扣款
-			return errors.New("发起人扣款失败\t" + err.Error())
+			return errors.New(strconv.FormatUint(u.ID, 10) + "扣款失败\t" + err.Error())
 		}
 
 		if err := u.AddIncome(-int(amount-u.Balance), trans); err != nil { //从收益钱包扣款
-			return errors.New("发起人扣款失败\t" + err.Error())
+			return errors.New(strconv.FormatUint(u.ID, 10) + "扣款失败\t" + err.Error())
 		}
+	}
+	return nil
+}
+
+//AllocateFund 划款
+func (u *UserProfile) AllocateFund(to, invitation *UserProfile, amount, incomeAmount, inviteAmount uint64, trans *gorm.DB) error {
+	if err := u.DeFund(amount, trans); err != nil {
+		return err
 	}
 
 	if err := to.AddIncome(int(incomeAmount), trans); err != nil { //增加余额
