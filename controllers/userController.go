@@ -361,7 +361,7 @@ func (c *UserController) GetFollowedLst() {
 //Report .
 // @Title 举报用户
 // @Description 举报用户
-// @Param   userid     		path    	string  	true        "用户id"
+// @Param   userid     		path    	int	  		true        "用户id"
 // @Param   content     	formData    string  	true       "反馈内容"
 // @Param   img		    	formData    string  	true       "图片"
 // @Success 200 {object} utils.ResultDTO
@@ -387,6 +387,28 @@ func (c *UserController) Report() {
 		return
 	}
 
+	dto.Sucess = true
+}
+
+//InviteList .
+// @Title 邀请列表
+// @Description 邀请列表
+// @Success 200 {object} utils.ResultDTO
+// @router /ivtlist [get]
+func (c *UserController) InviteList() {
+	tk, dto := GetToken(c.Ctx), &utils.ResultDTO{}
+	defer dto.JSONResult(&c.Controller)
+
+	up := &models.UserProfile{ID: tk.ID}
+	lst, err := up.GetInviteList()
+	if err != nil {
+		beego.Error("查询邀请列表失败", err, c.Ctx.Request.UserAgent())
+		dto.Message = "查询邀请列表失败\t" + err.Error()
+		dto.Code = utils.DtoStatusDatabaseError
+		return
+	}
+
+	dto.Data = lst
 	dto.Sucess = true
 }
 

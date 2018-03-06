@@ -32,3 +32,23 @@ func (c *ConfigController) GetGiftList() {
 	dto.Data = val
 	dto.Sucess = true
 }
+
+//GetCosSign .
+// @Title 获取对象存储签名
+// @Description 获取对象存储签名
+// @Success 200 {object} utils.ResultDTO
+// @router /cossign [get]
+func (c *ConfigController) GetCosSign() {
+	dto := utils.ResultDTO{}
+	defer dto.JSONResult(&c.Controller)
+
+	sign, err := utils.GetTecentImgSign()
+	if err != nil {
+		beego.Error("获取腾讯COS签名失败\t"+err.Error(), c.Ctx.Request.UserAgent())
+		dto.Message = "获取腾讯COS签名失败\t" + err.Error()
+		return
+	}
+
+	dto.Data = sign
+	dto.Sucess = true
+}

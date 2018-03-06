@@ -54,6 +54,11 @@ func init() {
 				&controllers.FeedbackController{},
 			),
 		),
+		beego.NSNamespace("/blchg",
+			beego.NSInclude(
+				&controllers.BalanceChgController{},
+			),
+		),
 	)
 	beego.AddNamespace(ns)
 }

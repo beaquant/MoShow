@@ -68,6 +68,11 @@ func (b *BalanceChg) Add(trans *gorm.DB) error {
 	return db.Create(b).Error
 }
 
+//Read .
+func (b *BalanceChg) Read() error {
+	return db.First(b, b.ID).Error
+}
+
 //AddChg .
 func (b *BalanceChg) AddChg(trans *gorm.DB, chg ...*BalanceChg) error {
 	if trans == nil {
@@ -84,4 +89,24 @@ func (b *BalanceChg) AddChg(trans *gorm.DB, chg ...*BalanceChg) error {
 		}
 	}
 	return nil
+}
+
+//GetIncomeChgs .
+func (b *BalanceChg) GetIncomeChgs(limit, skip int) ([]BalanceChg, error) {
+	if limit == 0 {
+		limit = 20
+	}
+
+	var lst []BalanceChg
+	return lst, db.Where("user_id = ?", b.UserID).Where("chg_type in (?)", []int{BalanceChgTypeInvitationRechargeIncome, BalanceChgTypeInvitationIncome}).Find(&lst).Order("time").Limit(limit).Offset(skip).Error
+}
+
+//GetPaymentChgs .
+func (b *BalanceChg) GetPaymentChgs(limit, skip int) ([]BalanceChg, error) {
+	if limit == 0 {
+		limit = 20
+	}
+
+	var lst []BalanceChg
+	return lst, db.Where("user_id = ?", b.UserID).Where("chg_type in (?)", []int{BalanceChgTypeGift, BalanceChgTypeVideo, BalanceChgTypeMessage, BalanceChgTypeVideoView}).Find(&lst).Order("time").Limit(limit).Offset(skip).Error
 }
