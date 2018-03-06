@@ -36,24 +36,48 @@ const (
 	UserStatusBlock
 )
 
+const (
+	//OnlineStatusOffline 离线
+	OnlineStatusOffline = iota
+	//OnlineStatusOnline 在线
+	OnlineStatusOnline
+	//OnlineStatusChating 正在聊天
+	OnlineStatusChating
+	//OnlineStatusBusy 勿扰
+	OnlineStatusBusy
+)
+
+const (
+	//AnchorAuthStatusUnAuth 未认证
+	AnchorAuthStatusUnAuth = iota
+	//AnchorAuthStatusChecking 审核中
+	AnchorAuthStatusChecking
+	//AnchorAuthStatusDone 审核完成
+	AnchorAuthStatusDone
+)
+
 //UserProfile .
 type UserProfile struct {
-	ID          uint64 `json:"user_id" gorm:"column:id;primary_key" description:"用户ID"`
-	Alias       string `json:"alias" gorm:"column:alias" description:"昵称"`
-	Gender      int    `json:"gender" gorm:"column:gender" description:"性别"`
-	CoverPic    string `json:"-" gorm:"column:cover" description:"形象展示,包括头像,相册,视频"`
-	Description string `json:"description" gorm:"column:description" description:"签名"`
-	Birthday    int64  `json:"birthday" gorm:"column:birthday" description:"生日"`
-	Location    string `json:"location" gorm:"column:location" description:"地区"`
-	Balance     uint64 `json:"balance" gorm:"column:balance" description:"余额"`
-	Income      uint64 `json:"income" gorm:"column:income" description:"收益"`
-	Price       uint64 `json:"price" gorm:"column:price" description:"视频价格/分"`
-	UserType    int    `json:"user_type" gorm:"column:user_type" description:"用户类型"`
-	UserStatus  int    `json:"-" gorm:"column:user_status" description:"用户状态"`
-	UpdateAt    int64  `json:"update_at" gorm:"column:update_at" description:"更新时间"`
-	ImToken     string `json:"-" gorm:"column:im_token" description:"网易云信token"`
-	Followers   string `json:"-" gorm:"column:follower" description:"关注者"`
-	Following   string `json:"-" gorm:"column:following" description:"正在关注"`
+	ID               uint64 `json:"user_id" gorm:"column:id;primary_key" description:"用户ID"`
+	Alias            string `json:"alias" gorm:"column:alias" description:"昵称"`
+	Gender           int    `json:"gender" gorm:"column:gender" description:"性别"`
+	CoverPic         string `json:"-" gorm:"column:cover" description:"形象展示,包括头像,相册,视频"`
+	Description      string `json:"description" gorm:"column:description" description:"签名"`
+	Birthday         int64  `json:"birthday" gorm:"column:birthday" description:"生日"`
+	Location         string `json:"location" gorm:"column:location" description:"地区"`
+	Balance          uint64 `json:"balance" gorm:"column:balance" description:"余额"`
+	Income           uint64 `json:"income" gorm:"column:income" description:"收益"`
+	Price            uint64 `json:"price" gorm:"column:price" description:"视频价格/分"`
+	UserType         int    `json:"user_type" gorm:"column:user_type" description:"用户类型"`
+	ImToken          string `json:"-" gorm:"column:im_token" description:"网易云信token"`
+	Followers        string `json:"-" gorm:"column:follower" description:"关注者"`
+	Following        string `json:"-" gorm:"column:following" description:"正在关注"`
+	UserStatus       int    `json:"-" gorm:"column:user_status" description:"用户状态"`
+	OnlineStatus     int    `json:"online_status" gorm:"column:online_status" description:"在线状态"`
+	AnchorAuthStatus int    `json:"anchor_auth_status" gorm:"column:anchor_auth_status" description:"主播认证状态"`
+	DialAccept       int    `json:"-" gorm:"column:dial_accept" description:"视频接通数"`
+	DialDeny         int    `json:"-" gorm:"column:dial_deny" description:"视频拒接数"`
+	UpdateAt         int64  `json:"update_at" gorm:"column:update_at" description:"更新时间"`
 }
 
 //UserCoverInfo .
