@@ -7,15 +7,17 @@ import (
 
 const (
 	configTypeGift       = "gifts"
+	configTypeProduct    = "products"
 	configTypeIncomeRate = "income_rate"
 	configTypeBanner     = "banner"
 )
 
 var (
-	giftList   map[string]Gift
-	updateTime = make(map[string]time.Time)
-	incomeRate *IncomeRate
-	banners    []Banner
+	giftList    map[string]Gift
+	productList map[string]Product
+	updateTime  = make(map[string]time.Time)
+	incomeRate  *IncomeRate
+	banners     []Banner
 )
 
 //Config .
@@ -31,6 +33,14 @@ type Gift struct {
 	Code     string `json:"code"`
 	Price    uint64 `json:"price"`
 	ImgURL   string `json:"img"`
+}
+
+//Product .
+type Product struct {
+	ProductName string  `json:"name"`
+	Code        string  `json:"code"`
+	Price       float64 `json:"price"`
+	CoinCount   uint64  `json:"coin_count"`
 }
 
 //IncomeRate 分成比例
@@ -76,6 +86,25 @@ func (c *Config) GetCommonGiftInfo() (map[string]Gift, error) {
 		return gf, nil
 	}
 	return giftList, nil
+}
+
+//GetProductInfo 获取商品列表
+func (c *Config) GetProductInfo() (map[string]Product, error) {
+	if tm, ok := updateTime[configTypeProduct]; productList == nil || !ok || tm.Add(time.Minute*5).Before(time.Now()) {
+		if err := db.Debug().Where("conf_key = ?", configTypeProduct).First(c).Error; err != nil {
+			return nil, err
+		}
+
+		pf := make(map[string]Product)
+		if err := utils.JSONUnMarshal(c.Value, &pf); err != nil {
+			return nil, err
+		}
+
+		productList = pf
+		updateTime[configTypeProduct] = time.Now()
+		return pf, nil
+	}
+	return productList, nil
 }
 
 //GetIncomeRate 获取分成比例

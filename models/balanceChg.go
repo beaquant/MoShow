@@ -21,6 +21,8 @@ const (
 	BalanceChgTypeInvitationRechargeIncome
 	//BalanceChgTypeInvitationIncome 邀请用户收益分成
 	BalanceChgTypeInvitationIncome
+	//BalanceChgTypeWithDraw 收益提现
+	BalanceChgTypeWithDraw
 )
 
 //BalanceChg .
@@ -98,7 +100,7 @@ func (b *BalanceChg) GetIncomeChgs(limit, skip int) ([]BalanceChg, error) {
 	}
 
 	var lst []BalanceChg
-	return lst, db.Where("user_id = ?", b.UserID).Where("chg_type in (?)", []int{BalanceChgTypeInvitationRechargeIncome, BalanceChgTypeInvitationIncome}).Find(&lst).Order("time").Limit(limit).Offset(skip).Error
+	return lst, db.Where("user_id = ?", b.UserID).Where("chg_type in (?)", []int{BalanceChgTypeInvitationRechargeIncome, BalanceChgTypeInvitationIncome}).Find(&lst).Order("time desc").Limit(limit).Offset(skip).Error
 }
 
 //GetPaymentChgs .
@@ -108,5 +110,5 @@ func (b *BalanceChg) GetPaymentChgs(limit, skip int) ([]BalanceChg, error) {
 	}
 
 	var lst []BalanceChg
-	return lst, db.Where("user_id = ?", b.UserID).Where("chg_type in (?)", []int{BalanceChgTypeGift, BalanceChgTypeVideo, BalanceChgTypeMessage, BalanceChgTypeVideoView}).Find(&lst).Order("time").Limit(limit).Offset(skip).Error
+	return lst, db.Where("user_id = ?", b.UserID).Where("chg_type in (?)", []int{BalanceChgTypeGift, BalanceChgTypeVideo, BalanceChgTypeMessage, BalanceChgTypeVideoView}).Find(&lst).Order("time desc").Limit(limit).Offset(skip).Error
 }

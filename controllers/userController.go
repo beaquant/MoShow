@@ -412,6 +412,46 @@ func (c *UserController) InviteList() {
 	dto.Sucess = true
 }
 
+//GuestList .
+// @Title 获取访客记录
+// @Description 获取访客记录
+// @Param   length     	formData    int  	true       "长度"
+// @Param   skip		formData    int  	true       "偏移量"
+// @Success 200 {object} utils.ResultDTO
+// @router /guests [get]
+func (c *UserController) GuestList() {
+	dto, tk := utils.ResultDTO{}, GetToken(c.Ctx)
+	defer dto.JSONResult(&c.Controller)
+
+	len, err := c.GetInt("length")
+	if err != nil {
+		beego.Error("参数解析错误:length\t"+err.Error(), c.Ctx.Request.UserAgent(), c.GetString("length"))
+		dto.Message = "参数解析错误:length\t" + err.Error()
+		dto.Code = utils.DtoStatusParamError
+		return
+	}
+
+	skip, err := c.GetInt("skip")
+	if err != nil {
+		beego.Error("参数解析错误:skip\t"+err.Error(), c.Ctx.Request.UserAgent(), c.GetString("skip"))
+		dto.Message = "参数解析错误:skip\t" + err.Error()
+		dto.Code = utils.DtoStatusParamError
+		return
+	}
+
+	lst, err := (&models.Guest{}).GetGuestList(tk.ID, len, skip)
+	if err != nil {
+		beego.Error("获取访客列表失败", err, c.Ctx.Request.UserAgent())
+		dto.Message = "获取访客列表失败\t" + err.Error()
+		dto.Code = utils.DtoStatusDatabaseError
+		return
+	}
+
+	dto.Data = lst
+	dto.Message = "查询成功"
+	return
+}
+
 //ReduceAmount .
 // @Title 扣款
 // @Description 扣款

@@ -39,10 +39,50 @@ func init() {
 			MethodParams: param.Make(),
 			Params: nil})
 
+	beego.GlobalControllerRouter["MoShow/controllers:BalanceChgController"] = append(beego.GlobalControllerRouter["MoShow/controllers:BalanceChgController"],
+		beego.ControllerComments{
+			Method: "GetChgDetail",
+			Router: `/:chgid`,
+			AllowHTTPMethods: []string{"get"},
+			MethodParams: param.Make(),
+			Params: nil})
+
+	beego.GlobalControllerRouter["MoShow/controllers:BalanceChgController"] = append(beego.GlobalControllerRouter["MoShow/controllers:BalanceChgController"],
+		beego.ControllerComments{
+			Method: "GetIncomeList",
+			Router: `/incomes`,
+			AllowHTTPMethods: []string{"get"},
+			MethodParams: param.Make(),
+			Params: nil})
+
+	beego.GlobalControllerRouter["MoShow/controllers:BalanceChgController"] = append(beego.GlobalControllerRouter["MoShow/controllers:BalanceChgController"],
+		beego.ControllerComments{
+			Method: "GetPaymentList",
+			Router: `/payments`,
+			AllowHTTPMethods: []string{"get"},
+			MethodParams: param.Make(),
+			Params: nil})
+
+	beego.GlobalControllerRouter["MoShow/controllers:ConfigController"] = append(beego.GlobalControllerRouter["MoShow/controllers:ConfigController"],
+		beego.ControllerComments{
+			Method: "GetCosSign",
+			Router: `/cossign`,
+			AllowHTTPMethods: []string{"get"},
+			MethodParams: param.Make(),
+			Params: nil})
+
 	beego.GlobalControllerRouter["MoShow/controllers:ConfigController"] = append(beego.GlobalControllerRouter["MoShow/controllers:ConfigController"],
 		beego.ControllerComments{
 			Method: "GetGiftList",
 			Router: `/gifts`,
+			AllowHTTPMethods: []string{"get"},
+			MethodParams: param.Make(),
+			Params: nil})
+
+	beego.GlobalControllerRouter["MoShow/controllers:ConfigController"] = append(beego.GlobalControllerRouter["MoShow/controllers:ConfigController"],
+		beego.ControllerComments{
+			Method: "GetProductList",
+			Router: `/products`,
 			AllowHTTPMethods: []string{"get"},
 			MethodParams: param.Make(),
 			Params: nil})
@@ -139,6 +179,14 @@ func init() {
 		beego.ControllerComments{
 			Method: "GetFollowedLst",
 			Router: `/fanslist`,
+			AllowHTTPMethods: []string{"get"},
+			MethodParams: param.Make(),
+			Params: nil})
+
+	beego.GlobalControllerRouter["MoShow/controllers:UserController"] = append(beego.GlobalControllerRouter["MoShow/controllers:UserController"],
+		beego.ControllerComments{
+			Method: "InviteList",
+			Router: `/ivtlist`,
 			AllowHTTPMethods: []string{"get"},
 			MethodParams: param.Make(),
 			Params: nil})

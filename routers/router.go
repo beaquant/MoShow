@@ -59,6 +59,11 @@ func init() {
 				&controllers.BalanceChgController{},
 			),
 		),
+		beego.NSNamespace("/dial",
+			beego.NSInclude(
+				&controllers.DialController{},
+			),
+		),
 	)
 	beego.AddNamespace(ns)
 }

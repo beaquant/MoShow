@@ -29,3 +29,23 @@ func (Dial) TableName() string {
 func (d *Dial) Add() error {
 	return db.Model(d).Create(d).Error
 }
+
+//Read .
+func (d *Dial) Read() error {
+	return db.Where("id = ?", d.ID).Find(d).Error
+}
+
+//GetDialList .
+func (d *Dial) GetDialList(uid uint64, limit, skip int) ([]Dial, error) {
+	if limit == 0 {
+		limit = 20
+	}
+
+	var lst []Dial
+	return lst, db.Where("from_user_id = ?", uid).Find(&lst).Order("create_at desc").Limit(limit).Offset(skip).Error
+}
+
+//Del .
+func (d *Dial) Del() error {
+	return db.Delete(d).Error
+}

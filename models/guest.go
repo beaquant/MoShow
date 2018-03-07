@@ -34,3 +34,13 @@ func (g *Guest) AddView(uid, guest uint64) error {
 	gst := &Guest{UserID: uid, GuestID: guest, Time: time.Now().Unix(), Count: 1}
 	return db.Model(g).Create(gst).Error
 }
+
+//GetGuestList 获取指定用户的访客列表
+func (g *Guest) GetGuestList(uid uint64, limit, skip int) ([]Guest, error) {
+	if limit == 0 {
+		limit = 20
+	}
+
+	var gg []Guest
+	return gg, db.Where("user_id = ?", uid).Find(&gg).Limit(limit).Offset(skip).Order("time desc").Error
+}

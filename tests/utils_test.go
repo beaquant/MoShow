@@ -54,7 +54,7 @@ func TestCompute(t *testing.T) {
 }
 
 func TestJson(t *testing.T) {
-	g := &models.Gift{}
+	g := &models.Product{}
 	t.Log(utils.JSONMarshalToString(g))
 }
 
