@@ -90,15 +90,11 @@ type UserCoverInfo struct {
 //Picture .
 type Picture struct {
 	ImageURL string `json:"image_url"`
-	Disable  bool   `json:"disable"`
-	Checked  bool   `json:"checked"`
 }
 
 //Video .
 type Video struct {
 	VideoURL string `json:"video_url"`
-	Disable  bool   `json:"disable"`
-	Checked  bool   `json:"checked"`
 }
 
 //FollowInfo .
@@ -137,9 +133,17 @@ func (u *UserProfile) Read() error {
 }
 
 //Update .
-func (u *UserProfile) Update(fields map[string]interface{}) error {
+func (u *UserProfile) Update(fields map[string]interface{}, trans *gorm.DB) error {
 	fields["update_at"] = time.Now().Unix()
+	if trans != nil {
+		return trans.Model(u).Updates(fields).Error
+	}
 	return db.Model(u).Updates(fields).Error
+}
+
+//UpdateOnlineStatus .
+func (u *UserProfile) UpdateOnlineStatus(status int) error {
+	return db.Model(u).Update("online_status", status).Error
 }
 
 //AddFollow 添加关注

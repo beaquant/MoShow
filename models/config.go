@@ -3,6 +3,8 @@ package models
 import (
 	"MoShow/utils"
 	"time"
+
+	"github.com/astaxie/beego"
 )
 
 const (
@@ -13,7 +15,7 @@ const (
 )
 
 var (
-	giftList    map[string]Gift
+	giftList    []Gift
 	productList map[string]Product
 	updateTime  = make(map[string]time.Time)
 	incomeRate  *IncomeRate
@@ -29,8 +31,8 @@ type Config struct {
 
 //Gift .
 type Gift struct {
+	ID       uint64 `json:"gift_id"`
 	GiftName string `json:"name"`
-	Code     string `json:"code"`
 	Price    uint64 `json:"price"`
 	ImgURL   string `json:"img"`
 }
@@ -70,15 +72,23 @@ func (Config) TableName() string {
 }
 
 //GetCommonGiftInfo 获取礼物列表
-func (c *Config) GetCommonGiftInfo() (map[string]Gift, error) {
+func (c *Config) GetCommonGiftInfo() ([]Gift, error) {
 	if tm, ok := updateTime[configTypeGift]; giftList == nil || !ok || tm.Add(time.Minute*5).Before(time.Now()) {
-		if err := db.Debug().Where("conf_key = ?", configTypeGift).First(c).Error; err != nil {
+		var cf []Config
+		if err := db.Debug().Where("conf_key = ?", configTypeGift).Find(&cf).Error; err != nil {
 			return nil, err
 		}
 
-		gf := make(map[string]Gift)
-		if err := utils.JSONUnMarshal(c.Value, &gf); err != nil {
-			return nil, err
+		var gf []Gift
+		for index := range cf {
+			var g Gift
+			if err := utils.JSONUnMarshal(cf[index].Value, &g); err != nil {
+				beego.Error("礼物信息解析失败", err)
+				continue
+			}
+
+			g.ID = cf[index].ID
+			gf = append(gf, g)
 		}
 
 		giftList = gf

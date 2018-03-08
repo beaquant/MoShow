@@ -172,7 +172,7 @@ func (c *UserController) Update() {
 		param["cover_pic"] = cv.ToString()
 	}
 
-	if err := up.Update(param); err != nil {
+	if err := up.Update(param, nil); err != nil {
 		beego.Error(err)
 		dto.Message = err.Error()
 		return
@@ -186,7 +186,7 @@ func (c *UserController) Update() {
 // @Title 赠送礼物
 // @Description 赠送礼物
 // @Param   userid     path    		string  	true        "赠送礼物的目标"
-// @Param   giftkey	   formData     string     	true		 "礼物id"
+// @Param   gifid	   formData     string     	true		 "礼物id"
 // @Param   count	   formData     uint     	true		 "数量"
 // @Success 200 {object} utils.ResultDTO
 // @router /:userid/sendgift [post]
@@ -194,9 +194,9 @@ func (c *UserController) SendGift() {
 	tk, dto, uidStr := GetToken(c.Ctx), &utils.ResultDTO{}, strings.TrimSpace(c.Ctx.Input.Param(":userid"))
 	defer dto.JSONResult(&c.Controller)
 
-	giftkey := c.GetString("giftkey")
-	if len(giftkey) == 0 {
-		dto.Message = "必须指定礼物key"
+	giftkey, err := c.GetUint64("gifid")
+	if err != nil {
+		dto.Message = "必须指定礼物id"
 		return
 	}
 
@@ -235,14 +235,20 @@ func (c *UserController) SendGift() {
 		return
 	}
 
-	gift, ok := gft[giftkey]
-	if !ok {
-		beego.Error("未能找到指定的礼物" + giftkey)
-		dto.Message = "未能找到指定的礼物\t" + giftkey
+	var gift *models.Gift
+	for index := range gft {
+		if gft[index].ID == giftkey {
+			gift = &gft[index]
+		}
+	}
+
+	if gift == nil {
+		beego.Error("未能找到指定的礼物" + strconv.FormatUint(giftkey, 10))
+		dto.Message = "未能找到指定的礼物\t" + strconv.FormatUint(giftkey, 10)
 		return
 	}
 
-	giftChg := &models.GiftChgInfo{Count: giftCount, GiftInfo: &gift}
+	giftChg := &models.GiftChgInfo{Count: giftCount, GiftInfo: gift}
 	if err := sendGift(fromUserProfile, toUserProfile, giftChg); err != nil {
 		beego.Error(err)
 		dto.Message = "支付过程出现异常\t" + err.Error()
@@ -409,6 +415,82 @@ func (c *UserController) InviteList() {
 	}
 
 	dto.Data = lst
+	dto.Sucess = true
+}
+
+//SetBusyStatus .
+// @Title 设置勿扰状态
+// @Description 设置勿扰状态
+// @Success 200 {object} utils.ResultDTO
+// @router /setbusy [post]
+func (c *UserController) SetBusyStatus() {
+	tk, dto := GetToken(c.Ctx), &utils.ResultDTO{}
+	defer dto.JSONResult(&c.Controller)
+
+	if err := (&models.UserProfile{ID: tk.ID}).UpdateOnlineStatus(models.OnlineStatusBusy); err != nil {
+		beego.Error("更新在线状态失败", err, c.Ctx.Request.UserAgent())
+		dto.Message = "更新在线状态失败\t" + err.Error()
+		return
+	}
+
+	dto.Sucess = true
+	dto.Message = "设置成功"
+}
+
+//AnchorApply .
+// @Title 申请主播
+// @Description 申请主播
+// @Param   pic     	formData    string  	true       "形象照"
+// @Param   video		formData    string  	true       "视频"
+// @Success 200 {object} utils.ResultDTO
+// @router /acapply [post]
+func (c *UserController) AnchorApply() {
+	tk, dto := GetToken(c.Ctx), &utils.ResultDTO{}
+	defer dto.JSONResult(&c.Controller)
+
+	pic := c.GetString("pic")
+	video := c.GetString("video")
+
+	if len(pic) == 0 || len(video) == 0 {
+		beego.Error("申请主播，参数错误", pic, video, c.Ctx.Request.UserAgent(), c.Ctx.Request.URL)
+		dto.Message = "认证主播需要上传形象照和视频"
+		dto.Code = utils.DtoStatusParamError
+		return
+	}
+
+	trans := models.TransactionGen()
+	if err := (&models.UserProfile{ID: tk.ID}).Update(map[string]interface{}{"anchor_auth_status": models.AnchorAuthStatusChecking}, trans); err != nil {
+		models.TransactionRollback(trans)
+		beego.Error("更新主播申请状态失败", err, c.Ctx.Request.UserAgent())
+		dto.Message = "更新主播申请状态失败\t" + err.Error()
+		dto.Code = utils.DtoStatusDatabaseError
+		return
+	}
+
+	pc := &models.ProfileChg{ID: tk.ID}
+	if err := pc.ReadOrCreate(trans); err != nil {
+		models.TransactionRollback(trans)
+		beego.Error("获取资料变动失败", err, c.Ctx.Request.UserAgent())
+		dto.Message = "获取资料变动失败\t" + err.Error()
+		dto.Code = utils.DtoStatusDatabaseError
+		return
+	}
+
+	field := map[string]interface{}{"cover_pic": pic}
+	field["video"] = video
+	field["cover_pic_check"] = models.CheckStatusUncheck
+	field["video_check"] = models.CheckStatusUncheck
+
+	if err := pc.Update(field, trans); err != nil {
+		models.TransactionRollback(trans)
+		beego.Error("更新资料变动失败", err, c.Ctx.Request.UserAgent())
+		dto.Message = "更新资料变动失败\t" + err.Error()
+		dto.Code = utils.DtoStatusDatabaseError
+		return
+	}
+
+	models.TransactionCommit(trans)
+	dto.Message = "申请成功，请等待审核"
 	dto.Sucess = true
 }
 

@@ -143,6 +143,7 @@ func (c *AuthController) Login() {
 		up.Following = "{}"
 		up.Followers = "{}"
 		up.CoverPic = "{}"
+		up.OnlineStatus = models.OnlineStatusOnline
 		if err := up.Add(trans); err != nil {
 			beego.Error(err, c.Ctx.Request.UserAgent())
 			dto.Message = err.Error()
@@ -158,6 +159,12 @@ func (c *AuthController) Login() {
 		SetToken(c.Ctx, tk)
 	} else {
 		if u.AcctStatus != models.AcctStatusDeleted {
+			if err := (&models.UserProfile{ID: u.ID}).UpdateOnlineStatus(models.OnlineStatusOnline); err != nil {
+				beego.Error("更新在线状态失败", err, c.Ctx.Request.UserAgent())
+				dto.Message = "更新在线状态失败\t" + err.Error()
+				return
+			}
+
 			tk.ID = u.ID
 			dto.Sucess = true
 			dto.Message = "登陆成功"
@@ -198,7 +205,7 @@ func (c *AuthController) WechatLogin() {
 		return
 	}
 
-	tk := &Token{}
+	tk := &Token{ExpireTime: time.Now().AddDate(0, 0, 15)}
 	if u.ID == 0 { //执行微信注册
 		trans := models.TransactionGen()
 
@@ -228,6 +235,7 @@ func (c *AuthController) WechatLogin() {
 		up.Following = "{}"
 		up.Followers = "{}"
 		up.CoverPic = "{}"
+		up.OnlineStatus = models.OnlineStatusOnline
 		if err := up.Add(trans); err != nil {
 			beego.Error(err, c.Ctx.Request.UserAgent())
 			dto.Message = err.Error()
@@ -243,6 +251,12 @@ func (c *AuthController) WechatLogin() {
 		SetToken(c.Ctx, tk)
 	} else {
 		if u.AcctStatus != models.AcctStatusDeleted {
+			if err := (&models.UserProfile{ID: u.ID}).UpdateOnlineStatus(models.OnlineStatusOnline); err != nil {
+				beego.Error("更新在线状态失败", err, c.Ctx.Request.UserAgent())
+				dto.Message = "更新在线状态失败\t" + err.Error()
+				return
+			}
+
 			tk.ID = u.ID
 			dto.Sucess = true
 			dto.Message = "登陆成功"
@@ -259,7 +273,15 @@ func (c *AuthController) WechatLogin() {
 // @Success 200 {object} utils.ResultDTO
 // @router /logout [get]
 func (c *AuthController) Logout() {
+	dto, tk := utils.ResultDTO{Message: "退出登陆成功"}, GetToken(c.Ctx)
+	defer dto.JSONResult(&c.Controller)
+
+	if err := (&models.UserProfile{ID: tk.ID}).UpdateOnlineStatus(models.OnlineStatusOffline); err != nil {
+		beego.Error("更新在线状态失败", err, c.Ctx.Request.UserAgent())
+		dto.Message = "更新在线状态失败\t" + err.Error()
+		return
+	}
+
 	ClearToken(&c.Controller)
-	dto := utils.ResultDTO{Sucess: false, Message: "退出登陆成功"}
-	dto.JSONResult(&c.Controller)
+	dto.Sucess = true
 }

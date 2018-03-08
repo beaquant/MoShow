@@ -79,10 +79,18 @@ func init() {
 			MethodParams: param.Make(),
 			Params: nil})
 
-	beego.GlobalControllerRouter["MoShow/controllers:ConfigController"] = append(beego.GlobalControllerRouter["MoShow/controllers:ConfigController"],
+	beego.GlobalControllerRouter["MoShow/controllers:DialController"] = append(beego.GlobalControllerRouter["MoShow/controllers:DialController"],
 		beego.ControllerComments{
-			Method: "GetProductList",
-			Router: `/products`,
+			Method: "Del",
+			Router: `/:dialid/list`,
+			AllowHTTPMethods: []string{"delete"},
+			MethodParams: param.Make(),
+			Params: nil})
+
+	beego.GlobalControllerRouter["MoShow/controllers:DialController"] = append(beego.GlobalControllerRouter["MoShow/controllers:DialController"],
+		beego.ControllerComments{
+			Method: "DialList",
+			Router: `/list`,
 			AllowHTTPMethods: []string{"get"},
 			MethodParams: param.Make(),
 			Params: nil})
@@ -169,6 +177,14 @@ func init() {
 
 	beego.GlobalControllerRouter["MoShow/controllers:UserController"] = append(beego.GlobalControllerRouter["MoShow/controllers:UserController"],
 		beego.ControllerComments{
+			Method: "AnchorApply",
+			Router: `/acapply`,
+			AllowHTTPMethods: []string{"post"},
+			MethodParams: param.Make(),
+			Params: nil})
+
+	beego.GlobalControllerRouter["MoShow/controllers:UserController"] = append(beego.GlobalControllerRouter["MoShow/controllers:UserController"],
+		beego.ControllerComments{
 			Method: "ReduceAmount",
 			Router: `/cutamount`,
 			AllowHTTPMethods: []string{"post"},
@@ -185,9 +201,25 @@ func init() {
 
 	beego.GlobalControllerRouter["MoShow/controllers:UserController"] = append(beego.GlobalControllerRouter["MoShow/controllers:UserController"],
 		beego.ControllerComments{
+			Method: "GuestList",
+			Router: `/guests`,
+			AllowHTTPMethods: []string{"get"},
+			MethodParams: param.Make(),
+			Params: nil})
+
+	beego.GlobalControllerRouter["MoShow/controllers:UserController"] = append(beego.GlobalControllerRouter["MoShow/controllers:UserController"],
+		beego.ControllerComments{
 			Method: "InviteList",
 			Router: `/ivtlist`,
 			AllowHTTPMethods: []string{"get"},
+			MethodParams: param.Make(),
+			Params: nil})
+
+	beego.GlobalControllerRouter["MoShow/controllers:UserController"] = append(beego.GlobalControllerRouter["MoShow/controllers:UserController"],
+		beego.ControllerComments{
+			Method: "SetBusyStatus",
+			Router: `/setbusy`,
+			AllowHTTPMethods: []string{"post"},
 			MethodParams: param.Make(),
 			Params: nil})
 

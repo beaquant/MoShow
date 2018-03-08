@@ -51,7 +51,7 @@ func (c *ImController) CreateImUser() {
 
 	up := &models.UserProfile{ID: tk.ID}
 	fields := map[string]interface{}{"im_token": imtk.Token}
-	if err := up.Update(fields); err != nil {
+	if err := up.Update(fields, nil); err != nil {
 		dto.Message = err.Error()
 		return
 	}
@@ -79,7 +79,7 @@ func (c *ImController) RefreshToken() {
 
 	up := &models.UserProfile{ID: tk.ID}
 	fields := map[string]interface{}{"im_token": imtk.Token}
-	if err := up.Update(fields); err != nil {
+	if err := up.Update(fields, nil); err != nil {
 		dto.Message = err.Error()
 		return
 	}

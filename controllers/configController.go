@@ -33,26 +33,26 @@ func (c *ConfigController) GetGiftList() {
 	dto.Sucess = true
 }
 
-//GetProductList .
-// @Title 获取商品列表
-// @Description 获取商品列表
-// @Success 200 {object} utils.ResultDTO
-// @router /products [get]
-func (c *ConfigController) GetProductList() {
-	dto := utils.ResultDTO{}
-	defer dto.JSONResult(&c.Controller)
+// //GetProductList .
+// // @Title 获取商品列表
+// // @Description 获取商品列表
+// // @Success 200 {object} utils.ResultDTO
+// // @router /products [get]
+// func (c *ConfigController) GetProductList() {
+// 	dto := utils.ResultDTO{}
+// 	defer dto.JSONResult(&c.Controller)
 
-	conf := &models.Config{}
-	val, err := conf.GetProductInfo()
-	if err != nil {
-		dto.Message = "获取商品列表失败\t" + err.Error()
-		beego.Error(err, c.Ctx.Request.UserAgent())
-		return
-	}
+// 	conf := &models.Config{}
+// 	val, err := conf.GetProductInfo()
+// 	if err != nil {
+// 		dto.Message = "获取商品列表失败\t" + err.Error()
+// 		beego.Error(err, c.Ctx.Request.UserAgent())
+// 		return
+// 	}
 
-	dto.Data = val
-	dto.Sucess = true
-}
+// 	dto.Data = val
+// 	dto.Sucess = true
+// }
 
 //GetCosSign .
 // @Title 获取对象存储签名
