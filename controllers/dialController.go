@@ -58,7 +58,7 @@ func (c *DialController) DialList() {
 // @Description 删除通话记录
 // @Param   dialid     	path    int  	true       "通话记录id"
 // @Success 200 {object} utils.ResultDTO
-// @router /:dialid/list [delete]
+// @router /:dialid [delete]
 func (c *DialController) Del() {
 	dto, tk := utils.ResultDTO{}, GetToken(c.Ctx)
 	defer dto.JSONResult(&c.Controller)

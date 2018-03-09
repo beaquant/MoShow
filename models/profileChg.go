@@ -29,6 +29,11 @@ type ProfileChg struct {
 	UpdateAt               int64  `json:"update_at" gorm:"column:update_at"`
 }
 
+//TableName .
+func (ProfileChg) TableName() string {
+	return "profile_chg"
+}
+
 //ReadOrCreate .
 func (p *ProfileChg) ReadOrCreate(trans *gorm.DB) (err error) {
 	var pl []ProfileChg

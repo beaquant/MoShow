@@ -419,15 +419,30 @@ func (c *UserController) InviteList() {
 }
 
 //SetBusyStatus .
-// @Title 设置勿扰状态
-// @Description 设置勿扰状态
+// @Title 设置状态
+// @Description 设置状态
+// @Param   status     	formData    int  	true       "0(勿扰),1(空闲)"
 // @Success 200 {object} utils.ResultDTO
 // @router /setbusy [post]
 func (c *UserController) SetBusyStatus() {
 	tk, dto := GetToken(c.Ctx), &utils.ResultDTO{}
 	defer dto.JSONResult(&c.Controller)
 
-	if err := (&models.UserProfile{ID: tk.ID}).UpdateOnlineStatus(models.OnlineStatusBusy); err != nil {
+	status, err := c.GetInt("status")
+	if err != nil {
+		beego.Error("设置状态参数错误", c.Ctx.Request.UserAgent(), c.GetString("status"), err)
+		dto.Message = "设置状态参数错误" + err.Error()
+		dto.Code = utils.DtoStatusParamError
+		return
+	}
+
+	if status == 0 {
+		status = models.OnlineStatusBusy
+	} else if status == 1 {
+		status = models.OnlineStatusOnline
+	}
+
+	if err := (&models.UserProfile{ID: tk.ID}).UpdateOnlineStatus(status); err != nil {
 		beego.Error("更新在线状态失败", err, c.Ctx.Request.UserAgent())
 		dto.Message = "更新在线状态失败\t" + err.Error()
 		return
