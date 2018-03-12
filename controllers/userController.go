@@ -20,9 +20,12 @@ type UserController struct {
 //UserPorfileInfo 用户信息
 type UserPorfileInfo struct {
 	models.UserProfile
-	ImTk      string                `json:"im_token,omitempty"`
-	CoverInfo *models.UserCoverInfo `json:"cover_info"  description:"形象展示,包括头像,相册,视频"`
-	Followed  bool                  `json:"followed" description:"是否已关注"`
+	ImTk        string                `json:"im_token,omitempty"`
+	CoverInfo   *models.UserCoverInfo `json:"cover_info"  description:"形象展示,包括头像,相册,视频"`
+	Followed    bool                  `json:"followed" description:"是否已关注"`
+	IsFill      bool                  `json:"is_fill" description:"资料是否完善"`
+	AnswerRate  float64               `json:"answer_rate" description:"接通率"`
+	CheckStatus *models.ProfileChg    `json:"check_status" description:"审核状态"`
 }
 
 //Read .
@@ -66,9 +69,10 @@ func (c *UserController) Read() {
 	}
 
 	upi := &UserPorfileInfo{UserProfile: *up}
-	upi.CoverInfo = up.GetCover()
 	if uid == tk.ID {
-		upi.ImTk = up.ImToken
+		upi = genUserPorfileInfo(up)
+	} else {
+		upi.CoverInfo = up.GetCover()
 	}
 
 	if fl := up.GetFollowers(); fl != nil {
@@ -100,12 +104,19 @@ func (c *UserController) Update() {
 
 	up := &models.UserProfile{ID: tk.ID}
 	if err := up.Read(); err != nil {
-		beego.Error(err)
+		beego.Error("获取用户资料失败", err, c.Ctx.Request.UserAgent())
 		dto.Message = err.Error()
 		return
 	}
 
-	cv, imgChg, param := up.GetCover(), false, make(map[string]interface{})
+	pc := &models.ProfileChg{ID: tk.ID}
+	if err := pc.ReadOrCreate(nil); err != nil {
+		beego.Error("获取用户信息变动失败", err, c.Ctx.Request.UserAgent())
+		dto.Message = "获取用户信息变动失败" + err.Error()
+		return
+	}
+
+	cv, imgChg, param, pcParam := up.GetCover(), false, make(map[string]interface{}), make(map[string]interface{})
 	if cv == nil {
 		cv = &models.UserCoverInfo{}
 	}
@@ -115,7 +126,9 @@ func (c *UserController) Update() {
 	}
 
 	if coverPic := c.GetString("cover_pic"); len(coverPic) > 0 {
-		cv.CoverPicture, imgChg = &models.Picture{ImageURL: coverPic}, true
+		cv.CoverPicture, imgChg = &models.Picture{ImageURL: coverPic}, false //头像先审核再更新
+		pcParam["cover_pic"] = coverPic
+		pcParam["cover_pic_check"] = models.CheckStatusUncheck
 	}
 
 	if gallery := c.GetStrings("gallery"); gallery != nil && len(gallery) > 0 {
@@ -137,7 +150,9 @@ func (c *UserController) Update() {
 	}
 
 	if video := c.GetString("video"); len(video) > 0 {
-		cv.DesVideo, imgChg = &models.Video{VideoURL: video}, true
+		cv.DesVideo, imgChg = &models.Video{VideoURL: video}, false //视频先审核再更新
+		pcParam["video"] = video
+		pcParam["video_check"] = models.CheckStatusUncheck
 	}
 
 	if description := c.GetString("description"); len(description) > 0 {
@@ -172,11 +187,21 @@ func (c *UserController) Update() {
 		param["cover_pic"] = cv.ToString()
 	}
 
-	if err := up.Update(param, nil); err != nil {
-		beego.Error(err)
-		dto.Message = err.Error()
+	trans := models.TransactionGen()
+	if err := up.Update(param, trans); err != nil {
+		beego.Error("更新用户资料失败", err, c.Ctx.Request.UserAgent())
+		dto.Message = "更新用户资料失败" + err.Error()
+		models.TransactionRollback(trans)
 		return
 	}
+
+	if err := pc.Update(pcParam, trans); err != nil {
+		beego.Error("更新用户资料变动记录失败", err, c.Ctx.Request.UserAgent())
+		dto.Message = "更新用户资料变动记录失败" + err.Error()
+		models.TransactionRollback(trans)
+		return
+	}
+	models.TransactionCommit(trans)
 
 	dto.Data = &UserPorfileInfo{UserProfile: *up, CoverInfo: cv}
 	dto.Sucess = true

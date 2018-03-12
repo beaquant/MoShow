@@ -16,7 +16,7 @@ const (
 
 var (
 	giftList    []Gift
-	productList map[string]Product
+	productList []Product
 	updateTime  = make(map[string]time.Time)
 	incomeRate  *IncomeRate
 	banners     []Banner
@@ -39,8 +39,8 @@ type Gift struct {
 
 //Product .
 type Product struct {
+	ID          uint64  `json:"gift_id"`
 	ProductName string  `json:"name"`
-	Code        string  `json:"code"`
 	Price       float64 `json:"price"`
 	CoinCount   uint64  `json:"coin_count"`
 }
@@ -99,15 +99,23 @@ func (c *Config) GetCommonGiftInfo() ([]Gift, error) {
 }
 
 //GetProductInfo 获取商品列表
-func (c *Config) GetProductInfo() (map[string]Product, error) {
-	if tm, ok := updateTime[configTypeProduct]; productList == nil || !ok || tm.Add(time.Minute*5).Before(time.Now()) {
-		if err := db.Debug().Where("conf_key = ?", configTypeProduct).First(c).Error; err != nil {
+func (c *Config) GetProductInfo() ([]Product, error) {
+	if tm, ok := updateTime[configTypeProduct]; giftList == nil || !ok || tm.Add(time.Minute*5).Before(time.Now()) {
+		var cf []Config
+		if err := db.Debug().Where("conf_key = ?", configTypeProduct).Find(&cf).Error; err != nil {
 			return nil, err
 		}
 
-		pf := make(map[string]Product)
-		if err := utils.JSONUnMarshal(c.Value, &pf); err != nil {
-			return nil, err
+		var pf []Product
+		for index := range cf {
+			var p Product
+			if err := utils.JSONUnMarshal(cf[index].Value, &p); err != nil {
+				beego.Error("礼物信息解析失败", err)
+				continue
+			}
+
+			p.ID = cf[index].ID
+			pf = append(pf, p)
 		}
 
 		productList = pf

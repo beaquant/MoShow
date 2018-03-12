@@ -127,6 +127,22 @@ func init() {
 			MethodParams: param.Make(),
 			Params: nil})
 
+	beego.GlobalControllerRouter["MoShow/controllers:OrderController"] = append(beego.GlobalControllerRouter["MoShow/controllers:OrderController"],
+		beego.ControllerComments{
+			Method: "AlipayConfirm",
+			Router: `/verify`,
+			AllowHTTPMethods: []string{"post"},
+			MethodParams: param.Make(),
+			Params: nil})
+
+	beego.GlobalControllerRouter["MoShow/controllers:OrderController"] = append(beego.GlobalControllerRouter["MoShow/controllers:OrderController"],
+		beego.ControllerComments{
+			Method: "CreateWebPay",
+			Router: `/webpay`,
+			AllowHTTPMethods: []string{"post"},
+			MethodParams: param.Make(),
+			Params: nil})
+
 	beego.GlobalControllerRouter["MoShow/controllers:TimelineController"] = append(beego.GlobalControllerRouter["MoShow/controllers:TimelineController"],
 		beego.ControllerComments{
 			Method: "NewCommers",

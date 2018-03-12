@@ -166,6 +166,14 @@ func (c *AuthController) Login() {
 			}
 
 			tk.ID = u.ID
+			up := &models.UserProfile{ID: u.ID}
+			if err := up.Read(); err != nil {
+				beego.Error("获取用户信息失败", err, c.Ctx.Request.UserAgent())
+				dto.Message = "获取用户信息失败\t" + err.Error()
+				return
+			}
+
+			dto.Data = genUserPorfileInfo(up)
 			dto.Sucess = true
 			dto.Message = "登陆成功"
 			SetToken(c.Ctx, tk)
@@ -258,6 +266,14 @@ func (c *AuthController) WechatLogin() {
 			}
 
 			tk.ID = u.ID
+			up := &models.UserProfile{ID: u.ID}
+			if err := up.Read(); err != nil {
+				beego.Error("获取用户信息失败", err, c.Ctx.Request.UserAgent())
+				dto.Message = "获取用户信息失败\t" + err.Error()
+				return
+			}
+
+			dto.Data = genUserPorfileInfo(up)
 			dto.Sucess = true
 			dto.Message = "登陆成功"
 			SetToken(c.Ctx, tk)
@@ -284,4 +300,27 @@ func (c *AuthController) Logout() {
 
 	ClearToken(&c.Controller)
 	dto.Sucess = true
+}
+
+func genUserPorfileInfo(up *models.UserProfile) *UserPorfileInfo {
+	upi := UserPorfileInfo{UserProfile: *up, CoverInfo: up.GetCover(), ImTk: up.ImToken}
+	if up.DialAccept+up.DialDeny > 0 {
+		upi.AnswerRate = float64(up.DialAccept) / float64((up.DialAccept + up.DialDeny)) //计算接通率
+	}
+
+	if up.Gender == models.GenderMan {
+		upi.IsFill = true
+	} else if len(up.Location) > 0 && up.Birthday > 0 && upi.CoverInfo != nil && upi.CoverInfo.CoverPicture != nil && len(up.Alias) > 0 {
+		upi.IsFill = true
+	} else {
+		upi.IsFill = false
+	}
+
+	pc := &models.ProfileChg{ID: up.ID}
+	if err := pc.ReadOrCreate(nil); err != nil {
+		beego.Error("获取个人信息变动失败", err)
+	}
+
+	upi.CheckStatus = pc
+	return &upi
 }

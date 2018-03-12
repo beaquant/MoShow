@@ -17,16 +17,12 @@ const (
 
 //ProfileChg .
 type ProfileChg struct {
-	ID                     uint64 `json:"user_id" gorm:"column:id;primary_key" description:"用户ID"`
-	Alias                  string `json:"alias" gorm:"column:alias"`
-	AliasCheckStatus       int    `json:"alias_check" gorm:"column:alias_check"`
-	Description            string `json:"description" gorm:"column:description"`
-	DescriptionCheckStatus int    `json:"description_check" gorm:"column:description_check"`
-	CoverPic               string `json:"cover_pic" gorm:"column:cover_pic"`
-	CoverPicCheckStatus    int    `json:"cover_pic_check" gorm:"column:cover_pic_check"`
-	Video                  string `json:"video" gorm:"column:video"`
-	VideoCheckStatus       int    `json:"video_check" gorm:"column:video_check"`
-	UpdateAt               int64  `json:"update_at" gorm:"column:update_at"`
+	ID                  uint64 `json:"user_id" gorm:"column:id;primary_key" description:"用户ID"`
+	CoverPic            string `json:"cover_pic" gorm:"column:cover_pic"`
+	CoverPicCheckStatus int    `json:"cover_pic_check" gorm:"column:cover_pic_check"`
+	Video               string `json:"video" gorm:"column:video"`
+	VideoCheckStatus    int    `json:"video_check" gorm:"column:video_check"`
+	UpdateAt            int64  `json:"update_at" gorm:"column:update_at"`
 }
 
 //TableName .

@@ -1,15 +1,18 @@
 package utils
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/smartwalle/alipay"
 )
 
 var client *alipay.AliPay
+var appId = "2017091508742831"
+var parterId = "2088821012806925"
 
 func init() {
-	client = alipay.New("2017091508742831", "2088821012806925", publicKey, privateKey, true)
+	client = alipay.New(appId, parterId, publicKey, privateKey, true)
 	client.AliPayPublicKey = aliPublicKey
 }
 
@@ -29,7 +32,24 @@ func CreatePayment(title, orderID, NotifyURL, Amount string) (string, error) {
 
 //ConfirmPayment .
 func ConfirmPayment(req *http.Request) (*alipay.TradeNotification, error) {
-	return client.GetTradeNotification(req)
+	notify, err := client.GetTradeNotification(req)
+	if err != nil {
+		return notify, err
+	}
+
+	if notify.AppId != appId {
+		return notify, errors.New("异常通知:appId检验失败")
+	}
+
+	if notify.SellerId != parterId {
+		return notify, errors.New("异常通知:seller_id检验失败")
+	}
+
+	if notify.TradeStatus != alipay.K_ALI_PAY_TRADE_STATUS_TRADE_SUCCESS && notify.TradeStatus != alipay.K_ALI_PAY_TRADE_STATUS_TRADE_FINISHED {
+		return nil, nil
+	}
+
+	return notify, nil
 }
 
 // RSA2(SHA256)

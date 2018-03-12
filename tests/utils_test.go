@@ -58,6 +58,14 @@ func TestJson(t *testing.T) {
 	t.Log(utils.JSONMarshalToString(g))
 }
 
+func TestSlice(t *testing.T) {
+	a := []string{""}
+	b := a[:0]
+
+	str, err := utils.JSONMarshalToString(&b)
+	t.Log(str, err)
+}
+
 func TestContains(t *testing.T) {
 	t.Log(strings.Contains("blueMr/1.1.0 (iPhone; iOS 11.2.5; Scale/2.00)", "iPhone"))
 }
