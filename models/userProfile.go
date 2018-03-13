@@ -89,7 +89,8 @@ type UserCoverInfo struct {
 
 //Picture .
 type Picture struct {
-	ImageURL string `json:"image_url"`
+	ImageURL   string `json:"image_url"`
+	CloudCheck bool   `json:"cloud_porn_check"`
 }
 
 //Video .

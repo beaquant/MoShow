@@ -645,6 +645,62 @@ func (c *UserController) ReduceAmount() {
 	dto.Data = chg
 }
 
+//Withdraw .
+// @Title 扣款
+// @Description 扣款
+// @Param   amount     	formData    int  	true       "扣款金额"
+// @Success 200 {object} utils.ResultDTO
+// @router /withdraw [post]
+func (c *UserController) Withdraw() {
+	tk, dto := GetToken(c.Ctx), &utils.ResultDTO{}
+	defer dto.JSONResult(&c.Controller)
+
+	amount, err := c.GetUint64("amount")
+	if err != nil {
+		beego.Error(err, c.Ctx.Request.UserAgent())
+		dto.Message = "参数错误\t" + err.Error()
+		dto.Code = utils.DtoStatusParamError
+		return
+	}
+
+	up := &models.UserProfile{ID: tk.ID}
+	if err := up.Read(); err != nil {
+		beego.Error(err, c.Ctx.Request.UserAgent())
+		dto.Message = "获取目标用户信息失败\t" + err.Error()
+		dto.Code = utils.DtoStatusDatabaseError
+		return
+	}
+
+	if up.Income < amount {
+		beego.Error("账户余额不足以提现:"+strconv.FormatUint(up.Income, 10)+strconv.FormatUint(amount, 10), c.Ctx.Request.UserAgent())
+		dto.Message = "账户余额不足以提现"
+		dto.Code = utils.DtoStatusParamError
+		return
+	}
+
+	trans := models.TransactionGen()
+	if err := up.AddIncome(-int(amount), trans); err != nil {
+		beego.Error("申请提现扣款失败", err, c.Ctx.Request.UserAgent())
+		dto.Message = "申请提现扣款失败" + err.Error()
+		models.TransactionRollback(trans)
+		dto.Code = utils.DtoStatusDatabaseError
+		return
+	}
+
+	wd := &models.Withdraw{UserID: tk.ID, Amount: amount, CreateAt: time.Now().Unix()}
+	if err := wd.Add(trans); err != nil {
+		beego.Error("生成提现申请失败", err, c.Ctx.Request.UserAgent())
+		dto.Message = "生成提现申请失败" + err.Error()
+		models.TransactionRollback(trans)
+		dto.Code = utils.DtoStatusDatabaseError
+		return
+	}
+
+	models.TransactionCommit(trans)
+	dto.Sucess = true
+	dto.Message = "提现申请已提交"
+}
+
 //赠送礼物,流程包括 源用户扣款，目标用户增加余额，邀请人分成，以及分别添加余额变动记录,过程中任何一部出错，事务回滚并返回失败
 //赠送礼物不参与分成
 func sendGift(from, to *models.UserProfile, gift *models.GiftChgInfo) error {
