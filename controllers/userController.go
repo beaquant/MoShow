@@ -20,12 +20,14 @@ type UserController struct {
 //UserPorfileInfo 用户信息
 type UserPorfileInfo struct {
 	models.UserProfile
-	ImTk        string                `json:"im_token,omitempty"`
-	CoverInfo   *models.UserCoverInfo `json:"cover_info"  description:"形象展示,包括头像,相册,视频"`
-	Followed    bool                  `json:"followed" description:"是否已关注"`
-	IsFill      bool                  `json:"is_fill" description:"资料是否完善"`
-	AnswerRate  float64               `json:"answer_rate" description:"接通率"`
-	CheckStatus *models.ProfileChg    `json:"check_status" description:"审核状态"`
+	ImTk        string             `json:"im_token,omitempty"`
+	Followed    bool               `json:"followed" description:"是否已关注"`
+	IsFill      bool               `json:"is_fill" description:"资料是否完善"`
+	AnswerRate  float64            `json:"answer_rate" description:"接通率"`
+	CheckStatus *models.ProfileChg `json:"check_status" description:"审核状态"`
+	Avatar      string             `json:"avatar"`
+	Gallery     []string           `json:"gallery"`
+	Video       string             `json:"video"`
 }
 
 //Read .
@@ -70,9 +72,9 @@ func (c *UserController) Read() {
 
 	upi := &UserPorfileInfo{UserProfile: *up}
 	if uid == tk.ID {
-		upi = genUserPorfileInfo(up)
+		upi = genSelfUserPorfileInfo(up)
 	} else {
-		upi.CoverInfo = up.GetCover()
+		genUserPorfileInfoCommon(upi, up.GetCover())
 	}
 
 	if fl := up.GetFollowers(); fl != nil {
@@ -203,7 +205,9 @@ func (c *UserController) Update() {
 	}
 	models.TransactionCommit(trans)
 
-	dto.Data = &UserPorfileInfo{UserProfile: *up, CoverInfo: cv}
+	upi := &UserPorfileInfo{UserProfile: *up}
+	genUserPorfileInfoCommon(upi, up.GetCover())
+	dto.Data = upi
 	dto.Sucess = true
 }
 

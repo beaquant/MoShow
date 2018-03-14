@@ -81,3 +81,9 @@ func TestWechatLogin(t *testing.T) {
 	info, err := o.GetUserInfo("7_9P0JWuyX3Hq6iQfDzfZEISor6ErwjfKD7Hz61sErhK819sP7-j4oe30881axlSORBSDX_XU98K4oepcvgaZK05ZLCT1XCae5pts_tNk8LbU", "oaGlO1gTBzsnPbDWEyZgZdrq17Do")
 	t.Log(info, err)
 }
+
+func TestStringReplace(t *testing.T) {
+	str := strings.Replace("http://bluemr-1254204939.cossh.myqcloud.co/photo/44919201802230116495945-1000x1777.jpg",
+		"bluemr-1254204939.cossh.myqcloud.com", "bluemr-1254204939.file.myqcloud.com", -1)
+	t.Log(str)
+}

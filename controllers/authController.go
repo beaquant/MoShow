@@ -139,7 +139,7 @@ func (c *AuthController) Login() {
 
 		up := models.UserProfile{ID: u.ID}
 		up.ImToken = imtk.Token
-		up.Birthday = time.Date(1993, 1, 1, 0, 0, 0, 0, time.Local).Unix()
+		up.Birthday = 0
 		up.Following = "{}"
 		up.Followers = "{}"
 		up.CoverPic = "{}"
@@ -173,7 +173,7 @@ func (c *AuthController) Login() {
 				return
 			}
 
-			dto.Data = genUserPorfileInfo(up)
+			dto.Data = genSelfUserPorfileInfo(up)
 			dto.Sucess = true
 			dto.Message = "登陆成功"
 			SetToken(c.Ctx, tk)
@@ -239,7 +239,7 @@ func (c *AuthController) WechatLogin() {
 
 		up := models.UserProfile{ID: u.ID}
 		up.ImToken = imtk.Token
-		up.Birthday = time.Date(1993, 1, 1, 0, 0, 0, 0, time.Local).Unix()
+		up.Birthday = 0
 		up.Following = "{}"
 		up.Followers = "{}"
 		up.CoverPic = "{}"
@@ -273,7 +273,7 @@ func (c *AuthController) WechatLogin() {
 				return
 			}
 
-			dto.Data = genUserPorfileInfo(up)
+			dto.Data = genSelfUserPorfileInfo(up)
 			dto.Sucess = true
 			dto.Message = "登陆成功"
 			SetToken(c.Ctx, tk)
@@ -302,15 +302,14 @@ func (c *AuthController) Logout() {
 	dto.Sucess = true
 }
 
-func genUserPorfileInfo(up *models.UserProfile) *UserPorfileInfo {
-	upi := UserPorfileInfo{UserProfile: *up, CoverInfo: up.GetCover(), ImTk: up.ImToken}
-	if up.DialAccept+up.DialDeny > 0 {
-		upi.AnswerRate = float64(up.DialAccept) / float64((up.DialAccept + up.DialDeny)) //计算接通率
-	}
+func genSelfUserPorfileInfo(up *models.UserProfile) *UserPorfileInfo {
+	upi := &UserPorfileInfo{UserProfile: *up, ImTk: up.ImToken}
+	cv := up.GetCover()
+	genUserPorfileInfoCommon(upi, cv)
 
 	if up.Gender == models.GenderMan {
 		upi.IsFill = true
-	} else if len(up.Location) > 0 && up.Birthday > 0 && upi.CoverInfo != nil && upi.CoverInfo.CoverPicture != nil && len(up.Alias) > 0 {
+	} else if len(up.Location) > 0 && up.Birthday > 0 && cv != nil && cv.CoverPicture != nil && len(up.Alias) > 0 {
 		upi.IsFill = true
 	} else {
 		upi.IsFill = false
@@ -322,5 +321,27 @@ func genUserPorfileInfo(up *models.UserProfile) *UserPorfileInfo {
 	}
 
 	upi.CheckStatus = pc
-	return &upi
+	return upi
+}
+
+func genUserPorfileInfoCommon(upi *UserPorfileInfo, cv *models.UserCoverInfo) {
+	if cv.CoverPicture != nil {
+		upi.Avatar = cv.CoverPicture.ImageURL
+	}
+
+	if cv.DesVideo != nil {
+		upi.Video = cv.DesVideo.VideoURL
+	}
+
+	if cv.Gallery != nil && len(cv.Gallery) > 0 {
+		var g []string
+		for index := range cv.Gallery {
+			g = append(g, cv.Gallery[index].ImageURL)
+		}
+		upi.Gallery = g
+	}
+
+	if upi.DialAccept+upi.DialDeny > 0 {
+		upi.AnswerRate = float64(upi.DialAccept) / float64((upi.DialAccept + upi.DialDeny)) //计算接通率
+	}
 }
