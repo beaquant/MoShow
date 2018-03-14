@@ -40,7 +40,7 @@ func (c *AuthController) SendCode() {
 
 	num := c.Ctx.Input.Param(":phone")
 	codeEx, err := redis.String(con.Do("HGET", SmsCodeRedisKey, num))
-	if err != nil {
+	if err != nil && err != redis.ErrNil {
 		beego.Error(err)
 		dto.Message = err.Error()
 		return
@@ -87,8 +87,8 @@ func (c *AuthController) Login() {
 	if phoneNum != adminPhone && code != adminCode {
 		codeEx, err := redis.String(con.Do("HGET", SmsCodeRedisKey, phoneNum))
 		if err != nil {
-			beego.Error(err)
-			dto.Message = err.Error()
+			beego.Error("读取验证码失败", err)
+			dto.Message = "读取验证码失败" + err.Error()
 			return
 		}
 
