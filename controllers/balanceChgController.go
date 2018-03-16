@@ -16,8 +16,8 @@ type BalanceChgController struct {
 //GetIncomeList .
 // @Title 获取收益列表
 // @Description 获取收益列表
-// @Param   length     	formData    int  	true       "长度"
-// @Param   skip		formData    int  	true       "偏移量"
+// @Param   length     	query    int  	true       "长度"
+// @Param   skip		query    int  	true       "偏移量"
 // @Success 200 {object} utils.ResultDTO
 // @router /incomes [get]
 func (c *BalanceChgController) GetIncomeList() {
@@ -56,8 +56,8 @@ func (c *BalanceChgController) GetIncomeList() {
 //GetPaymentList .
 // @Title 获取支出列表
 // @Description 获取支出列表
-// @Param   length     	formData    int  	true       "长度"
-// @Param   skip		formData    int  	true       "偏移量"
+// @Param   length     	query    int  	true       "长度"
+// @Param   skip		query    int  	true       "偏移量"
 // @Success 200 {object} utils.ResultDTO
 // @router /payments [get]
 func (c *BalanceChgController) GetPaymentList() {

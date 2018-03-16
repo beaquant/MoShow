@@ -136,6 +136,11 @@ func (u *UserProfile) Read() error {
 //Update .
 func (u *UserProfile) Update(fields map[string]interface{}, trans *gorm.DB) error {
 	fields["update_at"] = time.Now().Unix()
+
+	if len(fields) == 1 {
+		return nil
+	}
+
 	if trans != nil {
 		return trans.Model(u).Updates(fields).Error
 	}

@@ -55,6 +55,10 @@ func (p *ProfileChg) ReadOrCreate(trans *gorm.DB) (err error) {
 //Update .
 func (p *ProfileChg) Update(fields map[string]interface{}, trans *gorm.DB) error {
 	fields["update_at"] = time.Now().Unix()
+	if len(fields) == 1 {
+		return nil
+	}
+
 	if trans != nil {
 		return trans.Model(p).Updates(fields).Error
 	}

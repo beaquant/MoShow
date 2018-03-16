@@ -173,7 +173,13 @@ func (c *AuthController) Login() {
 				return
 			}
 
-			dto.Data = genSelfUserPorfileInfo(up)
+			var err error
+			if dto.Data, err = genSelfUserPorfileInfo(up, nil); err != nil {
+				beego.Error("获取用户信息失败", err, c.Ctx.Request.UserAgent())
+				dto.Message = "获取用户信息失败\t" + err.Error()
+				return
+			}
+
 			dto.Sucess = true
 			dto.Message = "登陆成功"
 			SetToken(c.Ctx, tk)
@@ -273,7 +279,11 @@ func (c *AuthController) WechatLogin() {
 				return
 			}
 
-			dto.Data = genSelfUserPorfileInfo(up)
+			if dto.Data, err = genSelfUserPorfileInfo(up, nil); err != nil {
+				beego.Error("获取用户信息失败", err, c.Ctx.Request.UserAgent())
+				dto.Message = "获取用户信息失败\t" + err.Error()
+				return
+			}
 			dto.Sucess = true
 			dto.Message = "登陆成功"
 			SetToken(c.Ctx, tk)
@@ -302,7 +312,7 @@ func (c *AuthController) Logout() {
 	dto.Sucess = true
 }
 
-func genSelfUserPorfileInfo(up *models.UserProfile) *UserPorfileInfo {
+func genSelfUserPorfileInfo(up *models.UserProfile, pc *models.ProfileChg) (*UserPorfileInfo, error) { //获取用户自己信息时,给出审核状态，已经在审核状态的图片等信息
 	upi := &UserPorfileInfo{UserProfile: *up, ImTk: up.ImToken}
 	cv := up.GetCover()
 	genUserPorfileInfoCommon(upi, cv)
@@ -315,13 +325,24 @@ func genSelfUserPorfileInfo(up *models.UserProfile) *UserPorfileInfo {
 		upi.IsFill = false
 	}
 
-	pc := &models.ProfileChg{ID: up.ID}
-	if err := pc.ReadOrCreate(nil); err != nil {
-		beego.Error("获取个人信息变动失败", err)
+	if pc == nil {
+		pc = &models.ProfileChg{ID: up.ID}
+		if err := pc.ReadOrCreate(nil); err != nil {
+			beego.Error("获取个人信息变动失败", err)
+			return nil, err
+		}
 	}
 
+	//当前用户获取自身信息时，给出正在审核的图片和视频
+	if len(pc.CoverPic) > 0 {
+		upi.Avatar = pc.CoverPic
+	}
+
+	if len(pc.Video) > 0 {
+		upi.Video = pc.Video
+	}
 	upi.CheckStatus = pc
-	return upi
+	return upi, nil
 }
 
 func genUserPorfileInfoCommon(upi *UserPorfileInfo, cv *models.UserCoverInfo) {
