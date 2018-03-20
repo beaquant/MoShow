@@ -317,14 +317,6 @@ func genSelfUserPorfileInfo(up *models.UserProfile, pc *models.ProfileChg) (*Use
 	cv := up.GetCover()
 	genUserPorfileInfoCommon(upi, cv)
 
-	if up.Gender == models.GenderMan {
-		upi.IsFill = true
-	} else if len(up.Location) > 0 && up.Birthday > 0 && cv != nil && cv.CoverPicture != nil && len(up.Alias) > 0 {
-		upi.IsFill = true
-	} else {
-		upi.IsFill = false
-	}
-
 	if pc == nil {
 		pc = &models.ProfileChg{ID: up.ID}
 		if err := pc.ReadOrCreate(nil); err != nil {
@@ -342,6 +334,14 @@ func genSelfUserPorfileInfo(up *models.UserProfile, pc *models.ProfileChg) (*Use
 		upi.Video = pc.Video
 	}
 	upi.CheckStatus = pc
+
+	if up.Gender == models.GenderMan {
+		upi.IsFill = true
+	} else if len(up.Location) > 0 && up.Birthday > 0 && len(upi.Avatar) > 0 && len(up.Alias) > 0 {
+		upi.IsFill = true
+	} else {
+		upi.IsFill = false
+	}
 	return upi, nil
 }
 
@@ -365,4 +365,10 @@ func genUserPorfileInfoCommon(upi *UserPorfileInfo, cv *models.UserCoverInfo) {
 	if upi.DialAccept+upi.DialDeny > 0 {
 		upi.AnswerRate = float64(upi.DialAccept) / float64((upi.DialAccept + upi.DialDeny)) //计算接通率
 	}
+
+	dur, err := (&models.Dial{}).GetToalDuration(upi.ID)
+	if err != nil {
+		beego.Error(err)
+	}
+	upi.Duration = dur
 }

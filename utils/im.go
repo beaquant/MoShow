@@ -5,7 +5,7 @@ import (
 )
 
 func genImClient() *netease.ImClient {
-	return netease.CreateImClient("36bb3190572f691d3b180fc099a1b4f1", "99c220190258", "")
+	return netease.CreateImClient("b2c60dbed0ae2d3c48e6c85664836dc9", "1ed04f7d7085", "")
 }
 
 //ImCreateUser .

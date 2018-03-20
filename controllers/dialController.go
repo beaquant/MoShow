@@ -17,8 +17,8 @@ type DialController struct {
 //DialList .
 // @Title 获取通话记录列表
 // @Description 获取通话记录列表
-// @Param   length     	formData    int  	true       "长度"
-// @Param   skip		formData    int  	true       "偏移量"
+// @Param   length     	query    int  	true       "长度"
+// @Param   skip		query    int  	true       "偏移量"
 // @Success 200 {object} utils.ResultDTO
 // @router /list [get]
 func (c *DialController) DialList() {

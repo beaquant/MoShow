@@ -1,5 +1,7 @@
 package models
 
+import "database/sql"
+
 const (
 	//DialStatusFail 通话状态,失败
 	DialStatusFail = iota
@@ -16,7 +18,7 @@ type Dial struct {
 	ToUserID   uint64 `json:"to_user_id" gorm:"column:to_user_id"`
 	Duration   int    `json:"duration" gorm:"column:duration"`
 	CreateAt   int64  `json:"create_at" gorm:"column:create_at"`
-	Status     int    `json:"success" gorm:"column:success"`
+	Status     int    `json:"status" gorm:"column:status"`
 	Tag        string `json:"tag" gorm:"column:tag"`
 }
 
@@ -48,4 +50,18 @@ func (d *Dial) GetDialList(uid uint64, limit, skip int) ([]Dial, error) {
 //Del .
 func (d *Dial) Del() error {
 	return db.Delete(d).Error
+}
+
+//GetToalDuration .
+func (d *Dial) GetToalDuration(uid uint64) (int64, error) {
+	row := db.Table(d.TableName()).Where("status = ? ", DialStatusSuccess).Where("from_user_id = ? or to_user_id = ?", uid, uid).Select("sum(duration) as duration").Row()
+	var duration sql.NullInt64
+	if err := row.Scan(&duration); err != nil {
+		return 0, err
+	}
+
+	if duration.Valid {
+		return duration.Int64, nil
+	}
+	return 0, nil
 }

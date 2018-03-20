@@ -24,6 +24,7 @@ type UserPorfileInfo struct {
 	Followed    bool               `json:"followed" description:"是否已关注"`
 	IsFill      bool               `json:"is_fill" description:"资料是否完善"`
 	AnswerRate  float64            `json:"answer_rate" description:"接通率"`
+	Duration    int64              `json:"duration" description:"通话时长"`
 	CheckStatus *models.ProfileChg `json:"check_status" description:"审核状态"`
 	Avatar      string             `json:"avatar"`
 	Gallery     []string           `json:"gallery"`
@@ -377,11 +378,29 @@ func (c *UserController) UnFollow() {
 //GetFollowingLst .
 // @Title 获取关注列表
 // @Description 获取关注列表
+// @Param   length     	query    int  	true       "长度"
+// @Param   skip		query    int  	true       "偏移量"
 // @Success 200 {object} utils.ResultDTO
 // @router /sublist [get]
 func (c *UserController) GetFollowingLst() {
 	tk, dto := GetToken(c.Ctx), &utils.ResultDTO{}
 	defer dto.JSONResult(&c.Controller)
+
+	len, err := c.GetInt("length")
+	if err != nil {
+		beego.Error("参数解析错误:length\t"+err.Error(), c.Ctx.Request.UserAgent(), c.GetString("length"))
+		dto.Message = "参数解析错误:length\t" + err.Error()
+		dto.Code = utils.DtoStatusParamError
+		return
+	}
+
+	skip, err := c.GetInt("skip")
+	if err != nil {
+		beego.Error("参数解析错误:skip\t"+err.Error(), c.Ctx.Request.UserAgent(), c.GetString("skip"))
+		dto.Message = "参数解析错误:skip\t" + err.Error()
+		dto.Code = utils.DtoStatusParamError
+		return
+	}
 
 	up := &models.UserProfile{ID: tk.ID}
 	if err := up.Read(); err != nil {
@@ -391,9 +410,22 @@ func (c *UserController) GetFollowingLst() {
 	}
 
 	mp := up.GetFollowing()
-	var flst []uint64
+	var flst []*models.UserProfile
 	for k := range mp {
-		flst = append(flst, k)
+		if skip > 0 {
+			skip--
+			continue
+		}
+
+		if len > 0 {
+			len--
+		} else {
+			break
+		}
+
+		flu := &models.UserProfile{ID: k}
+		flu.Read()
+		flst = append(flst, flu)
 	}
 
 	dto.Data = flst
@@ -403,11 +435,29 @@ func (c *UserController) GetFollowingLst() {
 //GetFollowedLst .
 // @Title 获取粉丝列表
 // @Description 获取粉丝列表
+// @Param   length     	query    int  	true       "长度"
+// @Param   skip		query    int  	true       "偏移量"
 // @Success 200 {object} utils.ResultDTO
 // @router /fanslist [get]
 func (c *UserController) GetFollowedLst() {
 	tk, dto := GetToken(c.Ctx), &utils.ResultDTO{}
 	defer dto.JSONResult(&c.Controller)
+
+	len, err := c.GetInt("length")
+	if err != nil {
+		beego.Error("参数解析错误:length\t"+err.Error(), c.Ctx.Request.UserAgent(), c.GetString("length"))
+		dto.Message = "参数解析错误:length\t" + err.Error()
+		dto.Code = utils.DtoStatusParamError
+		return
+	}
+
+	skip, err := c.GetInt("skip")
+	if err != nil {
+		beego.Error("参数解析错误:skip\t"+err.Error(), c.Ctx.Request.UserAgent(), c.GetString("skip"))
+		dto.Message = "参数解析错误:skip\t" + err.Error()
+		dto.Code = utils.DtoStatusParamError
+		return
+	}
 
 	up := &models.UserProfile{ID: tk.ID}
 	if err := up.Read(); err != nil {
@@ -417,9 +467,22 @@ func (c *UserController) GetFollowedLst() {
 	}
 
 	mp := up.GetFollowers()
-	var flst []uint64
+	var flst []*models.UserProfile
 	for k := range mp {
-		flst = append(flst, k)
+		if skip > 0 {
+			skip--
+			continue
+		}
+
+		if len > 0 {
+			len--
+		} else {
+			break
+		}
+
+		flu := &models.UserProfile{ID: k}
+		flu.Read()
+		flst = append(flst, flu)
 	}
 
 	dto.Data = flst
@@ -574,8 +637,8 @@ func (c *UserController) AnchorApply() {
 //GuestList .
 // @Title 获取访客记录
 // @Description 获取访客记录
-// @Param   length     	formData    int  	true       "长度"
-// @Param   skip		formData    int  	true       "偏移量"
+// @Param   length     	query    int  	true       "长度"
+// @Param   skip		query    int  	true       "偏移量"
 // @Success 200 {object} utils.ResultDTO
 // @router /guests [get]
 func (c *UserController) GuestList() {
@@ -606,7 +669,14 @@ func (c *UserController) GuestList() {
 		return
 	}
 
-	dto.Data = lst
+	var ups []*models.UserProfile
+	for index := range lst {
+		flu := &models.UserProfile{ID: lst[index].GuestID}
+		flu.Read()
+		ups = append(ups, flu)
+	}
+
+	dto.Data = ups
 	dto.Message = "查询成功"
 	return
 }
