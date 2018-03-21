@@ -69,3 +69,8 @@ func (u *User) ReadFromWechatID() (err error) {
 
 	return
 }
+
+//GetRegistTime .
+func (u *User) GetRegistTime() error {
+	return db.Select("create_at").Find(u).Error
+}

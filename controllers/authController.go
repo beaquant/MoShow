@@ -342,20 +342,22 @@ func genSelfUserPorfileInfo(up *models.UserProfile, pc *models.ProfileChg) (*Use
 }
 
 func genUserPorfileInfoCommon(upi *UserPorfileInfo, cv *models.UserCoverInfo) {
-	if cv.CoverPicture != nil {
-		upi.Avatar = cv.CoverPicture.ImageURL
-	}
-
-	if cv.DesVideo != nil {
-		upi.Video = cv.DesVideo.VideoURL
-	}
-
-	if cv.Gallery != nil && len(cv.Gallery) > 0 {
-		var g []string
-		for index := range cv.Gallery {
-			g = append(g, cv.Gallery[index].ImageURL)
+	if cv != nil {
+		if cv.CoverPicture != nil {
+			upi.Avatar = cv.CoverPicture.ImageURL
 		}
-		upi.Gallery = g
+
+		if cv.DesVideo != nil {
+			upi.Video = cv.DesVideo.VideoURL
+		}
+
+		if cv.Gallery != nil && len(cv.Gallery) > 0 {
+			var g []string
+			for index := range cv.Gallery {
+				g = append(g, cv.Gallery[index].ImageURL)
+			}
+			upi.Gallery = g
+		}
 	}
 
 	if upi.DialAccept+upi.DialDeny > 0 {

@@ -165,8 +165,8 @@ func (u *UserProfile) GetCover() *UserCoverInfo {
 }
 
 //GetInviteList 获取我邀请的用户列表
-func (u *UserProfile) GetInviteList() (ul []UserProfile, err error) {
-	if err = db.Joins("left join users on user_profile.id = users.id").Where("invited_by = ?", u.ID).Find(&ul).Error; err != nil {
+func (u *UserProfile) GetInviteList(skip, limit int) (ul []UserProfile, err error) {
+	if err = db.Joins("left join users on user_profile.id = users.id").Where("invited_by = ?", u.ID).Offset(skip).Limit(limit).Find(&ul).Error; err != nil {
 		return nil, err
 	}
 

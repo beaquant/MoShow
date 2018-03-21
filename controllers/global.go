@@ -44,7 +44,6 @@ type FreqRecord struct {
 }
 
 func init() {
-	r, _ = regexp.Compile("/api/.+?/")
 	beego.InsertFilter("/*", beego.BeforeRouter, FilterUser)
 }
 
@@ -59,17 +58,15 @@ func FilterUser(ctx *context.Context) {
 	}
 
 	exclude := make(map[string]struct{})
-	exclude["/api/auth/"] = struct{}{}
+	exclude["/api/auth/*"] = struct{}{}
+	exclude["/api/order/verify"] = struct{}{}
 
-	ss := r.FindStringSubmatch(ctx.Request.RequestURI)
-	if ss != nil && len(ss) > 0 {
-		_, ok := exclude[ss[0]]
-		if !ok {
-			GetToken(ctx)
+	for k := range exclude {
+		if ok, _ := regexp.MatchString(k, ctx.Request.RequestURI); ok {
+			return
 		}
-	} else {
-		GetToken(ctx)
 	}
+	GetToken(ctx)
 }
 
 //FrequencyCheck 检查调用频率

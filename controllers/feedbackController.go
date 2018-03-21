@@ -34,5 +34,6 @@ func (c *FeedbackController) Suggestion() {
 		return
 	}
 
+	dto.Message = "反馈成功!"
 	dto.Sucess = true
 }

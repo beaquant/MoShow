@@ -31,6 +31,12 @@ type UserPorfileInfo struct {
 	Video       string             `json:"video"`
 }
 
+//UserOperateInfo .
+type UserOperateInfo struct {
+	User   *UserPorfileInfo `json:"user"`
+	OpTime int64            `json:"time"`
+}
+
 //Read .
 // @Title 读取用户
 // @Description 读取用户
@@ -436,7 +442,7 @@ func (c *UserController) GetFollowingLst() {
 	}
 
 	mp := sb.GetFollowing()
-	var flst []*models.UserProfile
+	var uoi []UserOperateInfo
 	for k := range mp {
 		if skip > 0 {
 			skip--
@@ -449,12 +455,19 @@ func (c *UserController) GetFollowingLst() {
 			break
 		}
 
-		flu := &models.UserProfile{ID: k}
-		flu.Read()
-		flst = append(flst, flu)
+		upi := &UserPorfileInfo{UserProfile: models.UserProfile{ID: k}}
+		if err := upi.Read(); err != nil {
+			beego.Error("获取用户信息失败", err, c.Ctx.Request.UserAgent())
+			dto.Message = "获取用户信息失败" + err.Error()
+			dto.Code = utils.DtoStatusDatabaseError
+			return
+		}
+
+		genUserPorfileInfoCommon(upi, upi.GetCover())
+		uoi = append(uoi, UserOperateInfo{User: upi, OpTime: mp[k].FollowTime})
 	}
 
-	dto.Data = flst
+	dto.Data = uoi
 	dto.Sucess = true
 }
 
@@ -500,7 +513,7 @@ func (c *UserController) GetFollowedLst() {
 	}
 
 	mp := sb.GetFollowers()
-	var flst []*models.UserProfile
+	var uoi []UserOperateInfo
 	for k := range mp {
 		if skip > 0 {
 			skip--
@@ -513,19 +526,27 @@ func (c *UserController) GetFollowedLst() {
 			break
 		}
 
-		flu := &models.UserProfile{ID: k}
-		flu.Read()
-		flst = append(flst, flu)
+		upi := &UserPorfileInfo{UserProfile: models.UserProfile{ID: k}}
+		if err := upi.Read(); err != nil {
+			beego.Error("获取用户信息失败", err, c.Ctx.Request.UserAgent())
+			dto.Message = "获取用户信息失败" + err.Error()
+			dto.Code = utils.DtoStatusDatabaseError
+			return
+		}
+
+		genUserPorfileInfoCommon(upi, upi.GetCover())
+		uoi = append(uoi, UserOperateInfo{User: upi, OpTime: mp[k].FollowTime})
 	}
 
-	dto.Data = flst
+	dto.Data = uoi
 	dto.Sucess = true
 }
 
 //Report .
 // @Title 举报用户
 // @Description 举报用户
-// @Param   userid     		path    	int	  		true        "用户id"
+// @Param   userid     		path    	int	  		true       "用户id"
+// @Param   cate		    formData    string  	true       "举报类型"
 // @Param   content     	formData    string  	true       "反馈内容"
 // @Param   img		    	formData    string  	true       "图片"
 // @Success 200 {object} utils.ResultDTO
@@ -545,6 +566,7 @@ func (c *UserController) Report() {
 	r := &models.FeedBackReport{TgUserID: toID}
 	r.Img = c.GetString("img")
 	r.Content = c.GetString("content")
+	r.Cate = c.GetString("cate")
 	if err := f.AddReport(r); err != nil {
 		beego.Error(err)
 		dto.Message = "添加举报记录失败\t" + err.Error()
@@ -557,14 +579,32 @@ func (c *UserController) Report() {
 //InviteList .
 // @Title 邀请列表
 // @Description 邀请列表
+// @Param   length     	query    int  	true       "长度"
+// @Param   skip		query    int  	true       "偏移量"
 // @Success 200 {object} utils.ResultDTO
 // @router /ivtlist [get]
 func (c *UserController) InviteList() {
 	tk, dto := GetToken(c.Ctx), &utils.ResultDTO{}
 	defer dto.JSONResult(&c.Controller)
 
+	len, err := c.GetInt("length")
+	if err != nil {
+		beego.Error("参数解析错误:length\t"+err.Error(), c.Ctx.Request.UserAgent(), c.GetString("length"))
+		dto.Message = "参数解析错误:length\t" + err.Error()
+		dto.Code = utils.DtoStatusParamError
+		return
+	}
+
+	skip, err := c.GetInt("skip")
+	if err != nil {
+		beego.Error("参数解析错误:skip\t"+err.Error(), c.Ctx.Request.UserAgent(), c.GetString("skip"))
+		dto.Message = "参数解析错误:skip\t" + err.Error()
+		dto.Code = utils.DtoStatusParamError
+		return
+	}
+
 	up := &models.UserProfile{ID: tk.ID}
-	lst, err := up.GetInviteList()
+	lst, err := up.GetInviteList(skip, len)
 	if err != nil {
 		beego.Error("查询邀请列表失败", err, c.Ctx.Request.UserAgent())
 		dto.Message = "查询邀请列表失败\t" + err.Error()
@@ -572,7 +612,29 @@ func (c *UserController) InviteList() {
 		return
 	}
 
-	dto.Data = lst
+	var uoi []UserOperateInfo
+	for index := range lst {
+		u := &models.User{ID: lst[index].ID}
+		if err := u.GetRegistTime(); err != nil {
+			beego.Error("获取用户信息失败", err, c.Ctx.Request.UserAgent())
+			dto.Message = "获取用户信息失败" + err.Error()
+			dto.Code = utils.DtoStatusDatabaseError
+			return
+		}
+
+		upi := &UserPorfileInfo{UserProfile: models.UserProfile{ID: lst[index].ID}}
+		if err := upi.Read(); err != nil {
+			beego.Error("获取用户信息失败", err, c.Ctx.Request.UserAgent())
+			dto.Message = "获取用户信息失败" + err.Error()
+			dto.Code = utils.DtoStatusDatabaseError
+			return
+		}
+
+		genUserPorfileInfoCommon(upi, upi.GetCover())
+		uoi = append(uoi, UserOperateInfo{User: upi, OpTime: u.CreatedAt})
+	}
+
+	dto.Data = uoi
 	dto.Sucess = true
 }
 
@@ -702,11 +764,12 @@ func (c *UserController) GuestList() {
 		return
 	}
 
-	var ups []*models.UserProfile
+	var ups []UserOperateInfo
 	for index := range lst {
-		flu := &models.UserProfile{ID: lst[index].GuestID}
+		flu := &UserPorfileInfo{UserProfile: models.UserProfile{ID: lst[index].GuestID}}
 		flu.Read()
-		ups = append(ups, flu)
+		genUserPorfileInfoCommon(flu, flu.GetCover())
+		ups = append(ups, UserOperateInfo{User: flu, OpTime: lst[index].Time})
 	}
 
 	dto.Data = ups

@@ -47,14 +47,14 @@ func (c *OrderController) Detail() {
 //CreateWebPay .
 // @Title 创建网页订单
 // @Description 创建网页订单
-// @Param   prodid		    formData    string  	true       "套餐ID"
+// @Param   prodid		    formData    int  	true       "套餐ID"
 // @Success 200 {object} utils.ResultDTO
 // @router /webpay [post]
 func (c *OrderController) CreateWebPay() {
 	dto, tk := &utils.ResultDTO{}, GetToken(c.Ctx)
 	defer dto.JSONResult(&c.Controller)
 
-	pid, err := c.GetUint64(":prodid")
+	pid, err := c.GetUint64("prodid")
 	if err != nil {
 		beego.Error("订单ID格式错误", err, c.Ctx.Request.UserAgent())
 		dto.Message = "订单ID格式错误\t" + err.Error()
@@ -69,7 +69,7 @@ func (c *OrderController) CreateWebPay() {
 	}
 
 	trans := models.TransactionGen()
-	o := &models.Order{Amount: prod.Price, CoinCount: prod.CoinCount, UserID: tk.ID, PayType: models.PayTypeAlipay, CreateAt: time.Now().Unix()}
+	o := &models.Order{Amount: prod.Price, CoinCount: prod.CoinCount + prod.Extra, UserID: tk.ID, PayType: models.PayTypeAlipay, CreateAt: time.Now().Unix(), PayInfo: "{}"}
 	if err := o.Add(trans); err != nil {
 		beego.Error("添加订单失败", err, c.Ctx.Request.UserAgent())
 		dto.Message = "添加订单失败\t" + err.Error()
@@ -86,6 +86,7 @@ func (c *OrderController) CreateWebPay() {
 	}
 	models.TransactionCommit(trans)
 
+	beego.Info(uri)
 	dto.Data = uri
 	dto.Sucess = true
 }
