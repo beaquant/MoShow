@@ -87,3 +87,11 @@ func TestStringReplace(t *testing.T) {
 		"bluemr-1254204939.cossh.myqcloud.com", "bluemr-1254204939.file.myqcloud.com", -1)
 	t.Log(str)
 }
+
+func TestCosSign(t *testing.T) {
+
+}
+
+func TestPornImg(t *testing.T) {
+	utils.ImgPornCheckSingle("http://bluemr-1254204939.cossh.myqcloud.com/img/1521621081565194700.jpg")
+}

@@ -39,7 +39,7 @@ type Gift struct {
 
 //Product .
 type Product struct {
-	ID          uint64  `json:"gift_id"`
+	ID          uint64  `json:"product_id"`
 	ProductName string  `json:"name"`
 	Price       float64 `json:"price"`
 	CoinCount   uint64  `json:"coin_count"`

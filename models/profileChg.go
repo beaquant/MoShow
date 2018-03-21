@@ -1,6 +1,7 @@
 package models
 
 import (
+	"errors"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -32,20 +33,18 @@ func (ProfileChg) TableName() string {
 
 //ReadOrCreate .
 func (p *ProfileChg) ReadOrCreate(trans *gorm.DB) (err error) {
-	var pl []ProfileChg
+	if p.ID == 0 {
+		return errors.New("必须指定用户ID")
+	}
 
+	var pf ProfileChg
 	if trans == nil {
 		trans = db
 	}
-
-	err = trans.Where("id = ?", p.ID).Find(&pl).Error
-	if err != nil {
-		return
-	}
-
-	if pl != nil && len(pl) > 0 {
-		*p = pl[0]
-	} else {
+	if err = trans.Where("id = ?", p.ID).Find(&pf).Error; err != nil {
+		if err != gorm.ErrRecordNotFound {
+			return
+		}
 		err = trans.Create(p).Error
 	}
 

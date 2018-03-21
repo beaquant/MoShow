@@ -8,12 +8,12 @@ import (
 )
 
 var client *alipay.AliPay
-var appId = "2017091508742831"
-var parterId = "2088821012806925"
+var alipayAppID = "2017091508742831"
+var alipayParterId = "2088821012806925"
 
 func init() {
-	client = alipay.New(appId, parterId, publicKey, privateKey, true)
-	client.AliPayPublicKey = aliPublicKey
+	client = alipay.New(alipayAppID, alipayParterId, publicKey, privateKey, true)
+	client.AliPayPublicKey = alipayPublicKey
 }
 
 //CreatePayment .
@@ -37,11 +37,11 @@ func ConfirmPayment(req *http.Request) (*alipay.TradeNotification, error) {
 		return notify, err
 	}
 
-	if notify.AppId != appId {
+	if notify.AppId != alipayAppID {
 		return notify, errors.New("异常通知:appId检验失败")
 	}
 
-	if notify.SellerId != parterId {
+	if notify.SellerId != alipayParterId {
 		return notify, errors.New("异常通知:seller_id检验失败")
 	}
 
@@ -54,7 +54,7 @@ func ConfirmPayment(req *http.Request) (*alipay.TradeNotification, error) {
 
 // RSA2(SHA256)
 var (
-	aliPublicKey = []byte(`-----BEGIN PUBLIC KEY-----
+	alipayPublicKey = []byte(`-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAr8nWcRBXLF8OKDV0w4EtQSmoGfQj5
 h5w3RsMF8SsgXlUHmvU6Vj63Snebnmd1Fo1oflY6+nxAidwh/5P4G0aAOyS+ATUb+AqP11FXR
 0f1ZJGXISA2CpJHUuN0O7hrZU33XUHaIvrYby8jDMpa9r8fnc002ZUX8elys9x+OtCmTv+ppT

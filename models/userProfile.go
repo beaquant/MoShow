@@ -70,8 +70,6 @@ type UserProfile struct {
 	Price            uint64 `json:"price" gorm:"column:price" description:"视频价格/分"`
 	UserType         int    `json:"user_type" gorm:"column:user_type" description:"用户类型"`
 	ImToken          string `json:"-" gorm:"column:im_token" description:"网易云信token"`
-	Followers        string `json:"-" gorm:"column:follower" description:"关注者"`
-	Following        string `json:"-" gorm:"column:following" description:"正在关注"`
 	UserStatus       int    `json:"user_status" gorm:"column:user_status" description:"用户状态"`
 	OnlineStatus     int    `json:"online_status" gorm:"column:online_status" description:"在线状态"`
 	AnchorAuthStatus int    `json:"anchor_auth_status" gorm:"column:anchor_auth_status" description:"主播认证状态"`
@@ -98,11 +96,6 @@ type Video struct {
 	VideoURL string `json:"video_url"`
 }
 
-//FollowInfo .
-type FollowInfo struct {
-	FollowTime int64
-}
-
 //TableName .
 func (UserProfile) TableName() string {
 	return "user_profile"
@@ -120,17 +113,23 @@ func (u *UserCoverInfo) ToString() string {
 
 //Add .
 func (u *UserProfile) Add(trans *gorm.DB) error {
+	if u.ID == 0 {
+		return errors.New("必须指定用户ID")
+	}
+
 	if trans != nil {
 		return trans.Create(u).Error
 	}
 	return db.Create(u).Error
 }
 
+//Read .
 func (u *UserProfile) Read() error {
 	if u.ID == 0 {
 		return errors.New("必须指定user_profile的id")
 	}
-	return db.Where("id = ?", u.ID).Find(u).Error
+
+	return db.Find(u).Error
 }
 
 //Update .
@@ -152,44 +151,6 @@ func (u *UserProfile) UpdateOnlineStatus(status int) error {
 	return db.Model(u).Update("online_status", status).Error
 }
 
-//AddFollow 添加关注
-func (u *UserProfile) AddFollow(id uint64) error {
-	idStr := strconv.FormatUint(id, 10)
-	fis, _ := utils.JSONMarshalToString(&FollowInfo{FollowTime: time.Now().Unix()})
-
-	trans := db.Begin()
-	if err := trans.Model(u).Updates(map[string]interface{}{"following": `JSON_SET(COALESCE(following,'{}'),'$."` + idStr + `"',CAST('` + fis + `' AS JSON))`}).Error; err != nil {
-		trans.Rollback()
-		return err
-	}
-
-	if err := trans.Model(&UserProfile{ID: id}).Updates(map[string]interface{}{"follower": `JSON_SET(COALESCE(follower,'{}'),'$."` + idStr + `"',CAST('` + fis + `' AS JSON))) `}).Error; err != nil {
-		trans.Rollback()
-		return err
-	}
-
-	trans.Commit()
-	return nil
-}
-
-//UnFollow 取消关注
-func (u *UserProfile) UnFollow(id uint64) error {
-	idStr := strconv.FormatUint(id, 10)
-	trans := db.Begin()
-	if err := trans.Model(u).Updates(map[string]interface{}{"following": `JSON_REMOVE(follower,'$."` + idStr + `"')`}).Error; err != nil {
-		trans.Rollback()
-		return err
-	}
-
-	if err := trans.Model(&UserProfile{ID: id}).Updates(map[string]interface{}{"follower": `JSON_REMOVE(follower,'$."` + idStr + `"')`}).Error; err != nil {
-		trans.Rollback()
-		return err
-	}
-
-	trans.Commit()
-	return nil
-}
-
 //GetCover .
 func (u *UserProfile) GetCover() *UserCoverInfo {
 	if len(u.CoverPic) > 0 {
@@ -199,32 +160,6 @@ func (u *UserProfile) GetCover() *UserCoverInfo {
 			return nil
 		}
 		return ucp
-	}
-	return nil
-}
-
-//GetFollowers .
-func (u *UserProfile) GetFollowers() map[uint64]FollowInfo {
-	if len(u.Followers) > 0 {
-		fl := make(map[uint64]FollowInfo)
-		if err := utils.JSONUnMarshal(u.Followers, &fl); err != nil {
-			beego.Error(err)
-			return nil
-		}
-		return fl
-	}
-	return nil
-}
-
-//GetFollowing .
-func (u *UserProfile) GetFollowing() map[uint64]FollowInfo {
-	if len(u.Following) > 0 {
-		fl := make(map[uint64]FollowInfo)
-		if err := utils.JSONUnMarshal(u.Following, &fl); err != nil {
-			beego.Error(err)
-			return nil
-		}
-		return fl
 	}
 	return nil
 }

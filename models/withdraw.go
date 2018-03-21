@@ -26,7 +26,7 @@ func (Withdraw) TableName() string {
 //Add .
 func (w *Withdraw) Add(trans *gorm.DB) error {
 	if trans != nil {
-		db = trans
+		return trans.Create(w).Error
 	}
 
 	return db.Create(w).Error

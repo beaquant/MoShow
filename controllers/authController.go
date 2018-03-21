@@ -140,8 +140,6 @@ func (c *AuthController) Login() {
 		up := models.UserProfile{ID: u.ID}
 		up.ImToken = imtk.Token
 		up.Birthday = 0
-		up.Following = "{}"
-		up.Followers = "{}"
 		up.CoverPic = "{}"
 		up.OnlineStatus = models.OnlineStatusOnline
 		if err := up.Add(trans); err != nil {
@@ -246,8 +244,6 @@ func (c *AuthController) WechatLogin() {
 		up := models.UserProfile{ID: u.ID}
 		up.ImToken = imtk.Token
 		up.Birthday = 0
-		up.Following = "{}"
-		up.Followers = "{}"
 		up.CoverPic = "{}"
 		up.OnlineStatus = models.OnlineStatusOnline
 		if err := up.Add(trans); err != nil {

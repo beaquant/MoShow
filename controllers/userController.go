@@ -82,7 +82,14 @@ func (c *UserController) Read() {
 		genUserPorfileInfoCommon(upi, up.GetCover())
 	}
 
-	if fl := up.GetFollowers(); fl != nil {
+	sb := &models.Subscribe{ID: uid}
+	if err := sb.ReadOrCreate(nil); err != nil {
+		beego.Error("获取订阅信息", err, c.Ctx.Request.UserAgent())
+		dto.Message = "获取订阅信息" + err.Error()
+		return
+	}
+
+	if fl := sb.GetFollowers(); fl != nil {
 		if _, ok := fl[tk.ID]; ok {
 			upi.Followed = true
 		}
@@ -338,8 +345,14 @@ func (c *UserController) Follow() {
 		return
 	}
 
-	up := models.UserProfile{ID: toID}
-	if err := up.AddFollow(tk.ID); err != nil {
+	sb := models.Subscribe{ID: toID}
+	if err := sb.ReadOrCreate(nil); err != nil {
+		beego.Error("获取关注信息出错", err.Error)
+		dto.Message = "获取关注信息出错\t" + err.Error()
+		return
+	}
+
+	if err := sb.AddFollow(tk.ID); err != nil {
 		beego.Error(err)
 		dto.Message = "添加关注失败\t" + err.Error()
 		return
@@ -365,8 +378,14 @@ func (c *UserController) UnFollow() {
 		return
 	}
 
-	up := models.UserProfile{ID: toID}
-	if err := up.UnFollow(tk.ID); err != nil {
+	sb := models.Subscribe{ID: toID}
+	if err := sb.ReadOrCreate(nil); err != nil {
+		beego.Error("获取关注信息出错", err.Error)
+		dto.Message = "获取关注信息出错\t" + err.Error()
+		return
+	}
+
+	if err := sb.UnFollow(tk.ID); err != nil {
 		beego.Error(err)
 		dto.Message = "取消关注失败\t" + err.Error()
 		return
@@ -409,7 +428,14 @@ func (c *UserController) GetFollowingLst() {
 		return
 	}
 
-	mp := up.GetFollowing()
+	sb := &models.Subscribe{ID: tk.ID}
+	if err := sb.ReadOrCreate(nil); err != nil {
+		beego.Error("获取订阅信息", err, c.Ctx.Request.UserAgent())
+		dto.Message = "获取订阅信息" + err.Error()
+		return
+	}
+
+	mp := sb.GetFollowing()
 	var flst []*models.UserProfile
 	for k := range mp {
 		if skip > 0 {
@@ -466,7 +492,14 @@ func (c *UserController) GetFollowedLst() {
 		return
 	}
 
-	mp := up.GetFollowers()
+	sb := &models.Subscribe{ID: tk.ID}
+	if err := sb.ReadOrCreate(nil); err != nil {
+		beego.Error("获取订阅信息", err, c.Ctx.Request.UserAgent())
+		dto.Message = "获取订阅信息" + err.Error()
+		return
+	}
+
+	mp := sb.GetFollowers()
 	var flst []*models.UserProfile
 	for k := range mp {
 		if skip > 0 {
@@ -800,6 +833,21 @@ func (c *UserController) Withdraw() {
 		dto.Message = "生成提现申请失败" + err.Error()
 		models.TransactionRollback(trans)
 		dto.Code = utils.DtoStatusDatabaseError
+		return
+	}
+
+	wdStr, err := utils.JSONMarshalToString(wd)
+	if err != nil {
+		beego.Error("解析变动信息失败", err, c.Ctx.Request.UserAgent())
+		dto.Message = "解析变动信息失败" + err.Error()
+		models.TransactionRollback(trans)
+		return
+	}
+	bc := &models.BalanceChg{UserID: tk.ID, ChgType: models.BalanceChgTypeWithDraw, ChgInfo: wdStr, Amount: -int(amount), Time: time.Now().Unix()}
+	if err := bc.Add(trans); err != nil {
+		beego.Error("生成变动记录失败", err, c.Ctx.Request.UserAgent())
+		dto.Message = "生成变动记录失败" + err.Error()
+		models.TransactionRollback(trans)
 		return
 	}
 
