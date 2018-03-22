@@ -95,3 +95,8 @@ func TestCosSign(t *testing.T) {
 func TestPornImg(t *testing.T) {
 	utils.ImgPornCheckSingle("http://bluemr-1254204939.cossh.myqcloud.com/img/1521621081565194700.jpg")
 }
+
+func TestReg(t *testing.T) {
+	var re = regexp.MustCompile("\\d+")
+	t.Log(re.FindString("BlueMr1561"))
+}

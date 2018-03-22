@@ -271,6 +271,14 @@ func init() {
 			MethodParams: param.Make(),
 			Params: nil})
 
+	beego.GlobalControllerRouter["MoShow/controllers:UserController"] = append(beego.GlobalControllerRouter["MoShow/controllers:UserController"],
+		beego.ControllerComments{
+			Method: "WithdrawHis",
+			Router: `/withdrawhis`,
+			AllowHTTPMethods: []string{"get"},
+			MethodParams: param.Make(),
+			Params: nil})
+
 	beego.GlobalControllerRouter["MoShow/controllers:WebsocketController"] = append(beego.GlobalControllerRouter["MoShow/controllers:WebsocketController"],
 		beego.ControllerComments{
 			Method: "Join",

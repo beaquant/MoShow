@@ -60,13 +60,6 @@ func (c *UserController) Read() {
 			dto.Message = err.Error()
 			return
 		}
-
-		if uid != tk.ID { //自己查看自己时不增加记录
-			if err := (&models.Guest{}).AddView(uid, tk.ID); err != nil { //增加访客记录
-				beego.Error(err)
-				dto.Message = "增加访客记录失败\t" + err.Error()
-			}
-		}
 	}
 
 	up := &models.UserProfile{ID: uid}
@@ -85,6 +78,11 @@ func (c *UserController) Read() {
 			return
 		}
 	} else {
+		//自己查看自己时不增加记录
+		if err := (&models.Guest{}).AddView(uid, tk.ID); err != nil { //增加访客记录
+			beego.Error(err)
+			dto.Message = "增加访客记录失败\t" + err.Error()
+		}
 		genUserPorfileInfoCommon(upi, up.GetCover())
 	}
 
@@ -403,24 +401,27 @@ func (c *UserController) UnFollow() {
 //GetFollowingLst .
 // @Title 获取关注列表
 // @Description 获取关注列表
-// @Param   length     	query    int  	true       "长度"
-// @Param   skip		query    int  	true       "偏移量"
+// @Param   length     	query    int  	false       "长度"
+// @Param   skip		query    int  	false       "偏移量"
 // @Success 200 {object} utils.ResultDTO
 // @router /sublist [get]
 func (c *UserController) GetFollowingLst() {
 	tk, dto := GetToken(c.Ctx), &utils.ResultDTO{}
 	defer dto.JSONResult(&c.Controller)
 
-	len, err := c.GetInt("length")
+	length, err := c.GetInt("length")
 	if err != nil {
-		beego.Error("参数解析错误:length\t"+err.Error(), c.Ctx.Request.UserAgent(), c.GetString("length"))
-		dto.Message = "参数解析错误:length\t" + err.Error()
-		dto.Code = utils.DtoStatusParamError
-		return
+		if len(c.GetString("length")) > 0 { //length没填时默认给0,填了,但是解析错误,则返回错误
+			beego.Error("参数解析错误:length\t"+err.Error(), c.Ctx.Request.UserAgent(), c.GetString("length"))
+			dto.Message = "参数解析错误:length\t" + err.Error()
+			dto.Code = utils.DtoStatusParamError
+			return
+		}
+		length = 10
 	}
 
 	skip, err := c.GetInt("skip")
-	if err != nil {
+	if err != nil && len(c.GetString("skip")) > 0 {
 		beego.Error("参数解析错误:skip\t"+err.Error(), c.Ctx.Request.UserAgent(), c.GetString("skip"))
 		dto.Message = "参数解析错误:skip\t" + err.Error()
 		dto.Code = utils.DtoStatusParamError
@@ -449,8 +450,8 @@ func (c *UserController) GetFollowingLst() {
 			continue
 		}
 
-		if len > 0 {
-			len--
+		if length > 0 {
+			length--
 		} else {
 			break
 		}
@@ -474,24 +475,27 @@ func (c *UserController) GetFollowingLst() {
 //GetFollowedLst .
 // @Title 获取粉丝列表
 // @Description 获取粉丝列表
-// @Param   length     	query    int  	true       "长度"
-// @Param   skip		query    int  	true       "偏移量"
+// @Param   length     	query    int  	false       "长度"
+// @Param   skip		query    int  	false       "偏移量"
 // @Success 200 {object} utils.ResultDTO
 // @router /fanslist [get]
 func (c *UserController) GetFollowedLst() {
 	tk, dto := GetToken(c.Ctx), &utils.ResultDTO{}
 	defer dto.JSONResult(&c.Controller)
 
-	len, err := c.GetInt("length")
+	length, err := c.GetInt("length")
 	if err != nil {
-		beego.Error("参数解析错误:length\t"+err.Error(), c.Ctx.Request.UserAgent(), c.GetString("length"))
-		dto.Message = "参数解析错误:length\t" + err.Error()
-		dto.Code = utils.DtoStatusParamError
-		return
+		if len(c.GetString("length")) > 0 { //length没填时默认给0,填了,但是解析错误,则返回错误
+			beego.Error("参数解析错误:length\t"+err.Error(), c.Ctx.Request.UserAgent(), c.GetString("length"))
+			dto.Message = "参数解析错误:length\t" + err.Error()
+			dto.Code = utils.DtoStatusParamError
+			return
+		}
+		length = 10
 	}
 
 	skip, err := c.GetInt("skip")
-	if err != nil {
+	if err != nil && len(c.GetString("skip")) > 0 {
 		beego.Error("参数解析错误:skip\t"+err.Error(), c.Ctx.Request.UserAgent(), c.GetString("skip"))
 		dto.Message = "参数解析错误:skip\t" + err.Error()
 		dto.Code = utils.DtoStatusParamError
@@ -520,8 +524,8 @@ func (c *UserController) GetFollowedLst() {
 			continue
 		}
 
-		if len > 0 {
-			len--
+		if length > 0 {
+			length--
 		} else {
 			break
 		}
@@ -579,24 +583,27 @@ func (c *UserController) Report() {
 //InviteList .
 // @Title 邀请列表
 // @Description 邀请列表
-// @Param   length     	query    int  	true       "长度"
-// @Param   skip		query    int  	true       "偏移量"
+// @Param   length     	query    int  	false       "长度"
+// @Param   skip		query    int  	false       "偏移量"
 // @Success 200 {object} utils.ResultDTO
 // @router /ivtlist [get]
 func (c *UserController) InviteList() {
 	tk, dto := GetToken(c.Ctx), &utils.ResultDTO{}
 	defer dto.JSONResult(&c.Controller)
 
-	len, err := c.GetInt("length")
+	length, err := c.GetInt("length")
 	if err != nil {
-		beego.Error("参数解析错误:length\t"+err.Error(), c.Ctx.Request.UserAgent(), c.GetString("length"))
-		dto.Message = "参数解析错误:length\t" + err.Error()
-		dto.Code = utils.DtoStatusParamError
-		return
+		if len(c.GetString("length")) > 0 { //length没填时默认给0,填了,但是解析错误,则返回错误
+			beego.Error("参数解析错误:length\t"+err.Error(), c.Ctx.Request.UserAgent(), c.GetString("length"))
+			dto.Message = "参数解析错误:length\t" + err.Error()
+			dto.Code = utils.DtoStatusParamError
+			return
+		}
+		length = 10
 	}
 
 	skip, err := c.GetInt("skip")
-	if err != nil {
+	if err != nil && len(c.GetString("skip")) > 0 {
 		beego.Error("参数解析错误:skip\t"+err.Error(), c.Ctx.Request.UserAgent(), c.GetString("skip"))
 		dto.Message = "参数解析错误:skip\t" + err.Error()
 		dto.Code = utils.DtoStatusParamError
@@ -604,7 +611,7 @@ func (c *UserController) InviteList() {
 	}
 
 	up := &models.UserProfile{ID: tk.ID}
-	lst, err := up.GetInviteList(skip, len)
+	lst, err := up.GetInviteList(skip, length)
 	if err != nil {
 		beego.Error("查询邀请列表失败", err, c.Ctx.Request.UserAgent())
 		dto.Message = "查询邀请列表失败\t" + err.Error()
@@ -732,31 +739,34 @@ func (c *UserController) AnchorApply() {
 //GuestList .
 // @Title 获取访客记录
 // @Description 获取访客记录
-// @Param   length     	query    int  	true       "长度"
-// @Param   skip		query    int  	true       "偏移量"
+// @Param   length     	query    int  	false       "长度"
+// @Param   skip		query    int  	false       "偏移量"
 // @Success 200 {object} utils.ResultDTO
 // @router /guests [get]
 func (c *UserController) GuestList() {
 	dto, tk := utils.ResultDTO{}, GetToken(c.Ctx)
 	defer dto.JSONResult(&c.Controller)
 
-	len, err := c.GetInt("length")
+	length, err := c.GetInt("length")
 	if err != nil {
-		beego.Error("参数解析错误:length\t"+err.Error(), c.Ctx.Request.UserAgent(), c.GetString("length"))
-		dto.Message = "参数解析错误:length\t" + err.Error()
-		dto.Code = utils.DtoStatusParamError
-		return
+		if len(c.GetString("length")) > 0 { //length没填时默认给0,填了,但是解析错误,则返回错误
+			beego.Error("参数解析错误:length\t"+err.Error(), c.Ctx.Request.UserAgent(), c.GetString("length"))
+			dto.Message = "参数解析错误:length\t" + err.Error()
+			dto.Code = utils.DtoStatusParamError
+			return
+		}
+		length = 10
 	}
 
 	skip, err := c.GetInt("skip")
-	if err != nil {
+	if err != nil && len(c.GetString("skip")) > 0 {
 		beego.Error("参数解析错误:skip\t"+err.Error(), c.Ctx.Request.UserAgent(), c.GetString("skip"))
 		dto.Message = "参数解析错误:skip\t" + err.Error()
 		dto.Code = utils.DtoStatusParamError
 		return
 	}
 
-	lst, err := (&models.Guest{}).GetGuestList(tk.ID, len, skip)
+	lst, err := (&models.Guest{}).GetGuestList(tk.ID, length, skip)
 	if err != nil {
 		beego.Error("获取访客列表失败", err, c.Ctx.Request.UserAgent())
 		dto.Message = "获取访客列表失败\t" + err.Error()
@@ -781,14 +791,14 @@ func (c *UserController) GuestList() {
 // @Title 扣款
 // @Description 扣款
 // @Param   type     	formData    int  	true       "扣款类型(0:消息,1:视频)"
-// @Param   amount     	formData    int  	true       "扣款金额"
 // @Success 200 {object} utils.ResultDTO
 // @router /cutamount [post]
 func (c *UserController) ReduceAmount() {
 	tk, dto := GetToken(c.Ctx), &utils.ResultDTO{}
 	defer dto.JSONResult(&c.Controller)
 
-	amount, err := c.GetUint64("amount")
+	var amount int
+	dType, err := c.GetInt("type")
 	if err != nil {
 		beego.Error(err, c.Ctx.Request.UserAgent())
 		dto.Message = "参数错误\t" + err.Error()
@@ -796,12 +806,10 @@ func (c *UserController) ReduceAmount() {
 		return
 	}
 
-	dType, err := c.GetInt("type")
-	if err != nil {
-		beego.Error(err, c.Ctx.Request.UserAgent())
-		dto.Message = "参数错误\t" + err.Error()
-		dto.Code = utils.DtoStatusParamError
-		return
+	if dType == 0 {
+		amount = 10
+	} else if dType == 1 {
+		amount = 20
 	}
 
 	up := &models.UserProfile{ID: tk.ID}
@@ -812,7 +820,7 @@ func (c *UserController) ReduceAmount() {
 		return
 	}
 
-	chg := &models.BalanceChg{UserID: tk.ID, Amount: -int(amount), ChgInfo: "{}"}
+	chg := &models.BalanceChg{UserID: tk.ID, Amount: -amount, ChgInfo: "{}"}
 	if dType == 0 {
 		chg.ChgType = models.BalanceChgTypeMessage
 	} else if dType == 1 {
@@ -825,7 +833,7 @@ func (c *UserController) ReduceAmount() {
 	}
 
 	trans := models.TransactionGen() //开始事务
-	if err := up.DeFund(amount, trans); err != nil {
+	if err := up.DeFund(uint64(amount), trans); err != nil {
 		models.TransactionRollback(trans)
 		beego.Error(err, c.Ctx.Request.UserAgent())
 		dto.Message = "扣款失败\t" + err.Error()
@@ -849,9 +857,9 @@ func (c *UserController) ReduceAmount() {
 }
 
 //Withdraw .
-// @Title 扣款
-// @Description 扣款
-// @Param   amount     	formData    int  	true       "扣款金额"
+// @Title 提现
+// @Description 提现
+// @Param   amount     	formData    int  	true       "提现金额"
 // @Success 200 {object} utils.ResultDTO
 // @router /withdraw [post]
 func (c *UserController) Withdraw() {
@@ -917,6 +925,49 @@ func (c *UserController) Withdraw() {
 	models.TransactionCommit(trans)
 	dto.Sucess = true
 	dto.Message = "提现申请已提交"
+}
+
+//WithdrawHis .
+// @Title 获取提现记录
+// @Description 获取提现记录
+// @Param   length     	query    int  	false       "长度"
+// @Param   skip		query    int  	false       "偏移量"
+// @Success 200 {object} utils.ResultDTO
+// @router /withdrawhis [get]
+func (c *UserController) WithdrawHis() {
+	tk, dto := GetToken(c.Ctx), &utils.ResultDTO{}
+	defer dto.JSONResult(&c.Controller)
+
+	length, err := c.GetInt("length")
+	if err != nil {
+		if len(c.GetString("length")) > 0 { //length没填时默认给0,填了,但是解析错误,则返回错误
+			beego.Error("参数解析错误:length\t"+err.Error(), c.Ctx.Request.UserAgent(), c.GetString("length"))
+			dto.Message = "参数解析错误:length\t" + err.Error()
+			dto.Code = utils.DtoStatusParamError
+			return
+		}
+		length = 10
+	}
+
+	skip, err := c.GetInt("skip")
+	if err != nil && len(c.GetString("skip")) > 0 {
+		beego.Error("参数解析错误:skip\t"+err.Error(), c.Ctx.Request.UserAgent(), c.GetString("skip"))
+		dto.Message = "参数解析错误:skip\t" + err.Error()
+		dto.Code = utils.DtoStatusParamError
+		return
+	}
+
+	wds, err := (&models.Withdraw{UserID: tk.ID}).List(skip, length)
+	if err != nil {
+		beego.Error("查询提现记录失败", err, c.Ctx.Request.UserAgent())
+		dto.Message = "查询提现记录失败\t" + err.Error()
+		dto.Code = utils.DtoStatusDatabaseError
+		return
+	}
+
+	dto.Data = wds
+	dto.Sucess = true
+	dto.Message = "查询成功"
 }
 
 //赠送礼物,流程包括 源用户扣款，目标用户增加余额，邀请人分成，以及分别添加余额变动记录,过程中任何一部出错，事务回滚并返回失败

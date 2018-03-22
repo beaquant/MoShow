@@ -4,15 +4,31 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/astaxie/beego"
+
 	"github.com/smartwalle/alipay"
 )
 
-var client *alipay.AliPay
-var alipayAppID = "2017091508742831"
-var alipayParterId = "2088821012806925"
+var (
+	client          *alipay.AliPay
+	alipayAppID     = beego.AppConfig.String("alipayAppid")
+	alipayParterID  = beego.AppConfig.String("alipayParterid")
+	alipayPublicKey = []byte(`
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAr8nWcRBXLF8OKDV0w4EtQSmoGfQj5h5w3RsMF8SsgXlUHmvU6Vj63Snebnmd1Fo1oflY6+nxAidwh/5P4G0aAOyS+ATUb+AqP11FXR0f1ZJGXISA2CpJHUuN0O7hrZU33XUHaIvrYby8jDMpa9r8fnc002ZUX8elys9x+OtCmTv+ppTxzQSf45gFMv3fvFmwxz9Sm7rSq4CgRrbnW6JzckiOYpSqClvfr+eR3c7g7A1NDpYeW0dcfbz+Fmb/67Qs3PELJNZueW5moc8kjjK20dOYkuVcf9TAp23klHwfmiATIIDjOnYWIRlCYOPJCdrlR7xb2GYj3xGjGHeMkJrQ/wIDAQAB
+-----END PUBLIC KEY-----`)
+	publicKey = []byte(`
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApe58AH1bQgbxjKOBA6IiaKZx7NqxNTgrd1BpteWRlRzDRelqIbYiUF0sok1HCxvC2kKiul2j9GfNrNZZ+qBuDXayd1IZJLyq5xnU5zSb5+QYmIWZEh7ahMeHvemHq1rYxgej0jfM7HYp9rVCQ74aJMpwlAWuP2+43QEivtsUnEYz9rQYQVHDA69QrTs2ViSIJXk4Ag2KmgjZ0ysmr7GB2nsl7YZXHSULXmJ+m7ibDvEk8EXbZBpj9e29wDP7tYiInjvLhrEJD0h+LQ1jTJTk88DGia7wPbWDZyPB/tGptkV+x9XfWcY+bUNGaAJZIQiLw27jM4hT115PWmNqJX10kQIDAQAB
+-----END PUBLIC KEY-----`)
+	privateKey = []byte(`
+-----BEGIN RSA PRIVATE KEY-----
+MIIEpAIBAAKCAQEApe58AH1bQgbxjKOBA6IiaKZx7NqxNTgrd1BpteWRlRzDRelqIbYiUF0sok1HCxvC2kKiul2j9GfNrNZZ+qBuDXayd1IZJLyq5xnU5zSb5+QYmIWZEh7ahMeHvemHq1rYxgej0jfM7HYp9rVCQ74aJMpwlAWuP2+43QEivtsUnEYz9rQYQVHDA69QrTs2ViSIJXk4Ag2KmgjZ0ysmr7GB2nsl7YZXHSULXmJ+m7ibDvEk8EXbZBpj9e29wDP7tYiInjvLhrEJD0h+LQ1jTJTk88DGia7wPbWDZyPB/tGptkV+x9XfWcY+bUNGaAJZIQiLw27jM4hT115PWmNqJX10kQIDAQABAoIBAQCNAf50uBKuKJJqrqO7f7P39MJJwornLAWcDkTXI/C0o826AqKDZXEBlDyS7FLcOMo8inYZI+xpjTD2mO28E0uSu3Tr+2OMmZwuagBIPqfixy6zpoyvHnMadSmAlQ0K7Ffc6a8ovOyzYbNFiUF3qfwzmalT0QQDuqCBhy6MvEZmic9WMO/H7uE7+HimFJ63R/UT/s9TkTUSIcvHjecTF6Rx0iFKk6ESUbVjijzGbOZC3isKluRywWWTJYQBirw+CWBnKy0egJImVpYW6GZ8z4yPEO4tm4GLn88U6ITa0+vo4jtP89By7Ewb6t93bAUIhwEtOrpUKCoznxoihVYjEZDVAoGBANnmmiaBRBOcu1r9BxlXalsD7XSW8gzW01b6fbrI4IzLpVeFyG6LWkLdWpOFV0WrWkCV+48GM1Jq681oHiun1ByuEiMg5vLVXA9V/1XpLa/pKrVOTMbUchNVBZY9vD5/PkqEfiWwsBBdcvtv5un/O35UboOLqSnvmNhixkVSh7cvAoGBAMLxs9zQK7kuDE4iUqPxezSXcgQjHf0oEaAqqz+96YKNxxGnvuJzncPjS3WvvlyOZVYPgzkHyRZ6LvnUzVay8jPwg5W8ndUDqor9/G+q9poWEPriohmjue+DeiVb1bOZVLrf3KO1TRFwBWoQYmK0cBZH8cD54L5H6I52W+2vhqA/AoGBAIzQaW3Yu5WxA6KZQa0uwJxwvVNK+MEzUwAygG3kwrg6Im+dFRnbFEmBorcSxINRaNG0Gw0ihKgOULQ9RMIRgxHFrBLngFgNaaC/gnKSbePwWpkwMI2NXOsBVsrwumXo9OhTFvJkbGMnANdcSW2Oc3QAPCrmZjujirLLojXKT8ohAoGAPz7HSaZH6SYlW9wKz6FyhVd06B60hgNP5JSzRlTIw1BX+0Rey30S/BBr1NyVd9XCzq7ttbzu4ln1j5wYmj4oEe2/4v50fj1YQQuxsFDY/JiYHa0VRhg2JJyVLjWjGUdvk8k4/eu9+yBKwWRbZwZ/LttcdW0cGt+ddUq0/GHr3WUCgYAUlojAOI7zHEvvjNS8/DIHACsiv06Z+Hpb8B2NJy3aolIZklft+pj4CODgM1IyxRLsyXLV0oH8E/naoLN1bUwjJ84e6gmIIuUipyvyeCwWjAxlyCICRQyQ4zvU1WDJ1Sqikky0PV7S58Ot/dziI0bjXnKOY6dPOebT03NZo7sc3A==
+-----END RSA PRIVATE KEY-----`)
+)
 
 func init() {
-	client = alipay.New(alipayAppID, alipayParterId, publicKey, privateKey, true)
+	client = alipay.New(alipayAppID, alipayParterID, publicKey, privateKey, true)
 	client.AliPayPublicKey = alipayPublicKey
 }
 
@@ -27,6 +43,9 @@ func CreatePayment(title, orderID, NotifyURL, Amount string) (string, error) {
 	p.ProductCode = "QUICK_WAP_WAY"
 
 	var url, err = client.TradeWapPay(p)
+	if url == nil {
+		return "", err
+	}
 	return url.String(), err
 }
 
@@ -41,7 +60,7 @@ func ConfirmPayment(req *http.Request) (*alipay.TradeNotification, error) {
 		return notify, errors.New("异常通知:appId检验失败")
 	}
 
-	if notify.SellerId != alipayParterId {
+	if notify.SellerId != alipayParterID {
 		return notify, errors.New("异常通知:seller_id检验失败")
 	}
 
@@ -51,51 +70,3 @@ func ConfirmPayment(req *http.Request) (*alipay.TradeNotification, error) {
 
 	return notify, nil
 }
-
-// RSA2(SHA256)
-var (
-	alipayPublicKey = []byte(`-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAr8nWcRBXLF8OKDV0w4EtQSmoGfQj5
-h5w3RsMF8SsgXlUHmvU6Vj63Snebnmd1Fo1oflY6+nxAidwh/5P4G0aAOyS+ATUb+AqP11FXR
-0f1ZJGXISA2CpJHUuN0O7hrZU33XUHaIvrYby8jDMpa9r8fnc002ZUX8elys9x+OtCmTv+ppT
-xzQSf45gFMv3fvFmwxz9Sm7rSq4CgRrbnW6JzckiOYpSqClvfr+eR3c7g7A1NDpYeW0dcfbz+
-Fmb/67Qs3PELJNZueW5moc8kjjK20dOYkuVcf9TAp23klHwfmiATIIDjOnYWIRlCYOPJCdrlR
-7xb2GYj3xGjGHeMkJrQ/wIDAQAB
------END PUBLIC KEY-----`)
-
-	publicKey = []byte(`-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA6O8O5ei6BjQyi0+FmyfFdP/vvX49+
-EpJS+/wGQVvGAKyHhDDjSFG0bnAfrNRg8ofLrsnWeu/TiZn785MtEJS5h+SvlY/y4kvbL4MYf
-UL57bT6YpeivcKPDJsdAKdjb8cmwQpC38VPemJEdTYm0L/L9MmeDU+KBAgM7tIs3cszFrgKU1
-Tm5xZXeTurwu/tz4ohVUAgeatwoCdNe03/2coJqcDLIdiDqC9UqnkMTLtdOSNTRXEO3gvImlv
-q7MxrMu51qMWNJ3ONiWvgAzXZPuYQ7ELq5NBRhSAUejX3SWEERLsol3F3aheKoZyLBEXkMHDl
-dBJ+M6eY2heAy6U1uSkmwIDAQAB
------END PUBLIC KEY-----`)
-
-	privateKey = []byte(`-----BEGIN RSA PRIVATE KEY-----
-MIIEpQIBAAKCAQEA6O8O5ei6BjQyi0+FmyfFdP/vvX49+EpJS+/wGQVvGAKyHhDDjSFG
-0bnAfrNRg8ofLrsnWeu/TiZn785MtEJS5h+SvlY/y4kvbL4MYfUL57bT6YpeivcKPDJs
-dAKdjb8cmwQpC38VPemJEdTYm0L/L9MmeDU+KBAgM7tIs3cszFrgKU1Tm5xZXeTurwu/
-tz4ohVUAgeatwoCdNe03/2coJqcDLIdiDqC9UqnkMTLtdOSNTRXEO3gvImlvq7MxrMu5
-1qMWNJ3ONiWvgAzXZPuYQ7ELq5NBRhSAUejX3SWEERLsol3F3aheKoZyLBEXkMHDldBJ
-+M6eY2heAy6U1uSkmwIDAQABAoIBADLs0N0C3Giu0L4UTKl3MHw72DYde37k/tFTS7Ks
-tXUSYc6g65/XPpxrd+I7Yf7mGZsl35yRJen4C5EqESr3tRgKnxJt2NSu0Wd8xUhFQq0O
-E5ZjYfgPunUesQdL6xYqSh658h9JUWOPwx/a4OBQ7WmPSEHPoh8wJ1on/+T8kRa7/JfI
-iI1z4aVrMLJjDVw+fzT2btb3Cff4cJCctex+cq8a5Xvh2TyM2tyJU9X1uXW7q1emNrLu
-uz7N0YhHHWO/3hkQfkYskdN5+8elqeYI86kSTrMPym0jiDtFAbItxUAfWlUE+kMnCl1k
-2nYUPi+zsYSAZO8D5GFU0ZMSkV8bQQECgYEA/pSgB7j7/OvNsU89y/t7n6xYo1ke3d7w
-xoTra7I80u2wHqDZsMEwK2uRJQVKKMECp9V9RwNYT/gWDuTAMFFU2vDQihqB2GkAyCXa
-3uE/3yTtH9qeZmEeOeS1il/1bDVJn7YsPN9D2srd4no5O5n+hroxRecdYu9gWu5Tb3ON
-EYsCgYEA6juJIJyCExiGnwsebhmZvGLRs2WRDPDP3WQDQOqajZVYSzI2P7I+jXJio3RZ
-suqttIYBJgHauQuTQ8uC/AR2+wonUhfqEz7alv4eN8UBKQDthRdzisL6wM1NqES8wNj8
-//HHxk+zUNZz9o6PmZIZ+ogcob0zrEezDjuElv4z+zECgYEA4wsJ7dk8YsSqHYfeRR1z
-k2PRaV0B+j3p3iKNEu9S74qrl6U8gDbLDu5P9ARTryTziVsM71g8WpWWlpHMFUtzsg8y
-7PfW9XowCFA6cqvQmuID2HTQ792NZ3Rhs5cA+hBMKPP/YAp+KZLjcCgxAsbECMPlTcJg
-out5s575KlyTYyECgYEAsdZt8KKjZ5gxbcNlYTZysMNeb5RnoqmbSH3MspbsrR58oOsI
-oSfVslLsbSnDiMIBDJTJfm/d/qy5LLnxQyKoq0U0QXICuIX6NLXPf4xFqzoXG/uIMAyF
-kajOkzlNDiYxQKnzga+1d2S7OrFWecShkMOS6YHbH6x4WA/8RR/Pm6ECgYEA1LuXtzyg
-iLgX86KSRibepL30KDqMw9Ex5Do+7JYf+k3R9em8f154GxTR7KRfGYh6VTXKuAsR/Bjy
-/zrF6vFU4kOvRQWT+3hulX1sNtM/f+Yw2VjH8BgtYYewUed6tWKMY8Wh7B9NmiV0rTmt
-ahpURD9Xkef/j+/OvO8AKv89rYw=
------END RSA PRIVATE KEY-----`)
-)

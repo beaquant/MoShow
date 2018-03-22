@@ -5,11 +5,16 @@ import (
 	"MoShow/utils"
 	"encoding/json"
 	"errors"
+	"regexp"
 	"strconv"
 	"time"
 
 	"github.com/astaxie/beego"
 )
+
+const appName = "MoShow"
+
+var re = regexp.MustCompile("\\d+")
 
 //OrderController 充值，支付，提现等接口
 type OrderController struct {
@@ -56,20 +61,27 @@ func (c *OrderController) CreateWebPay() {
 
 	pid, err := c.GetUint64("prodid")
 	if err != nil {
-		beego.Error("订单ID格式错误", err, c.Ctx.Request.UserAgent())
-		dto.Message = "订单ID格式错误\t" + err.Error()
+		beego.Error("产品ID格式错误", err, c.Ctx.Request.UserAgent())
+		dto.Message = "产品ID格式错误\t" + err.Error()
 		return
 	}
 
 	prod, err := getProdFromID(pid)
 	if err != nil {
-		beego.Error("订单ID错误"+strconv.FormatUint(pid, 10), err, c.Ctx.Request.UserAgent())
-		dto.Message = "订单ID错误\t" + err.Error()
+		beego.Error("产品ID错误", pid, err, c.Ctx.Request.UserAgent())
+		dto.Message = "产品ID错误\t" + err.Error()
+		return
+	}
+
+	prodInfo, err := utils.JSONMarshalToString(prod)
+	if err != nil {
+		beego.Error("解析产品信息出错")
+		dto.Message = "解析产品信息出错"
 		return
 	}
 
 	trans := models.TransactionGen()
-	o := &models.Order{Amount: prod.Price, CoinCount: prod.CoinCount + prod.Extra, UserID: tk.ID, PayType: models.PayTypeAlipay, CreateAt: time.Now().Unix(), PayInfo: "{}"}
+	o := &models.Order{Amount: prod.Price, CoinCount: prod.CoinCount + prod.Extra, UserID: tk.ID, PayType: models.PayTypeAlipay, CreateAt: time.Now().Unix(), ProductInfo: prodInfo, PayInfo: "{}"}
 	if err := o.Add(trans); err != nil {
 		beego.Error("添加订单失败", err, c.Ctx.Request.UserAgent())
 		dto.Message = "添加订单失败\t" + err.Error()
@@ -77,7 +89,8 @@ func (c *OrderController) CreateWebPay() {
 		return
 	}
 
-	uri, err := utils.CreatePayment(prod.ProductName, strconv.FormatUint(o.ID, 10), "http://47.96.177.91:8888/api/order/verify", strconv.FormatFloat(o.Amount, 'f', 2, 64))
+	//用APPName加上订单ID拼接成唯一交易号(支付宝规定每个收款账号下面的交易号必须唯一)
+	uri, err := utils.CreatePayment(prod.ProductName, appName+strconv.FormatUint(o.ID, 10), "http://47.96.177.91:8888/api/order/verify", strconv.FormatFloat(o.Amount, 'f', 2, 64))
 	if err != nil {
 		beego.Error("生成支付链接失败", err, c.Ctx.Request.UserAgent())
 		dto.Message = "生成支付链接失败\t" + err.Error()
@@ -108,7 +121,8 @@ func (c *OrderController) AlipayConfirm() {
 		return
 	}
 
-	orderID, err := strconv.ParseUint(noti.OutTradeNo, 10, 64)
+	//正则表达式解析订单ID
+	orderID, err := strconv.ParseUint(re.FindString(noti.OutTradeNo), 10, 64)
 	if err != nil {
 		beego.Error("解析支付宝订单回调参数失败", err)
 		return
@@ -137,7 +151,7 @@ func (c *OrderController) AlipayConfirm() {
 		return
 	}
 
-	up, param, trans := &models.UserProfile{ID: order.UserID}, make(map[string]interface{}), models.TransactionGen()
+	up, param, chg, trans := &models.UserProfile{ID: order.UserID}, make(map[string]interface{}), &models.BalanceChg{UserID: order.UserID, Amount: int(order.CoinCount), Time: time.Now().Unix(), ChgType: models.BalanceChgTypeRecharge, ChgInfo: order.ProductInfo}, models.TransactionGen()
 	param["pay_info"], _ = utils.JSONMarshalToString(noti)
 	param["success"] = true
 	param["pay_time"] = time.Now().Unix()
@@ -149,6 +163,11 @@ func (c *OrderController) AlipayConfirm() {
 
 	if err := up.AddBalance(int(order.CoinCount), trans); err != nil {
 		beego.Error("增加用户余额失败", err)
+		models.TransactionRollback(trans)
+	}
+
+	if err := chg.Add(trans); err != nil {
+		beego.Error("用户充值，生成变动失败", err)
 		models.TransactionRollback(trans)
 	}
 
