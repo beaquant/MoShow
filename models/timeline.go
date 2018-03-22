@@ -4,7 +4,7 @@ package models
 type TimelineUser struct {
 	UserProfile
 	CreatedAt int64  `json:"create_at" gorm:"column:create_at"`
-	Duration  uint64 `json:"duration" gorm:"column:duration"`
+	Duration  uint64 `json:"recent_duration" gorm:"column:recent_duration"`
 }
 
 //TableName .

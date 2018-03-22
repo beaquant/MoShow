@@ -7,6 +7,8 @@ const (
 	WithdrawStatusApply = iota
 	//WithdrawStatusDone 提现成功
 	WithdrawStatusDone
+	//WithdrawStatusReject 提现驳回
+	WithdrawStatusReject
 )
 
 //Withdraw .

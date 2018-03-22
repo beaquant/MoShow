@@ -3,7 +3,6 @@ package controllers
 import (
 	"MoShow/models"
 	"MoShow/utils"
-	"errors"
 	"strconv"
 	"time"
 
@@ -16,20 +15,20 @@ const (
 	writeWait = 10 * time.Second
 
 	// Time allowed to read the next pong message from the peer.
-	pongWait = 60 * time.Second
+	pongWait = 45 * time.Second
 
 	// Send pings to peer with this period. Must be less than pongWait.
-	pingPeriod = (pongWait * 9) / 10
+	pingPeriod = 15 * time.Second
 
 	// Maximum message size allowed from peer.
 	maxMessageSize = 512
 )
 
 const (
-	wsMessageTypeText = iota
-	wsMessageTypeGift
-	wsMessageTypeSystem
-	wsMessageTypeClose
+	wsMessageTypeText         = iota //文本消息内容
+	wsMessageTypeChannelStart        //房间初始化
+	wsMessageTypeSystem              //系统消息
+	wsMessageTypeClose               //关闭房间
 )
 
 var (
@@ -46,6 +45,7 @@ type WebsocketController struct {
 type ChatChannel struct {
 	ID        uint64
 	DstID     uint64
+	Inited    bool
 	StartTime int64
 	Timelong  uint64 //聊天时长,单位:秒
 	StopTime  int64
@@ -199,6 +199,8 @@ func (c *WebsocketController) Reject() {
 		return
 	}
 
+	(&models.UserProfile{ID: tk.ID}).AddDialReject(nil)
+
 	dto.Sucess = true
 }
 
@@ -213,35 +215,37 @@ func (c *ChatChannel) Run() {
 				c.Src = client
 			} else if client.User.ID == c.DstID {
 				c.Dst = client
-
-				if c.StartTime == 0 { //开始计时
-					c.StartTime = time.Now().Unix()
-
-					ticker := time.NewTicker(60 * time.Second)
-					//扣费
-					if err := videoAllocateFund(c.Src.User, c.Dst.User, c.Price); err != nil {
-						beego.Error(err)
-						c.Exit <- nil
-					}
-
-					go func() {
-						defer ticker.Stop()
-
-						for {
-							if c.StopTime == 0 { //若频道未关闭,每隔60秒扣费一次
-								<-ticker.C
-								c.Timelong += 60
-								//扣费
-								if err := videoAllocateFund(c.Src.User, c.Dst.User, c.Price); err != nil { //扣费失败关闭聊天频道
-									beego.Error(err)
-									c.Exit <- nil
-								}
-							}
-						}
-					}()
-				}
 			}
 		case msg := <-c.Send:
+			if msg.MessageType == wsMessageTypeChannelStart && !c.Inited { //双方进入房间，初始化房间，开始视频
+				c.Inited = true
+
+				c.StartTime = time.Now().Unix()
+
+				ticker := time.NewTicker(60 * time.Second)
+				//扣费
+				if err := videoAllocateFund(c.Src.User, c.Dst.User, c.Price); err != nil {
+					beego.Error(err)
+					c.Exit <- nil
+				}
+
+				go func() {
+					defer ticker.Stop()
+
+					for {
+						if c.StopTime == 0 { //若频道未关闭,每隔60秒扣费一次
+							<-ticker.C
+							c.Timelong += 60
+							//扣费
+							if err := videoAllocateFund(c.Src.User, c.Dst.User, c.Price); err != nil { //扣费失败关闭聊天频道
+								beego.Error(err)
+								c.Exit <- nil
+							}
+						}
+					}
+				}()
+			}
+
 			beego.Info(utils.JSONMarshalToString(msg))
 
 			if msg.MessageType == wsMessageTypeClose {
@@ -259,13 +263,21 @@ func (c *ChatChannel) Run() {
 
 			//生成变动
 			if err := videoDone(c.Src.User, c.Dst.User, &models.VideoChgInfo{TimeLong: c.Timelong, Price: c.Price}); err != nil {
-				beego.Error(errors.New("视频结算生成余额变动错误\t" + err.Error()))
+				beego.Error("[websocket结算异常]视频结算生成余额变动错误", err)
 			}
 
 			//生成通话记录
 			dl := &models.Dial{FromUserID: c.ID, ToUserID: c.DstID, Duration: int(c.Timelong), CreateAt: c.StartTime, Status: models.DialStatusSuccess}
 			if err := dl.Add(); err != nil {
-				beego.Error(errors.New("通话记录生成失败\t" + err.Error()))
+				js, _ := utils.JSONMarshalToString(c)
+				beego.Error("[websocket结算异常]通话记录生成失败", err, js)
+			}
+
+			if err := c.Src.User.AddDialDuration(c.Timelong, nil); err != nil {
+				beego.Error("[websocket结算异常]用户增加通话时长失败", err, c.Src.User.ID)
+			}
+			if err := c.Dst.User.AddDialDuration(c.Timelong, nil); err != nil {
+				beego.Error("[websocket结算异常]用户增加通话时长失败", err, c.Dst.User.ID)
 			}
 
 			return
@@ -290,10 +302,11 @@ func (c *ChatChannel) CloseChannel() {
 }
 
 func (c *ChatClient) Read() {
+	oldConnection := c.Conn
+
 	defer func() {
 		if c.Channel.StopTime == 0 { //聊天通道未结束
-			oldConnection := c.Conn
-			time.Sleep(30 * time.Second) //等待30秒,如过连接没有恢复,执行退出
+			// time.Sleep(30 * time.Second) //等待30秒,如过连接没有恢复,执行退出
 
 			if oldConnection != c.Conn { //重连成功
 				return

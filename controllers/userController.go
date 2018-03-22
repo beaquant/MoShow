@@ -24,7 +24,6 @@ type UserPorfileInfo struct {
 	Followed    bool               `json:"followed" description:"是否已关注"`
 	IsFill      bool               `json:"is_fill" description:"资料是否完善"`
 	AnswerRate  float64            `json:"answer_rate" description:"接通率"`
-	Duration    int64              `json:"duration" description:"通话时长"`
 	CheckStatus *models.ProfileChg `json:"check_status" description:"审核状态"`
 	Avatar      string             `json:"avatar"`
 	Gallery     []string           `json:"gallery"`

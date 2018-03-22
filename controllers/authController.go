@@ -363,10 +363,4 @@ func genUserPorfileInfoCommon(upi *UserPorfileInfo, cv *models.UserCoverInfo) {
 	if upi.DialAccept+upi.DialDeny > 0 {
 		upi.AnswerRate = float64(upi.DialAccept) / float64((upi.DialAccept + upi.DialDeny)) //计算接通率
 	}
-
-	dur, err := (&models.Dial{}).GetToalDuration(upi.ID)
-	if err != nil {
-		beego.Error(err)
-	}
-	upi.Duration = dur
 }

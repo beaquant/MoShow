@@ -76,6 +76,7 @@ type UserProfile struct {
 	DialAccept       int    `json:"-" gorm:"column:dial_accept" description:"视频接通数"`
 	DialDeny         int    `json:"-" gorm:"column:dial_deny" description:"视频拒接数"`
 	UpdateAt         int64  `json:"update_at" gorm:"column:update_at" description:"更新时间"`
+	DialDuration     uint64 `json:"dial_duration" gorm:"column:dial_duration" description:"通话时间"`
 }
 
 //UserCoverInfo .
@@ -171,6 +172,22 @@ func (u *UserProfile) GetInviteList(skip, limit int) (ul []UserProfile, err erro
 	}
 
 	return
+}
+
+//AddDialDuration 增加通话时间
+func (u *UserProfile) AddDialDuration(duration uint64, trans *gorm.DB) error {
+	if trans != nil {
+		return trans.Model(u).Updates(map[string]interface{}{"dial_duration": gorm.Expr("dial_duration + ?", duration), "dial_accept + ?": 1}).Error
+	}
+	return db.Model(u).Updates(map[string]interface{}{"dial_duration": gorm.Expr("dial_duration + ?", duration), "dial_accept + ?": 1}).Error
+}
+
+//AddDialReject .
+func (u *UserProfile) AddDialReject(trans *gorm.DB) error {
+	if trans != nil {
+		return trans.Model(u).Update("dial_deny", gorm.Expr("dial_deny + ?", 1)).Error
+	}
+	return db.Model(u).Update("dial_deny", gorm.Expr("dial_deny + ?", 1)).Error
 }
 
 //AddBalance .
