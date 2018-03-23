@@ -969,6 +969,45 @@ func (c *UserController) WithdrawHis() {
 	dto.Message = "查询成功"
 }
 
+//GiftHistory .
+// @Title 获取用户收到的所有礼物
+// @Description 获取用户收到的所有礼物
+// @Param   userid     path    string  true        "用户id,填me表示获取当前账号的用户信息"
+// @Success 200 {object} models.UserProfile
+// @router /:userid/gifthis [get]
+func (c *UserController) GiftHistory() {
+	dto := &utils.ResultDTO{}
+	defer dto.JSONResult(&c.Controller)
+
+	var uid uint64
+	var err error
+	uidStr := strings.TrimSpace(c.Ctx.Input.Param(":userid"))
+	if uidStr == "me" {
+		tk := GetToken(c.Ctx)
+		uid = tk.ID
+	} else {
+		uid, err = strconv.ParseUint(uidStr, 10, 64)
+		if err != nil {
+			beego.Error(err)
+			dto.Message = err.Error()
+			return
+		}
+	}
+
+	ue := &models.UserExtra{ID: uid}
+	lst, err := ue.GetGiftHis()
+	if err != nil {
+		beego.Error("获取礼物历史记录失败", err, c.Ctx.Request.UserAgent())
+		dto.Message = "获取礼物历史记录失败\t" + err.Error()
+		dto.Code = utils.DtoStatusDatabaseError
+		return
+	}
+
+	dto.Data = lst
+	dto.Sucess = true
+	dto.Message = "查询成功"
+}
+
 //赠送礼物,流程包括 源用户扣款，目标用户增加余额，邀请人分成，以及分别添加余额变动记录,过程中任何一部出错，事务回滚并返回失败
 //赠送礼物不参与分成
 func sendGift(from, to *models.UserProfile, gift *models.GiftChgInfo) error {

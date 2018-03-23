@@ -177,6 +177,14 @@ func init() {
 
 	beego.GlobalControllerRouter["MoShow/controllers:UserController"] = append(beego.GlobalControllerRouter["MoShow/controllers:UserController"],
 		beego.ControllerComments{
+			Method: "GiftHistory",
+			Router: `/:userid/gifthis`,
+			AllowHTTPMethods: []string{"get"},
+			MethodParams: param.Make(),
+			Params: nil})
+
+	beego.GlobalControllerRouter["MoShow/controllers:UserController"] = append(beego.GlobalControllerRouter["MoShow/controllers:UserController"],
+		beego.ControllerComments{
 			Method: "Report",
 			Router: `/:userid/report`,
 			AllowHTTPMethods: []string{"post"},

@@ -54,7 +54,8 @@ func TestCompute(t *testing.T) {
 }
 
 func TestJson(t *testing.T) {
-	g := &models.Product{}
+	g := make(map[uint64]models.GiftHisInfo)
+	g[2] = models.GiftHisInfo{Count: 10, GiftInfo: models.Gift{ID: 2}}
 	t.Log(utils.JSONMarshalToString(g))
 }
 
