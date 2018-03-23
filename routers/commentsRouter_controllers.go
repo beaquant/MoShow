@@ -299,7 +299,7 @@ func init() {
 		beego.ControllerComments{
 			Method: "Reject",
 			Router: `/:channelid/reject`,
-			AllowHTTPMethods: []string{"post"},
+			AllowHTTPMethods: []string{"get"},
 			MethodParams: param.Make(),
 			Params: nil})
 

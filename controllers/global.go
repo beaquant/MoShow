@@ -21,8 +21,8 @@ const SmsCodeRedisKey = "code"
 //FrequencyRedisKey IP调用接口频率限制的redis哈希表key
 const FrequencyRedisKey = "frequency"
 
-//TokenRedisKey .
-const TokenRedisKey = "token"
+//TokenValidRedisKey 单端登陆唯一有效token的redis哈希表key
+const TokenValidRedisKey = "token"
 
 var (
 	key        = []byte(beego.AppConfig.String("aesKey"))
@@ -34,12 +34,13 @@ var (
 type Token struct {
 	ID         uint64
 	AcctStatus int
-	ExpireTime time.Time
+	ExpireTime int64
+	UUID       string
 }
 
 //FreqRecord 记录某个ip在某个时间段内的调用频率
 type FreqRecord struct {
-	ExpireTime time.Time
+	ExpireTime int64
 	Count      uint64
 }
 
@@ -58,7 +59,9 @@ func FilterUser(ctx *context.Context) {
 	}
 
 	exclude := make(map[string]struct{})
-	exclude["/api/auth/*"] = struct{}{}
+	exclude["/api/auth/.+/sendcode"] = struct{}{}
+	exclude["/api/auth/.+/login"] = struct{}{}
+	exclude["/api/auth/wechatlogin"] = struct{}{}
 	exclude["/api/order/verify"] = struct{}{}
 
 	for k := range exclude {
@@ -79,7 +82,7 @@ func FrequencyCheck(ctx *context.Context) bool {
 	f := &FreqRecord{}
 	val, _ := redis.String(con.Do("HGET", FrequencyRedisKey, ip))
 	if len(val) > 0 {
-		if err := utils.JSONUnMarshal(val, f); err == nil && f.ExpireTime.After(time.Now()) {
+		if err := utils.JSONUnMarshal(val, f); err == nil && f.ExpireTime > time.Now().Unix() {
 			if f.Count > count {
 				dto := &utils.ResultDTO{Sucess: false, Message: "您访问频率太快，请稍后再试", Code: utils.DtoStatusFrequencyError}
 				ctx.Output.JSON(dto, false, false)
@@ -88,11 +91,11 @@ func FrequencyCheck(ctx *context.Context) bool {
 			f.Count++
 		} else {
 			f.Count = 1
-			f.ExpireTime = time.Now().Add(time.Minute)
+			f.ExpireTime = time.Now().Add(time.Minute).Unix()
 		}
 	} else {
 		f.Count = 1
-		f.ExpireTime = time.Now().Add(time.Minute)
+		f.ExpireTime = time.Now().Add(time.Minute).Unix()
 	}
 
 	if str, err := utils.JSONMarshalToString(f); err == nil {
@@ -103,6 +106,23 @@ func FrequencyCheck(ctx *context.Context) bool {
 
 //SetToken 在cookie里添加token字段
 func SetToken(ctx *context.Context, tk *Token) error {
+	var err error
+
+	//设置token过期时间
+	tk.ExpireTime = time.Now().AddDate(0, 0, 15).Unix()
+	if tk.UUID, err = utils.UUIDHexString(); err != nil {
+		beego.Error("生成UUID失败", err, ctx.Request.UserAgent())
+		tk.UUID = utils.RandStringBytesMaskImprSrc(16)
+	}
+
+	con := utils.RedisPool.Get()
+	defer con.Close()
+
+	if _, err := con.Do("HSET", TokenValidRedisKey, tk.ID, tk.UUID); err != nil {
+		beego.Error("redis更新token操作失败", err, ctx.Request.UserAgent())
+		return err
+	}
+
 	tkStr, err := tk.Encrypt()
 	if err != nil {
 		return err
@@ -116,29 +136,47 @@ func SetToken(ctx *context.Context, tk *Token) error {
 func GetToken(ctx *context.Context) *Token {
 	ckStr := ctx.GetCookie(cookieName)
 
-	b := &Token{}
-	err := b.Decrypt(ckStr)
+	tk := &Token{}
+	err := tk.Decrypt(ckStr)
+	dto := &utils.ResultDTO{Sucess: false, Code: utils.DtoStatusAuthError}
 
 	if err != nil {
-		beego.Error(err)
-
-		dto := &utils.ResultDTO{Sucess: false, Message: "Token校验失败,请先登录", Code: utils.DtoStatusAuthError}
+		beego.Error("token解密失败", err)
+		dto.Message = "Token校验失败,请先登录"
 		ctx.Output.JSON(dto, false, false)
 		return nil
 	}
 
-	if b.ExpireTime.Before(time.Now()) {
-		dto := &utils.ResultDTO{Sucess: false, Message: "Token已过期,请重新登录", Code: utils.DtoStatusAuthError}
+	if tk.ExpireTime < time.Now().Unix() {
+		beego.Error("Token已过期", tk.ExpireTime, tk)
+		dto.Message = "Token已过期,请重新登录"
 		ctx.Output.JSON(dto, false, false)
 		return nil
 	}
 
-	if b.AcctStatus == models.AcctStatusDeleted {
-		dto := &utils.ResultDTO{Sucess: false, Message: "您的账号已被注销,请联系客服", Code: utils.DtoStatusAuthError}
+	if tk.AcctStatus == models.AcctStatusDeleted {
+		dto.Message = "您的账号已被注销,请联系客服"
 		ctx.Output.JSON(dto, false, false)
 		return nil
 	}
-	return b
+
+	con := utils.RedisPool.Get()
+	defer con.Close()
+	val, err := redis.String(con.Do("HGET", TokenValidRedisKey, tk.ID))
+	if err != nil {
+		beego.Error("redis获取token失败", err)
+		dto.Message = "校验单端登陆失败"
+		ctx.Output.JSON(dto, false, false)
+		return nil
+	}
+
+	if val != tk.UUID {
+		dto.Message = "已在其他设备登陆,请注意信息安全"
+		ctx.Output.JSON(dto, false, false)
+		return nil
+	}
+
+	return tk
 }
 
 //ClearToken 清除token字段

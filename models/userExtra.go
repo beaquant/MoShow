@@ -35,6 +35,24 @@ func (UserExtra) TableName() string {
 	return "user_extra"
 }
 
+//Add .
+func (u *UserExtra) Add(trans *gorm.DB) error {
+	if trans == nil {
+		trans = db
+	}
+
+	if len(u.GiftHistory) == 0 {
+		u.GiftHistory = "{}"
+	}
+
+	return trans.Create(u).Error
+}
+
+//ReadOrCreate .
+func (u *UserExtra) Read() error {
+	return db.Find(u).Error
+}
+
 //AddGiftCount .
 func (u *UserExtra) AddGiftCount(count uint64) {
 

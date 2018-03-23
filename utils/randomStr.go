@@ -1,8 +1,11 @@
 package utils
 
 import (
+	"encoding/base64"
 	"math/rand"
 	"time"
+
+	"github.com/satori/go.uuid"
 )
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -40,4 +43,10 @@ func RandStringBytesMaskImprSrc(n int) string {
 // RandNumber .
 func RandNumber(min, max int) int {
 	return min + rand.Intn(max-min)
+}
+
+//UUIDHexString .
+func UUIDHexString() (string, error) {
+	u1, err := uuid.NewV4()
+	return base64.URLEncoding.EncodeToString(u1.Bytes()), err
 }

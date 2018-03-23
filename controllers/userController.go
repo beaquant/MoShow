@@ -128,7 +128,7 @@ func (c *UserController) Update() {
 	}
 
 	pc := &models.ProfileChg{ID: tk.ID}
-	if err := pc.ReadOrCreate(nil); err != nil {
+	if err := pc.Read(nil); err != nil {
 		beego.Error("获取用户信息变动失败", err, c.Ctx.Request.UserAgent())
 		dto.Message = "获取用户信息变动失败" + err.Error()
 		return
@@ -253,6 +253,8 @@ func (c *UserController) Update() {
 
 	dto.Data = upi
 	dto.Sucess = true
+
+	go checkPorn(up, cv)
 }
 
 //SendGift .
@@ -709,14 +711,6 @@ func (c *UserController) AnchorApply() {
 	}
 
 	pc := &models.ProfileChg{ID: tk.ID}
-	if err := pc.ReadOrCreate(trans); err != nil {
-		models.TransactionRollback(trans)
-		beego.Error("获取资料变动失败", err, c.Ctx.Request.UserAgent())
-		dto.Message = "获取资料变动失败\t" + err.Error()
-		dto.Code = utils.DtoStatusDatabaseError
-		return
-	}
-
 	field := map[string]interface{}{"cover_pic": pic}
 	field["video"] = video
 	field["cover_pic_check"] = models.CheckStatusUncheck
@@ -1032,6 +1026,19 @@ func sendGift(from, to *models.UserProfile, gift *models.GiftChgInfo) error {
 		return err
 	}
 
+	//增加历史收益，邀请人历史收益
+	if err := (&models.UserExtra{ID: to.ID}).AddIncomeHist(uint64(income), trans); err != nil {
+		models.TransactionRollback(trans)
+		return errors.New("增加赠礼目标用户历史收益失败\t" + err.Error())
+	}
+
+	if u.InvitedBy != 0 { //如果有邀请人，增加邀请人历史收益
+		if err := (&models.UserExtra{ID: u.InvitedBy}).AddIncomeHist(uint64(inviteIncome), trans); err != nil {
+			models.TransactionRollback(trans)
+			return errors.New("增加赠礼目标用户邀请人历史收益失败\t" + err.Error())
+		}
+	}
+
 	fuChg := &models.BalanceChg{UserID: from.ID, FromUserID: to.ID, ChgType: models.BalanceChgTypeGift, Amount: -int(amount)} //源用户扣款变动
 	fuChg.ChgInfo = chgInfo
 
@@ -1039,23 +1046,6 @@ func sendGift(from, to *models.UserProfile, gift *models.GiftChgInfo) error {
 	tuchg.ChgInfo = chgInfo
 
 	if err := fuChg.AddChg(trans, fuChg, tuchg, iuchg); err != nil {
-		models.TransactionRollback(trans)
-		return err
-	}
-
-	models.TransactionCommit(trans) //提交事务
-	return nil
-}
-
-func videoAllocateFund(from, to *models.UserProfile, price uint64) error {
-	income, inviteIncome, err := computeIncome(price) //收益金额,分成金额
-	if err != nil {
-		return err
-	}
-
-	trans := models.TransactionGen() //开始事务
-
-	if err := from.AllocateFund(to, nil, price, uint64(income), uint64(inviteIncome), trans); err != nil {
 		models.TransactionRollback(trans)
 		return err
 	}
@@ -1089,6 +1079,19 @@ func videoDone(from, to *models.UserProfile, video *models.VideoChgInfo) error {
 		return err
 	}
 
+	//增加历史收益，邀请人历史收益
+	if err := (&models.UserExtra{ID: to.ID}).AddIncomeHist(uint64(income), trans); err != nil {
+		models.TransactionRollback(trans)
+		return errors.New("增加赠礼目标用户历史收益失败\t" + err.Error())
+	}
+
+	if u.InvitedBy != 0 { //如果有邀请人，增加邀请人历史收益
+		if err := (&models.UserExtra{ID: u.InvitedBy}).AddIncomeHist(uint64(inviteIncome), trans); err != nil {
+			models.TransactionRollback(trans)
+			return errors.New("增加赠礼目标用户邀请人历史收益失败\t" + err.Error())
+		}
+	}
+
 	fuChg := &models.BalanceChg{UserID: from.ID, FromUserID: to.ID, ChgType: models.BalanceChgTypeVideo, Amount: -int(amount)} //源用户扣款变动
 	fuChg.ChgInfo = chgInfo
 
@@ -1104,7 +1107,24 @@ func videoDone(from, to *models.UserProfile, video *models.VideoChgInfo) error {
 	return nil
 }
 
-//计算收益
+func videoAllocateFund(from, to *models.UserProfile, price uint64) error {
+	income, inviteIncome, err := computeIncome(price) //收益金额,分成金额
+	if err != nil {
+		return err
+	}
+
+	trans := models.TransactionGen() //开始事务
+
+	if err := from.AllocateFund(to, nil, price, uint64(income), uint64(inviteIncome), trans); err != nil {
+		models.TransactionRollback(trans)
+		return err
+	}
+
+	models.TransactionCommit(trans) //提交事务
+	return nil
+}
+
+//computeIncome 计算收益
 func computeIncome(amount uint64) (income, inviteIncome int, err error) {
 	rate, err := (&models.Config{}).GetIncomeRate()
 	if err != nil {
@@ -1117,7 +1137,7 @@ func computeIncome(amount uint64) (income, inviteIncome int, err error) {
 	return
 }
 
-//生成邀请人收益变动
+//genInvitationIncome 生成邀请人收益变动
 func genInvitationIncome(uid, invitedByid uint64, inviteIncome int, chgInfo string) (iu *models.UserProfile, iuchg *models.BalanceChg) {
 	if invitedByid != 0 { //邀请人分成
 		iuchg = &models.BalanceChg{UserID: invitedByid, FromUserID: uid, ChgType: models.BalanceChgTypeInvitationIncome, Amount: inviteIncome}

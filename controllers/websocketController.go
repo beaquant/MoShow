@@ -73,8 +73,8 @@ type WsMessage struct {
 }
 
 //Create .
-// @Title 创建聊天通道
-// @Description 创建聊天通道
+// @Title 创建聊天通道[websocket]
+// @Description 创建聊天通道[websocket]
 // @Param   parterid     path    int  true        "聊天对象的ID"
 // @router /:parterid/create [get]
 func (c *WebsocketController) Create() {
@@ -118,8 +118,8 @@ func (c *WebsocketController) Create() {
 }
 
 //Join .
-// @Title 加入聊天通道
-// @Description 加入聊天通道
+// @Title 加入聊天通道[websocket]
+// @Description 加入聊天通道[websocket]
 // @Param   channelid     path    int  true        "聊天对象的ID"
 // @router /:channelid/join [get]
 func (c *WebsocketController) Join() {
@@ -174,7 +174,7 @@ func (c *WebsocketController) Join() {
 // @Title 拒绝聊天请求
 // @Description 拒绝聊天请求
 // @Param   channelid     path    int  true        "聊天对象的ID"
-// @router /:channelid/reject [post]
+// @router /:channelid/reject [get]
 func (c *WebsocketController) Reject() {
 	dto := &utils.ResultDTO{}
 	defer dto.JSONResult(&c.Controller)

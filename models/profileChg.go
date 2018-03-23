@@ -31,24 +31,30 @@ func (ProfileChg) TableName() string {
 	return "profile_chg"
 }
 
-//ReadOrCreate .
-func (p *ProfileChg) ReadOrCreate(trans *gorm.DB) (err error) {
+//Add .
+func (p *ProfileChg) Add(trans *gorm.DB) error {
 	if p.ID == 0 {
 		return errors.New("必须指定用户ID")
 	}
 
-	var pf ProfileChg
 	if trans == nil {
 		trans = db
 	}
-	if err = trans.Where("id = ?", p.ID).Find(&pf).Error; err != nil {
-		if err != gorm.ErrRecordNotFound {
-			return
-		}
-		err = trans.Create(p).Error
+
+	return trans.Create(p).Error
+}
+
+//Read .
+func (p *ProfileChg) Read(trans *gorm.DB) error {
+	if p.ID == 0 {
+		return errors.New("必须指定用户ID")
 	}
 
-	return
+	if trans == nil {
+		trans = db
+	}
+
+	return trans.Find(p).Error
 }
 
 //Update .

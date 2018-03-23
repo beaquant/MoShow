@@ -159,16 +159,25 @@ func (c *OrderController) AlipayConfirm() {
 	if err := order.Update(param, trans); err != nil {
 		beego.Error("更新订单状态失败", err)
 		models.TransactionRollback(trans)
+		return
 	}
 
 	if err := up.AddBalance(int(order.CoinCount), trans); err != nil {
 		beego.Error("增加用户余额失败", err)
 		models.TransactionRollback(trans)
+		return
 	}
 
 	if err := chg.Add(trans); err != nil {
 		beego.Error("用户充值，生成变动失败", err)
 		models.TransactionRollback(trans)
+		return
+	}
+
+	if err := (&models.UserExtra{ID: order.UserID}).AddBalanceHist(order.CoinCount, trans); err != nil {
+		beego.Error("用户充值，增加历史余额失败", err)
+		models.TransactionRollback(trans)
+		return
 	}
 
 	models.TransactionCommit(trans)

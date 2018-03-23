@@ -3,6 +3,7 @@ package controllers
 import (
 	"MoShow/models"
 	"MoShow/utils"
+	"errors"
 	"strconv"
 	"time"
 
@@ -113,48 +114,61 @@ func (c *AuthController) Login() {
 		return
 	}
 
-	tk := &Token{ExpireTime: time.Now().AddDate(0, 0, 15)}
+	tk := &Token{}
 	if u.ID == 0 { //该手机号未注册，执行注册逻辑
-		trans := models.TransactionGen()
+		// trans := models.TransactionGen()
 
-		u.AcctType = models.AcctTypeTelephone
-		u.AcctStatus = models.AcctStatusNormal
-		u.CreatedAt = time.Now().Unix()
+		// u.AcctType = models.AcctTypeTelephone
+		// u.AcctStatus = models.AcctStatusNormal
+		// u.CreatedAt = time.Now().Unix()
 
-		if err := u.Add(trans); err != nil {
-			beego.Error(err, c.Ctx.Request.UserAgent())
-			dto.Message = err.Error()
-			models.TransactionRollback(trans)
-			return
-		}
+		// if err := u.Add(trans); err != nil {
+		// 	beego.Error(err, c.Ctx.Request.UserAgent())
+		// 	dto.Message = err.Error()
+		// 	models.TransactionRollback(trans)
+		// 	return
+		// }
 
-		imUser := &netease.ImUser{ID: strconv.FormatUint(u.ID, 10)}
-		imtk, err := utils.ImCreateUser(imUser)
+		// imUser := &netease.ImUser{ID: strconv.FormatUint(u.ID, 10)}
+		// imtk, err := utils.ImCreateUser(imUser)
+		// if err != nil {
+		// 	beego.Error("创建IMUser失败", err, c.Ctx.Request.UserAgent())
+		// 	dto.Message = "创建IMUser失败\t" + err.Error()
+		// 	models.TransactionRollback(trans)
+		// 	return
+		// }
+
+		// up := models.UserProfile{ID: u.ID}
+		// up.ImToken = imtk.Token
+		// up.Birthday = 0
+		// up.CoverPic = "{}"
+		// up.OnlineStatus = models.OnlineStatusOnline
+		// if err := up.Add(trans); err != nil {
+		// 	beego.Error(err, c.Ctx.Request.UserAgent())
+		// 	dto.Message = err.Error()
+		// 	models.TransactionRollback(trans)
+		// 	return
+		// }
+
+		// models.TransactionCommit(trans)
+
+		up, err := initUser(u, models.AcctTypeTelephone)
 		if err != nil {
-			beego.Error("创建IMUser失败", err, c.Ctx.Request.UserAgent())
-			dto.Message = "创建IMUser失败\t" + err.Error()
-			models.TransactionRollback(trans)
+			beego.Error("注册用户失败", err, c.Ctx.Request.UserAgent())
+			dto.Message = "注册用户失败\t" + err.Error()
 			return
 		}
 
-		up := models.UserProfile{ID: u.ID}
-		up.ImToken = imtk.Token
-		up.Birthday = 0
-		up.CoverPic = "{}"
-		up.OnlineStatus = models.OnlineStatusOnline
-		if err := up.Add(trans); err != nil {
-			beego.Error(err, c.Ctx.Request.UserAgent())
-			dto.Message = err.Error()
-			models.TransactionRollback(trans)
+		if err := SetToken(c.Ctx, tk); err != nil {
+			beego.Error("设置token失败", err, c.Ctx.Request.UserAgent())
+			dto.Message = "设置token失败\t" + err.Error()
 			return
 		}
 
-		models.TransactionCommit(trans)
 		tk.ID = u.ID
 		dto.Message = "注册成功"
-		dto.Data = &UserPorfileInfo{UserProfile: up, ImTk: imtk.Token}
+		dto.Data = &UserPorfileInfo{UserProfile: *up, ImTk: up.ImToken}
 		dto.Sucess = true
-		SetToken(c.Ctx, tk)
 	} else {
 		if u.AcctStatus != models.AcctStatusDeleted {
 			if err := (&models.UserProfile{ID: u.ID}).UpdateOnlineStatus(models.OnlineStatusOnline); err != nil {
@@ -178,9 +192,14 @@ func (c *AuthController) Login() {
 				return
 			}
 
+			if err := SetToken(c.Ctx, tk); err != nil {
+				beego.Error("设置token失败", err, c.Ctx.Request.UserAgent())
+				dto.Message = "设置token失败\t" + err.Error()
+				return
+			}
+
 			dto.Sucess = true
 			dto.Message = "登陆成功"
-			SetToken(c.Ctx, tk)
 		} else {
 			dto.Message = "该账号已被注销"
 		}
@@ -217,48 +236,61 @@ func (c *AuthController) WechatLogin() {
 		return
 	}
 
-	tk := &Token{ExpireTime: time.Now().AddDate(0, 0, 15)}
+	tk := &Token{}
 	if u.ID == 0 { //执行微信注册
-		trans := models.TransactionGen()
+		// trans := models.TransactionGen()
 
-		u.AcctType = models.AcctTypeWechat
-		u.AcctStatus = models.AcctStatusNormal
-		u.CreatedAt = time.Now().Unix()
+		// u.AcctType = models.AcctTypeWechat
+		// u.AcctStatus = models.AcctStatusNormal
+		// u.CreatedAt = time.Now().Unix()
 
-		if err := u.Add(trans); err != nil {
-			beego.Error(err, c.Ctx.Request.UserAgent())
-			dto.Message = err.Error()
-			models.TransactionRollback(trans)
-			return
-		}
+		// if err := u.Add(trans); err != nil {
+		// 	beego.Error(err, c.Ctx.Request.UserAgent())
+		// 	dto.Message = err.Error()
+		// 	models.TransactionRollback(trans)
+		// 	return
+		// }
 
-		imUser := &netease.ImUser{ID: strconv.FormatUint(u.ID, 10)}
-		imtk, err := utils.ImCreateUser(imUser)
+		// imUser := &netease.ImUser{ID: strconv.FormatUint(u.ID, 10)}
+		// imtk, err := utils.ImCreateUser(imUser)
+		// if err != nil {
+		// 	beego.Error("创建IMUser失败", err, c.Ctx.Request.UserAgent())
+		// 	dto.Message = "创建IMUser失败\t" + err.Error()
+		// 	models.TransactionRollback(trans)
+		// 	return
+		// }
+
+		// up := models.UserProfile{ID: u.ID}
+		// up.ImToken = imtk.Token
+		// up.Birthday = 0
+		// up.CoverPic = "{}"
+		// up.OnlineStatus = models.OnlineStatusOnline
+		// if err := up.Add(trans); err != nil {
+		// 	beego.Error(err, c.Ctx.Request.UserAgent())
+		// 	dto.Message = err.Error()
+		// 	models.TransactionRollback(trans)
+		// 	return
+		// }
+
+		// models.TransactionCommit(trans)
+
+		up, err := initUser(u, models.AcctTypeWechat)
 		if err != nil {
-			beego.Error("创建IMUser失败", err, c.Ctx.Request.UserAgent())
-			dto.Message = "创建IMUser失败\t" + err.Error()
-			models.TransactionRollback(trans)
+			beego.Error("注册用户失败", err, c.Ctx.Request.UserAgent())
+			dto.Message = "注册用户失败\t" + err.Error()
 			return
 		}
 
-		up := models.UserProfile{ID: u.ID}
-		up.ImToken = imtk.Token
-		up.Birthday = 0
-		up.CoverPic = "{}"
-		up.OnlineStatus = models.OnlineStatusOnline
-		if err := up.Add(trans); err != nil {
-			beego.Error(err, c.Ctx.Request.UserAgent())
-			dto.Message = err.Error()
-			models.TransactionRollback(trans)
+		if err := SetToken(c.Ctx, tk); err != nil {
+			beego.Error("设置token失败", err, c.Ctx.Request.UserAgent())
+			dto.Message = "设置token失败\t" + err.Error()
 			return
 		}
 
-		models.TransactionCommit(trans)
 		tk.ID = u.ID
 		dto.Message = "注册成功"
-		dto.Data = &UserPorfileInfo{UserProfile: up, ImTk: imtk.Token}
+		dto.Data = &UserPorfileInfo{UserProfile: *up, ImTk: up.ImToken}
 		dto.Sucess = true
-		SetToken(c.Ctx, tk)
 	} else {
 		if u.AcctStatus != models.AcctStatusDeleted {
 			if err := (&models.UserProfile{ID: u.ID}).UpdateOnlineStatus(models.OnlineStatusOnline); err != nil {
@@ -280,13 +312,67 @@ func (c *AuthController) WechatLogin() {
 				dto.Message = "获取用户信息失败\t" + err.Error()
 				return
 			}
+
+			if err := SetToken(c.Ctx, tk); err != nil {
+				beego.Error("设置token失败", err, c.Ctx.Request.UserAgent())
+				dto.Message = "设置token失败\t" + err.Error()
+				return
+			}
+
 			dto.Sucess = true
 			dto.Message = "登陆成功"
-			SetToken(c.Ctx, tk)
 		} else {
 			dto.Message = "该账号已被注销"
 		}
 	}
+}
+
+func initUser(u *models.User, acctType int) (*models.UserProfile, error) {
+	trans := models.TransactionGen()
+
+	u.AcctType = acctType
+	u.AcctStatus = models.AcctStatusNormal
+	u.CreatedAt = time.Now().Unix()
+
+	if err := u.Add(trans); err != nil {
+		models.TransactionRollback(trans)
+		return nil, errors.New("添加用户失败\t" + err.Error())
+	}
+
+	imUser := &netease.ImUser{ID: strconv.FormatUint(u.ID, 10)}
+	imtk, err := utils.ImCreateUser(imUser)
+	if err != nil {
+		models.TransactionRollback(trans)
+		return nil, errors.New("创建IMUser失败\t" + err.Error())
+	}
+
+	up := &models.UserProfile{ID: u.ID}
+	up.ImToken = imtk.Token
+	up.Birthday = 0
+	up.CoverPic = "{}"
+	up.OnlineStatus = models.OnlineStatusOnline
+	if err := up.Add(trans); err != nil {
+		models.TransactionRollback(trans)
+		return nil, errors.New("创建用户详情失败\t" + err.Error())
+	}
+
+	if err := (&models.Subscribe{ID: u.ID}).Add(trans); err != nil {
+		models.TransactionRollback(trans)
+		return nil, errors.New("创建关注信息失败\t" + err.Error())
+	}
+
+	if err := (&models.UserExtra{ID: u.ID}).Add(trans); err != nil {
+		models.TransactionRollback(trans)
+		return nil, errors.New("创建用户附加信息失败\t" + err.Error())
+	}
+
+	if err := (&models.ProfileChg{ID: u.ID}).Add(trans); err != nil {
+		models.TransactionRollback(trans)
+		return nil, errors.New("创建用户资料变动信息失败\t" + err.Error())
+	}
+
+	models.TransactionCommit(trans)
+	return up, nil
 }
 
 //Logout .
@@ -315,7 +401,7 @@ func genSelfUserPorfileInfo(up *models.UserProfile, pc *models.ProfileChg) (*Use
 
 	if pc == nil {
 		pc = &models.ProfileChg{ID: up.ID}
-		if err := pc.ReadOrCreate(nil); err != nil {
+		if err := pc.Read(nil); err != nil {
 			beego.Error("获取个人信息变动失败", err)
 			return nil, err
 		}

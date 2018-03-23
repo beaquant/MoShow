@@ -27,6 +27,23 @@ func (Subscribe) TableName() string {
 	return "subscribe"
 }
 
+//Add .
+func (s *Subscribe) Add(trans *gorm.DB) error {
+	if trans == nil {
+		trans = db
+	}
+
+	if len(s.Followers) == 0 {
+		s.Followers = "{}"
+	}
+
+	if len(s.Following) == 0 {
+		s.Following = "{}"
+	}
+
+	return trans.Create(s).Error
+}
+
 //ReadOrCreate .
 func (s *Subscribe) ReadOrCreate(trans *gorm.DB) (err error) {
 	if s.ID == 0 {
