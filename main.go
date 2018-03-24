@@ -9,7 +9,7 @@ import (
 )
 
 func init() {
-	beego.BConfig.RunMode = "dev"
+	// beego.BConfig.RunMode = "dev"
 }
 
 func main() {

@@ -27,6 +27,9 @@ const (
 const (
 	wsMessageTypeText         = iota //文本消息内容
 	wsMessageTypeChannelStart        //房间初始化
+	wsMessageTypeAllocateFund        //扣费信息
+	wsMessageTypeException           //异常挂断
+	wsMessageTypeChannelEnd          //房间结算
 	wsMessageTypeSystem              //系统消息
 	wsMessageTypeClose               //关闭房间
 )
@@ -34,6 +37,7 @@ const (
 var (
 	upgrader     = websocket.Upgrader{}
 	chatChannels = make(map[uint64]*ChatChannel)
+	chattingUser = make(map[uint64]interface{})
 )
 
 //WebsocketController websocket相关
@@ -50,11 +54,12 @@ type ChatChannel struct {
 	Timelong  uint64 //聊天时长,单位:秒
 	StopTime  int64
 	Price     uint64
+	Amount    uint64
 	Src       *ChatClient
 	Dst       *ChatClient
 	Send      chan *WsMessage
 	Join      chan *ChatClient
-	Exit      chan *ChatClient
+	Exit      chan error
 }
 
 //ChatClient .
@@ -67,9 +72,22 @@ type ChatClient struct {
 
 //WsMessage .
 type WsMessage struct {
-	FromID      uint64
-	Content     string
-	MessageType int
+	Content     string `json:"content"`
+	MessageType int    `json:"type"`
+}
+
+//VideoCost 用户消费信息
+type VideoCost struct {
+	Balance  uint64 `json:"balance" description:"用户余额"`
+	Cost     uint64 `json:"cost" description:"用户花费"`
+	Income   uint64 `json:"income,omitempty" description:"主播收益"`
+	Timelong uint64 `json:"timelong" description:"聊天时长"`
+}
+
+//WsTraficInfo .
+type WsTraficInfo struct {
+	NIMChannelID uint64 `json:"NIMChannelID" description:"网易云房间ID"`
+	Timelong     uint64 `json:"income" description:"聊天时长"`
 }
 
 //Create .
@@ -85,7 +103,7 @@ func (c *WebsocketController) Create() {
 	}
 
 	tk := GetToken(c.Ctx)
-	_, ok := chatChannels[tk.ID]
+	_, ok := chattingUser[tk.ID]
 	if ok {
 		return
 	}
@@ -104,12 +122,13 @@ func (c *WebsocketController) Create() {
 		}
 	}
 
-	channel := &ChatChannel{Join: make(chan *ChatClient), Send: make(chan *WsMessage), Exit: make(chan *ChatClient, 1), ID: tk.ID, DstID: parter}
+	channel := &ChatChannel{Join: make(chan *ChatClient), Send: make(chan *WsMessage), Exit: make(chan error, 1), ID: tk.ID, DstID: parter}
 	go channel.Run()
 
 	client := &ChatClient{User: up, Conn: conn, Send: make(chan *WsMessage)}
 	client.Channel = channel
 	chatChannels[tk.ID] = channel
+	chattingUser[tk.ID] = nil
 
 	channel.Join <- client //加入频道
 
@@ -120,7 +139,7 @@ func (c *WebsocketController) Create() {
 //Join .
 // @Title 加入聊天通道[websocket]
 // @Description 加入聊天通道[websocket]
-// @Param   channelid     path    int  true        "聊天对象的ID"
+// @Param   channelid     path    int  true        "聊天频道的ID"
 // @router /:channelid/join [get]
 func (c *WebsocketController) Join() {
 	channelid, err := strconv.ParseUint(c.Ctx.Input.Param(":channelid"), 10, 64)
@@ -166,6 +185,8 @@ func (c *WebsocketController) Join() {
 		}
 	}
 
+	chattingUser[tk.ID] = nil
+
 	go client.Read()
 	go client.Write()
 }
@@ -204,6 +225,18 @@ func (c *WebsocketController) Reject() {
 	dto.Sucess = true
 }
 
+func (c *ChatChannel) genVideoCost() (*VideoCost, error) {
+	vc := &VideoCost{}
+	up := (&models.UserProfile{ID: c.ID})
+	if err := up.Read(); err != nil {
+		return nil, err
+	}
+
+	vc.Balance = up.Balance
+	vc.Cost = c.Amount
+	return vc, nil
+}
+
 //Run .
 func (c *ChatChannel) Run() {
 	defer c.CloseChannel()
@@ -217,59 +250,111 @@ func (c *ChatChannel) Run() {
 				c.Dst = client
 			}
 		case msg := <-c.Send:
-			if msg.MessageType == wsMessageTypeChannelStart && !c.Inited { //双方进入房间，初始化房间，开始视频
-				c.Inited = true
+			switch msg.MessageType {
+			case wsMessageTypeChannelStart:
+				if !c.Inited { //双方进入房间，初始化房间，开始视频
+					c.Inited = true
+					c.StartTime = time.Now().Unix()
 
-				c.StartTime = time.Now().Unix()
+					//扣费
+					if err := videoAllocateFund(c.Src.User, c.Dst.User, c.Price); err != nil {
+						beego.Error(err)
+						c.Exit <- nil
+					}
 
-				ticker := time.NewTicker(60 * time.Second)
-				//扣费
-				if err := videoAllocateFund(c.Src.User, c.Dst.User, c.Price); err != nil {
-					beego.Error(err)
+					go func() {
+						ticker := time.NewTicker(60 * time.Second)
+						defer ticker.Stop()
+
+						for {
+							select {
+							case <-ticker.C:
+								if c.StopTime == 0 { //若频道未关闭,每隔60秒扣费一次
+									c.Timelong = uint64(time.Now().Unix() - c.StartTime)
+
+									//扣费
+									if err := videoAllocateFund(c.Src.User, c.Dst.User, c.Price); err != nil { //扣费失败关闭聊天频道
+										beego.Error(err)
+										c.Exit <- nil
+									}
+
+									c.Amount += c.Price
+								} else {
+									break
+								}
+							}
+						}
+					}()
+				}
+
+				vc, err := c.genVideoCost()
+				if err != nil {
+					beego.Error("生成消费信息失败", err)
 					c.Exit <- nil
 				}
 
-				go func() {
-					defer ticker.Stop()
+				m := &WsMessage{MessageType: wsMessageTypeChannelStart}
+				vcStr, err := utils.JSONMarshalToString(vc)
+				if err != nil {
+					beego.Error("解析消费信息失败", err)
+					c.Exit <- nil
+				}
 
-					for {
-						if c.StopTime == 0 { //若频道未关闭,每隔60秒扣费一次
-							<-ticker.C
-							c.Timelong += 60
-							//扣费
-							if err := videoAllocateFund(c.Src.User, c.Dst.User, c.Price); err != nil { //扣费失败关闭聊天频道
-								beego.Error(err)
-								c.Exit <- nil
-							}
-						}
-					}
-				}()
-			}
+				m.Content = vcStr
+				c.Src.Send <- m
+			case wsMessageTypeClose:
+				c.StopTime = time.Now().Unix()
+				c.Timelong = uint64(c.StopTime - c.StartTime)
 
-			beego.Info(utils.JSONMarshalToString(msg))
+				m := &WsMessage{MessageType: wsMessageTypeChannelEnd}
+				vc := &VideoCost{Cost: c.Amount, Timelong: c.Timelong}
 
-			if msg.MessageType == wsMessageTypeClose {
+				income, _, _ := computeIncome(c.Amount)
+				vc.Income = uint64(income)
+
+				vcStr, err := utils.JSONMarshalToString(vc)
+				if err != nil {
+					beego.Error("解析消费信息失败", err)
+				}
+
+				m.Content = vcStr
+
+				c.Src.Send <- m
+				c.Dst.Send <- m
+
 				c.Exit <- nil
 				return
 			}
-
-			if msg.FromID == c.DstID && c.Src != nil {
-				c.Src.Send <- msg
-			} else if c.Dst != nil {
-				c.Dst.Send <- msg
+			beego.Info(utils.JSONMarshalToString(msg))
+		case exp := <-c.Exit:
+			if !c.Inited { //在主播未加入之前取消，不做任何操作
+				return
 			}
-		case <-c.Exit:
-			c.StopTime = time.Now().Unix()
+
+			if c.StopTime == 0 {
+				c.StopTime = time.Now().Unix()
+
+			}
+			c.Timelong = uint64(c.StopTime - c.StartTime)
+
+			dt := &models.DialTag{}
 
 			//生成变动
-			if err := videoDone(c.Src.User, c.Dst.User, &models.VideoChgInfo{TimeLong: c.Timelong, Price: c.Price}); err != nil {
-				beego.Error("[websocket结算异常]视频结算生成余额变动错误", err)
+			if err := videoDone(c.Src.User, c.Dst.User, &models.VideoChgInfo{TimeLong: c.Timelong, Price: c.Price}, c.Amount); err != nil {
+				beego.Error("[websocket结算异常]视频结算生成余额变动错误", err, "发起人:", c.ID, "接受人:", c.DstID, "金额:", c.Amount, "通话时长:", c.Timelong)
+				dt.ErrorMsg = append(dt.ErrorMsg, err.Error())
 			}
 
 			//生成通话记录
-			dl := &models.Dial{FromUserID: c.ID, ToUserID: c.DstID, Duration: int(c.Timelong), CreateAt: c.StartTime, Status: models.DialStatusSuccess}
+			dl := &models.Dial{FromUserID: c.ID, ToUserID: c.DstID, Duration: c.Timelong, CreateAt: c.StartTime, Status: models.DialStatusSuccess}
+			if exp != nil {
+				dl.Status = models.DialStatusException
+				dt.ErrorMsg = append(dt.ErrorMsg, exp.Error())
+				dl.Tag, _ = utils.JSONMarshalToString(dt)
+			}
+
 			if err := dl.Add(); err != nil {
-				js, _ := utils.JSONMarshalToString(c)
+				js, _ := utils.JSONMarshalToString(dl)
 				beego.Error("[websocket结算异常]通话记录生成失败", err, js)
 			}
 
@@ -291,6 +376,8 @@ func (c *ChatChannel) CloseChannel() {
 	close(c.Exit)
 	close(c.Join)
 	delete(chatChannels, c.ID)
+	delete(chattingUser, c.ID)
+	delete(chattingUser, c.DstID)
 
 	if c.Src != nil {
 		close(c.Src.Send)
@@ -313,7 +400,7 @@ func (c *ChatClient) Read() {
 			}
 		}
 
-		c.Channel.Exit <- c //发送退出信号,关闭通道后write方法会立即退出
+		c.Channel.Exit <- nil //发送退出信号,关闭通道后write方法会立即退出
 	}()
 	c.Conn.SetReadLimit(maxMessageSize)
 	c.Conn.SetReadDeadline(time.Now().Add(pongWait))
@@ -325,7 +412,7 @@ func (c *ChatClient) Read() {
 	})
 
 	for {
-		m := &WsMessage{FromID: c.User.ID}
+		m := &WsMessage{}
 		_, message, err := c.Conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {

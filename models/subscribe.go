@@ -45,26 +45,15 @@ func (s *Subscribe) Add(trans *gorm.DB) error {
 }
 
 //ReadOrCreate .
-func (s *Subscribe) ReadOrCreate(trans *gorm.DB) (err error) {
+func (s *Subscribe) Read(trans *gorm.DB) error {
 	if s.ID == 0 {
 		return errors.New("必须指定用户ID")
 	}
 
-	var sb Subscribe
 	if trans == nil {
 		trans = db
 	}
-	if err = trans.Where("id = ?", s.ID).Find(&sb).Error; err != nil {
-		if err != gorm.ErrRecordNotFound {
-			return
-		}
-
-		s.Followers = "{}"
-		s.Following = "{}"
-		err = trans.Create(s).Error
-	}
-
-	return
+	return trans.Find(s).Error
 }
 
 //AddFollow 添加关注

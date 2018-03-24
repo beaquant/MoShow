@@ -16,10 +16,15 @@ type Dial struct {
 	ID         uint64 `json:"id" gorm:"column:id;primary_key"`
 	FromUserID uint64 `json:"from_user_id" gorm:"column:from_user_id"`
 	ToUserID   uint64 `json:"to_user_id" gorm:"column:to_user_id"`
-	Duration   int    `json:"duration" gorm:"column:duration"`
+	Duration   uint64 `json:"duration" gorm:"column:duration"`
 	CreateAt   int64  `json:"create_at" gorm:"column:create_at"`
 	Status     int    `json:"status" gorm:"column:status"`
 	Tag        string `json:"tag" gorm:"column:tag"`
+}
+
+//DialTag .
+type DialTag struct {
+	ErrorMsg []string
 }
 
 //TableName .

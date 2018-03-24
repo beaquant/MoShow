@@ -86,7 +86,7 @@ func (c *UserController) Read() {
 	}
 
 	sb := &models.Subscribe{ID: uid}
-	if err := sb.ReadOrCreate(nil); err != nil {
+	if err := sb.Read(nil); err != nil {
 		beego.Error("获取订阅信息", err, c.Ctx.Request.UserAgent())
 		dto.Message = "获取订阅信息" + err.Error()
 		return
@@ -350,14 +350,7 @@ func (c *UserController) Follow() {
 		return
 	}
 
-	sb := models.Subscribe{ID: toID}
-	if err := sb.ReadOrCreate(nil); err != nil {
-		beego.Error("获取关注信息出错", err.Error)
-		dto.Message = "获取关注信息出错\t" + err.Error()
-		return
-	}
-
-	if err := sb.AddFollow(tk.ID); err != nil {
+	if err := (&models.Subscribe{ID: toID}).AddFollow(tk.ID); err != nil {
 		beego.Error(err)
 		dto.Message = "添加关注失败\t" + err.Error()
 		return
@@ -383,14 +376,7 @@ func (c *UserController) UnFollow() {
 		return
 	}
 
-	sb := models.Subscribe{ID: toID}
-	if err := sb.ReadOrCreate(nil); err != nil {
-		beego.Error("获取关注信息出错", err.Error)
-		dto.Message = "获取关注信息出错\t" + err.Error()
-		return
-	}
-
-	if err := sb.UnFollow(tk.ID); err != nil {
+	if err := (&models.Subscribe{ID: toID}).UnFollow(tk.ID); err != nil {
 		beego.Error(err)
 		dto.Message = "取消关注失败\t" + err.Error()
 		return
@@ -437,7 +423,7 @@ func (c *UserController) GetFollowingLst() {
 	}
 
 	sb := &models.Subscribe{ID: tk.ID}
-	if err := sb.ReadOrCreate(nil); err != nil {
+	if err := sb.Read(nil); err != nil {
 		beego.Error("获取订阅信息", err, c.Ctx.Request.UserAgent())
 		dto.Message = "获取订阅信息" + err.Error()
 		return
@@ -511,7 +497,7 @@ func (c *UserController) GetFollowedLst() {
 	}
 
 	sb := &models.Subscribe{ID: tk.ID}
-	if err := sb.ReadOrCreate(nil); err != nil {
+	if err := sb.Read(nil); err != nil {
 		beego.Error("获取订阅信息", err, c.Ctx.Request.UserAgent())
 		dto.Message = "获取订阅信息" + err.Error()
 		return
@@ -777,6 +763,7 @@ func (c *UserController) GuestList() {
 
 	dto.Data = ups
 	dto.Message = "查询成功"
+	dto.Sucess = true
 	return
 }
 
@@ -1054,8 +1041,8 @@ func sendGift(from, to *models.UserProfile, gift *models.GiftChgInfo) error {
 	return nil
 }
 
-//视频聊天结算
-func videoDone(from, to *models.UserProfile, video *models.VideoChgInfo) error {
+//视频聊天结算,增加主播收入和邀请人收入
+func videoDone(from, to *models.UserProfile, video *models.VideoChgInfo, amount uint64) error {
 	u := &models.User{ID: to.ID}
 	if err := u.Read(); err != nil {
 		return errors.New("获取目标用户信息失败,id:" + strconv.FormatUint(to.ID, 10) + "\t" + err.Error())
@@ -1063,7 +1050,6 @@ func videoDone(from, to *models.UserProfile, video *models.VideoChgInfo) error {
 
 	chgInfo, _ := utils.JSONMarshalToString(video)
 
-	amount := video.Price * video.TimeLong             //消费金额
 	income, inviteIncome, err := computeIncome(amount) //收益金额,分成金额
 	if err != nil {
 		return err
@@ -1072,7 +1058,12 @@ func videoDone(from, to *models.UserProfile, video *models.VideoChgInfo) error {
 	iu, iuchg := genInvitationIncome(to.ID, u.InvitedBy, inviteIncome, chgInfo)
 
 	trans := models.TransactionGen() //开始事务
-	//视频结算只生成变动，金额已在websocket中扣除
+	//视频结算不扣除用户费用(已在websocket连接时每分钟扣费时结清)，只增加主播收益和主播邀请人收益
+
+	if err := (&models.UserProfile{ID: to.ID}).AddIncome(income, trans); err != nil {
+		models.TransactionRollback(trans)
+		return err
+	}
 
 	if err := iu.AddBalance(inviteIncome, trans); err != nil { //邀请人收益
 		models.TransactionRollback(trans)
@@ -1107,15 +1098,11 @@ func videoDone(from, to *models.UserProfile, video *models.VideoChgInfo) error {
 	return nil
 }
 
+//videoAllocateFund 视频聊天定时扣费 只扣用户的钱，主播和主播邀请人的收益留到视频结束时统一增加（避免计算收益率时产生的精度误差）
 func videoAllocateFund(from, to *models.UserProfile, price uint64) error {
-	income, inviteIncome, err := computeIncome(price) //收益金额,分成金额
-	if err != nil {
-		return err
-	}
-
 	trans := models.TransactionGen() //开始事务
 
-	if err := from.AllocateFund(to, nil, price, uint64(income), uint64(inviteIncome), trans); err != nil {
+	if err := from.DeFund(price, trans); err != nil {
 		models.TransactionRollback(trans)
 		return err
 	}

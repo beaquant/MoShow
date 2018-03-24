@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/silenceper/wechat/oauth"
 )
@@ -100,4 +101,33 @@ func TestPornImg(t *testing.T) {
 func TestReg(t *testing.T) {
 	var re = regexp.MustCompile("\\d+")
 	t.Log(re.FindString("BlueMr1561"))
+}
+
+func TestImTextMesg(t *testing.T) {
+	t.Log(utils.SendP2PMessage("1", "3", "normal message test"))
+}
+
+func TestImSysMsg(t *testing.T) {
+	// t.Log(utils.SendSysMessage(&utils.ImSysNotifyMessage{Message: "名门97", Type: utils.ImSysNotifyMessageTypeText}, []string{"4"}))
+}
+
+func TestTimeSubSeconds(t *testing.T) {
+	start := time.Now().Unix()
+	time.Sleep(time.Second * 2)
+
+	stop := time.Now()
+	tl := stop.Sub(time.Unix(start, 0)).Seconds()
+	t.Log(tl)
+	t.Log(uint64(tl))
+
+	itl := stop.Unix() - start
+	t.Log("unix time sub", itl)
+}
+
+func TestMapDelete(t *testing.T) {
+	dic := make(map[uint64]interface{})
+
+	val, ok := dic[1]
+	t.Log(val, ok)
+
 }

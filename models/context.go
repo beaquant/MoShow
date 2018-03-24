@@ -14,6 +14,9 @@ func init() {
 		panic(err)
 	}
 
+	db.DB().SetMaxIdleConns(10)
+	db.DB().SetMaxOpenConns(100)
+
 	db = db.Debug()
 
 	beego.Info("数据库连接初始化完成")

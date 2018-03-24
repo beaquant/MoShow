@@ -54,7 +54,7 @@ func (u *UserExtra) Read() error {
 }
 
 //AddGiftCount .
-func (u *UserExtra) AddGiftCount(count uint64) {
+func (u *UserExtra) AddGiftCount(gft Gift,count uint64) {
 
 }
 

@@ -24,7 +24,7 @@ type AuthController struct {
 
 type codeInfo struct {
 	Code string
-	Time time.Time
+	Time int64
 }
 
 //SendCode .
@@ -50,7 +50,7 @@ func (c *AuthController) SendCode() {
 	ci := &codeInfo{}
 	utils.JSONUnMarshal(codeEx, ci)
 
-	if ci != nil && ci.Time.After(time.Now().Add(time.Minute*13)) {
+	if ci != nil && ci.Time > time.Now().Add(time.Minute*13).Unix() {
 		dto.Message = "验证码请求太频繁，请稍等"
 		return
 	}
@@ -61,7 +61,7 @@ func (c *AuthController) SendCode() {
 		beego.Error("发送验证码失败:\t" + res + "\r\n" + err.Error())
 		dto.Message = err.Error()
 	} else {
-		cs, _ := utils.JSONMarshalToString(&codeInfo{Code: code, Time: time.Now().Add(time.Minute * 15)})
+		cs, _ := utils.JSONMarshalToString(&codeInfo{Code: code, Time: time.Now().Add(time.Minute * 15).Unix()})
 
 		con.Do("HSET", SmsCodeRedisKey, num, cs)
 		dto.Sucess = true
@@ -96,7 +96,7 @@ func (c *AuthController) Login() {
 		ci := &codeInfo{}
 		utils.JSONUnMarshal(codeEx, ci)
 
-		if ci.Time.Before(time.Now()) {
+		if ci.Time < time.Now().Unix() {
 			dto.Message = "验证码已过期,请重新获取"
 			return
 		}
