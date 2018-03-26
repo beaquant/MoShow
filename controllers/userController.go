@@ -1065,9 +1065,11 @@ func videoDone(from, to *models.UserProfile, video *models.VideoChgInfo, amount 
 		return err
 	}
 
-	if err := iu.AddBalance(inviteIncome, trans); err != nil { //邀请人收益
-		models.TransactionRollback(trans)
-		return err
+	if iu != nil {
+		if err := iu.AddBalance(inviteIncome, trans); err != nil { //邀请人收益
+			models.TransactionRollback(trans)
+			return err
+		}
 	}
 
 	//增加历史收益，邀请人历史收益
@@ -1102,6 +1104,11 @@ func videoDone(from, to *models.UserProfile, video *models.VideoChgInfo, amount 
 func videoAllocateFund(from, to *models.UserProfile, price uint64) error {
 	trans := models.TransactionGen() //开始事务
 
+	beego.Info("视频扣费,用户ID:", from.ID, "金额:", price)
+	if err := from.Read(); err != nil {
+		return err
+	}
+
 	if err := from.DeFund(price, trans); err != nil {
 		models.TransactionRollback(trans)
 		return err
@@ -1119,7 +1126,7 @@ func computeIncome(amount uint64) (income, inviteIncome int, err error) {
 		return
 	}
 
-	income = int(float64(amount) * (rate.IncomeFee))                //收益金额
+	income = int(float64(amount) * (1 - rate.IncomeFee))            //收益金额
 	inviteIncome = int(float64(income) * (rate.InviteIncomegeRate)) //分成金额
 	return
 }

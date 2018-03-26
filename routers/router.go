@@ -34,11 +34,11 @@ func init() {
 				&controllers.ConfigController{},
 			),
 		),
-		beego.NSNamespace("/im",
-			beego.NSInclude(
-				&controllers.ImController{},
-			),
-		),
+		// beego.NSNamespace("/im",
+		// 	beego.NSInclude(
+		// 		&controllers.ImController{},
+		// 	),
+		// ),
 		beego.NSNamespace("/order",
 			beego.NSInclude(
 				&controllers.OrderController{},

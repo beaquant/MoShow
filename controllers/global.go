@@ -110,7 +110,7 @@ func SetToken(ctx *context.Context, tk *Token) error {
 
 	//设置token过期时间
 	tk.ExpireTime = time.Now().AddDate(0, 0, 15).Unix()
-	if tk.UUID, err = utils.UUIDHexString(); err != nil {
+	if tk.UUID, err = utils.UUIDBase64String(); err != nil {
 		beego.Error("生成UUID失败", err, ctx.Request.UserAgent())
 		tk.UUID = utils.RandStringBytesMaskImprSrc(16)
 	}

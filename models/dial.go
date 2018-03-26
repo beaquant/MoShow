@@ -1,6 +1,10 @@
 package models
 
-import "database/sql"
+import (
+	"database/sql"
+
+	"github.com/jinzhu/gorm"
+)
 
 const (
 	//DialStatusFail 通话状态,失败
@@ -20,11 +24,20 @@ type Dial struct {
 	CreateAt   int64  `json:"create_at" gorm:"column:create_at"`
 	Status     int    `json:"status" gorm:"column:status"`
 	Tag        string `json:"tag" gorm:"column:tag"`
+	Clearing   string `json:"-" gorm:"column:clearing"`
 }
 
 //DialTag .
 type DialTag struct {
 	ErrorMsg []string
+}
+
+//ClearingInfo .
+type ClearingInfo struct {
+	NIMChannelID uint64 //网易云信房间ID
+	Cost         uint64 `json:"cost" description:"用户花费"`
+	Income       uint64 `json:"income,omitempty" description:"主播收益"`
+	Timelong     uint64 `json:"timelong" description:"聊天时长"`
 }
 
 //TableName .
@@ -34,7 +47,24 @@ func (Dial) TableName() string {
 
 //Add .
 func (d *Dial) Add() error {
+	if len(d.Tag) == 0 {
+		d.Tag = "null"
+	}
+
+	if len(d.Clearing) == 0 {
+		d.Clearing = "null"
+	}
+
 	return db.Model(d).Create(d).Error
+}
+
+//Update .
+func (d *Dial) Update(fields map[string]interface{}, trans *gorm.DB) error {
+	if trans == nil {
+		trans = db
+	}
+
+	return trans.Model(d).Updates(fields).Error
 }
 
 //Read .

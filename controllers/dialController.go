@@ -14,6 +14,23 @@ type DialController struct {
 	beego.Controller
 }
 
+//DialDetail 通话详情
+type DialDetail struct {
+	models.Dial
+	models.ClearingInfo
+}
+
+func genDialDetail(d *models.Dial) (*DialDetail, error) {
+	ci := &models.ClearingInfo{}
+	var err error
+
+	if len(d.Clearing) > 0 {
+		err = utils.JSONUnMarshal(d.Clearing, ci)
+
+	}
+	return &DialDetail{Dial: *d, ClearingInfo: *ci}, err
+}
+
 //DialList .
 // @Title 获取通话记录列表
 // @Description 获取通话记录列表
@@ -51,6 +68,51 @@ func (c *DialController) DialList() {
 
 	dto.Data = lst
 	dto.Sucess = true
+}
+
+//GetDialDetail 通话记录详情
+// @Title 通话记录详情
+// @Description 通话记录详情
+// @Param   dialid     	path    int  	true       "通话记录ID"
+// @Success 200 {object} utils.ResultDTO
+// @router /:dialid [get]
+func (c *DialController) GetDialDetail() {
+	dto, tk := utils.ResultDTO{}, GetToken(c.Ctx)
+	defer dto.JSONResult(&c.Controller)
+
+	id, err := strconv.ParseUint(c.Ctx.Input.Param(":dialid"), 10, 64)
+	if err != nil {
+		beego.Error("参数解析错误:dialid\t", err, c.Ctx.Request.UserAgent(), id)
+		dto.Message = "参数解析错误:dialid\t" + err.Error()
+		dto.Code = utils.DtoStatusParamError
+		return
+	}
+
+	dial := &models.Dial{ID: id}
+	if err := dial.Read(); err != nil {
+		beego.Error("获取通话记录失败", err, c.Ctx.Request.UserAgent(), id)
+		dto.Message = "获取通话记录失败" + err.Error()
+		dto.Code = utils.DtoStatusDatabaseError
+		return
+	}
+
+	if dial.FromUserID != tk.ID && dial.ToUserID != tk.ID {
+		beego.Error("当前用户没有此通话记录")
+		dto.Message = "当前用户没有此通话记录"
+		dto.Code = utils.DtoStatusParamError
+		return
+	}
+
+	dd, err := genDialDetail(dial)
+	if err != nil {
+		beego.Error("获取通话记录", err)
+		dto.Message = "获取通话记录失败" + err.Error()
+		return
+	}
+
+	dto.Data = dd
+	dto.Sucess = true
+	dto.Message = "获取成功"
 }
 
 //Del .

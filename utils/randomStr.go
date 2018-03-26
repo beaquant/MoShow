@@ -45,8 +45,8 @@ func RandNumber(min, max int) int {
 	return min + rand.Intn(max-min)
 }
 
-//UUIDHexString .
-func UUIDHexString() (string, error) {
+//UUIDBase64String .
+func UUIDBase64String() (string, error) {
 	u1, err := uuid.NewV4()
 	return base64.URLEncoding.EncodeToString(u1.Bytes()), err
 }

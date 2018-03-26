@@ -1,7 +1,6 @@
 package test
 
 import (
-	"MoShow/models"
 	"MoShow/utils"
 	"fmt"
 	"net/url"
@@ -55,9 +54,12 @@ func TestCompute(t *testing.T) {
 }
 
 func TestJson(t *testing.T) {
-	g := make(map[uint64]models.GiftHisInfo)
-	g[2] = models.GiftHisInfo{Count: 10, GiftInfo: models.Gift{ID: 2}}
-	t.Log(utils.JSONMarshalToString(g))
+	// g := make(map[uint64]models.GiftHisInfo)
+	// g[2] = models.GiftHisInfo{Count: 10, GiftInfo: models.Gift{ID: 2}}
+	// t.Log(utils.JSONMarshalToString(g))
+
+	a := &struct{}{}
+	t.Log(utils.JSONUnMarshal("null", a))
 }
 
 func TestSlice(t *testing.T) {
@@ -129,5 +131,9 @@ func TestMapDelete(t *testing.T) {
 
 	val, ok := dic[1]
 	t.Log(val, ok)
+}
 
+func TestUint64Sub(t *testing.T) {
+	a := uint64(10)
+	t.Log(-time.Duration(a) * time.Second)
 }

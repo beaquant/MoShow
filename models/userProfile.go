@@ -212,7 +212,7 @@ func (u *UserProfile) DeFund(amount uint64, trans *gorm.DB) error {
 		return errors.New("用户余额不足，扣款(" + strconv.FormatUint(amount, 10) + ")失败,所有钱包余额合计:" + strconv.FormatUint(u.Balance+u.Income, 10))
 	}
 
-	if u.Balance < amount { //余额钱包金额足够扣款
+	if u.Balance > amount { //余额钱包金额足够扣款
 		if err := u.AddBalance(-int(amount), trans); err != nil { //扣款
 			return errors.New(strconv.FormatUint(u.ID, 10) + "扣款失败\t" + err.Error())
 		}
