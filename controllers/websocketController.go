@@ -319,6 +319,15 @@ func (c *ChatChannel) Run() {
 			if c.StopTime == 0 {
 				c.StopTime = time.Now().Unix()
 			}
+
+			if c.StartTime == 0 {
+				c.StartTime = c.ChannelStartTime
+			}
+
+			if c.Timelong == 0 {
+				c.Timelong = uint64(c.StopTime - c.StartTime)
+			}
+
 			beego.Info("房间关闭，准备结算,房间ID:", c.ID, "主播ID:", c.DstID)
 
 			dt := &models.DialTag{}
@@ -462,6 +471,10 @@ func (c *ChatChannel) wsMsgDeal(msg *WsMessage) {
 	case wsMessageTypeChannelEnd:
 		if c.StopTime != 0 {
 			break
+		}
+
+		if c.StartTime == 0 {
+			c.StartTime = c.ChannelStartTime
 		}
 
 		var errs []error
