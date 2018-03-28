@@ -45,7 +45,7 @@ func (u *User) Add(trans *gorm.DB) error {
 }
 
 func (u *User) Read() error {
-	return db.First(u, u.ID).Error
+	return db.Find(u).Error
 }
 
 //ReadFromPhoneNumber .

@@ -29,6 +29,35 @@ type Config struct {
 	Value string `json:"val" gorm:"column:val"`
 }
 
+//CommonConfig 通用配置
+type CommonConfig struct {
+	AnchorVideoRecord     bool            `json:"anchor_video_record"`
+	UserVideoRecordbool   bool            `json:"user_video_record"`
+	UserProtocol          string          `json:"user_protocal"`
+	ForceUpdate           ForceUpdateInfo `json:"force_update"`
+	Share                 ShareInfo       `json:"share"`
+	CustomerServiceWechat string          `json:"customer_service_wechat"`
+	CheckStaffWechat      string          `json:"check_staff_wechat"`
+	WithdrawCopywriting   string          `json:"withdraw_copywriting"`
+	RechargeCopywriting   string          `json:"recharge_copywriting"`
+}
+
+//ForceUpdateInfo .
+type ForceUpdateInfo struct {
+	ForceUpdate bool   `json:"is_force_update"`
+	NoticeCount uint64 `json:"notice_count"`
+	URL         string `json:"url"`
+	Version     string `json:"version"`
+	Copywriting string `json:"copywriting"`
+}
+
+//ShareInfo .
+type ShareInfo struct {
+	Rule             string `json:"rule"`
+	URL              string `json:"url"`
+	AwardCopyWriting string `json:"award_copywriting"`
+}
+
 //Gift .
 type Gift struct {
 	ID       uint64 `json:"gift_id"`

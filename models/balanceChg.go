@@ -39,7 +39,7 @@ type BalanceChg struct {
 //GiftChgInfo .
 type GiftChgInfo struct {
 	Count    uint64 `json:"count"`
-	GiftInfo *Gift  `json:"gift_info"`
+	GiftInfo Gift   `json:"gift_info"`
 }
 
 //VideoChgInfo .

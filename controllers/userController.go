@@ -304,11 +304,6 @@ func (c *UserController) SendGift() {
 	}
 
 	toUserProfile := &models.UserProfile{ID: toID}
-	if err := toUserProfile.Read(); err != nil {
-		beego.Error(err)
-		dto.Message = "获取用户信息失败\t" + err.Error()
-		return
-	}
 
 	var gift *models.Gift
 	for index := range gft {
@@ -323,7 +318,7 @@ func (c *UserController) SendGift() {
 		return
 	}
 
-	giftChg := &models.GiftChgInfo{Count: giftCount, GiftInfo: gift}
+	giftChg := &models.GiftChgInfo{Count: giftCount, GiftInfo: *gift}
 	if err := sendGift(fromUserProfile, toUserProfile, giftChg); err != nil {
 		beego.Error(err)
 		dto.Message = "支付过程出现异常\t" + err.Error()
@@ -1009,6 +1004,11 @@ func sendGift(from, to *models.UserProfile, gift *models.GiftChgInfo) error {
 
 	trans := models.TransactionGen() //开始事务
 	if err := from.AllocateFund(to, iu, amount, uint64(income), uint64(inviteIncome), trans); err != nil {
+		models.TransactionRollback(trans)
+		return err
+	}
+
+	if err := (&models.UserExtra{ID: to.ID}).AddGiftCount(gift.GiftInfo, gift.Count, trans); err != nil {
 		models.TransactionRollback(trans)
 		return err
 	}

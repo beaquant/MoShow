@@ -4,6 +4,7 @@ import (
 	"MoShow/utils"
 	"errors"
 	"sort"
+	"strconv"
 
 	"github.com/jinzhu/gorm"
 )
@@ -19,8 +20,8 @@ type UserExtra struct {
 
 //GiftHisInfo .
 type GiftHisInfo struct {
-	GiftInfo Gift
-	Count    uint64
+	Count    uint64 `json:"count"`
+	GiftInfo Gift   `json:"gift_info"`
 }
 
 //GiftHisInfoList .
@@ -54,8 +55,20 @@ func (u *UserExtra) Read() error {
 }
 
 //AddGiftCount .
-func (u *UserExtra) AddGiftCount(gft Gift,count uint64) {
+func (u *UserExtra) AddGiftCount(gft Gift, count uint64, trans *gorm.DB) error {
+	if trans == nil {
+		trans = db
+	}
 
+	gstr, err := utils.JSONMarshalToString(&GiftHisInfo{GiftInfo: gft, Count: count})
+	if err != nil {
+		return err
+	}
+
+	idStr := strconv.FormatUint(gft.ID, 10)
+	countStr := strconv.FormatUint(count, 10)
+
+	return trans.Model(u).Update("gift_his", gorm.Expr(`if(isnull(gift_his ->>'$."`+idStr+`"'),JSON_SET(COALESCE(gift_his,"{}"),'$."`+idStr+`"',cast(? as json)),JSON_SET(gift_his,'$."`+idStr+`"."Count"',gift_his->>'$."`+idStr+`"."Count"' + `+countStr+`))`, gstr)).Error
 }
 
 //GetGiftHis .
