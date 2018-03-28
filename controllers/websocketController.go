@@ -324,7 +324,7 @@ func (c *ChatChannel) Run() {
 				c.StartTime = c.ChannelStartTime
 			}
 
-			if c.Timelong == 0 {
+			if c.Timelong == 0 && c.Dst != nil {
 				c.Timelong = uint64(c.StopTime - c.StartTime)
 			}
 
@@ -369,7 +369,7 @@ func (c *ChatChannel) Run() {
 				}
 			}
 
-			if c.Timelong > 0 {
+			if c.Timelong > 0 && c.Dst != nil {
 				if err := c.Src.User.AddDialDuration(c.Timelong, nil); err != nil {
 					beego.Error("[websocket结算异常]用户增加通话时长失败", err, c.ID)
 				}
