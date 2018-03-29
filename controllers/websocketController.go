@@ -518,6 +518,10 @@ func (c *ChatChannel) wsMsgDeal(msg *WsMessage) {
 
 //CloseChannel 关闭频道,通道,websocket链接
 func (c *ChatChannel) CloseChannel() {
+	if err := recover(); err != nil {
+		beego.Error(err)
+	}
+
 	close(c.Send)
 	close(c.Exit)
 	close(c.Join)
@@ -538,6 +542,10 @@ func (c *ChatClient) Read() {
 	curConnection := c.Conn
 
 	defer func() {
+		if err := recover(); err != nil {
+			beego.Error(err)
+		}
+
 		if c.Channel.StopTime == 0 { //聊天通道未结束
 			// time.Sleep(30 * time.Second) //等待30秒,如过连接没有恢复,执行退出
 
@@ -595,6 +603,10 @@ func (c *ChatClient) Write() {
 	di := c.Channel.DialID
 
 	defer func() {
+		if err := recover(); err != nil {
+			beego.Error(err)
+		}
+
 		ticker.Stop()
 
 		if c.Channel.StopTime == 0 { //聊天通道未结束
