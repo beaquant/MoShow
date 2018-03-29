@@ -483,12 +483,17 @@ func (c *ChatChannel) wsMsgDeal(msg *WsMessage) {
 			if c.NIMChannelID == 0 {
 				c.NIMChannelID = vcp.NIMChannelID
 			}
+
+			m := &WsMessage{MessageType: wsMessageTypeChannelEnd}
+			vc := &VideoCost{Timelong: c.Timelong}
 			c.StopTime = time.Now().Unix()
-			if !c.Inited { //未收到房间初始化信息，直接进入结费,按客户端传入的时长计算结费信息
+			if !c.Inited && c.Dst != nil { //未收到房间初始化信息，直接进入结费,按客户端传入的时长计算结费信息
 				c.StartTime = c.StopTime - int64(vcp.Timelong)
 
-				minutes := (vcp.Timelong + 59) / 60
-				c.Amount = c.Price * minutes
+				c.Amount = c.Price * ((vcp.Timelong + 59) / 60)
+				vc.Cost = c.Amount
+				income, _, _ := computeIncome(c.Amount)
+				vc.Income = uint64(income)
 
 				//扣费
 				if err := videoAllocateFund(c.Src.User, c.Dst.User, c.Amount); err != nil { //扣费失败关闭聊天频道
@@ -498,11 +503,6 @@ func (c *ChatChannel) wsMsgDeal(msg *WsMessage) {
 			}
 
 			c.Timelong = uint64(c.StopTime - c.StartTime)
-			m := &WsMessage{MessageType: wsMessageTypeChannelEnd}
-			vc := &VideoCost{Cost: c.Amount, Timelong: c.Timelong}
-
-			income, _, _ := computeIncome(c.Amount)
-			vc.Income = uint64(income)
 			m.Content, _ = utils.JSONMarshalToString(vc)
 
 			c.Src.Send <- m
