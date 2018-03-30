@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"regexp"
+	"runtime/debug"
 	"strings"
 	"testing"
 	"time"
@@ -20,7 +21,8 @@ func TestMsgSend(t *testing.T) {
 func TestPanic(t *testing.T) {
 	defer func() {
 		if err := recover(); err != nil {
-			fmt.Print(err)
+			fmt.Println(err)
+			debug.PrintStack()
 		}
 	}()
 

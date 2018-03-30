@@ -5,6 +5,7 @@ import (
 	"MoShow/utils"
 	"errors"
 	"net/http"
+	"runtime/debug"
 	"strconv"
 	"time"
 
@@ -385,6 +386,13 @@ func (c *ChatChannel) Run() {
 }
 
 func (c *ChatChannel) wsMsgDeal(msg *WsMessage) {
+	defer func() {
+		if err := recover(); err != nil {
+			beego.Error(err)
+			debug.PrintStack()
+		}
+	}()
+
 	beego.Info("收到客户端消息")
 	beego.Info(utils.JSONMarshalToString(msg))
 
@@ -417,7 +425,13 @@ func (c *ChatChannel) wsMsgDeal(msg *WsMessage) {
 
 			go func() {
 				ticker := time.NewTicker(60 * time.Second)
-				defer ticker.Stop()
+				defer func() {
+					if err := recover(); err != nil {
+						beego.Error(err)
+						debug.PrintStack()
+					}
+					ticker.Stop()
+				}()
 
 				for {
 					select {
@@ -520,6 +534,7 @@ func (c *ChatChannel) wsMsgDeal(msg *WsMessage) {
 func (c *ChatChannel) CloseChannel() {
 	if err := recover(); err != nil {
 		beego.Error(err)
+		debug.PrintStack()
 	}
 
 	close(c.Send)
@@ -544,6 +559,7 @@ func (c *ChatClient) Read() {
 	defer func() {
 		if err := recover(); err != nil {
 			beego.Error(err)
+			debug.PrintStack()
 		}
 
 		if c.Channel.StopTime == 0 { //聊天通道未结束
@@ -605,6 +621,7 @@ func (c *ChatClient) Write() {
 	defer func() {
 		if err := recover(); err != nil {
 			beego.Error(err)
+			debug.PrintStack()
 		}
 
 		ticker.Stop()
