@@ -43,7 +43,7 @@ type UserOperateInfo struct {
 // @Success 200 {object} models.UserProfile
 // @router /:userid [get]
 func (c *UserController) Read() {
-	dto := utils.ResultDTO{Sucess: false}
+	dto := utils.ResultDTO{}
 	defer dto.JSONResult(&c.Controller)
 
 	var uid uint64
@@ -100,6 +100,26 @@ func (c *UserController) Read() {
 
 	dto.Data = upi
 	dto.Sucess = true
+}
+
+//ReadExtra .
+// @Title 读取用户统计信息
+// @Description 读取用户统计信息
+// @Success 200 {object} models.UserExtra
+// @router /extra [get]
+func (c *UserController) ReadExtra() {
+	tk, dto := GetToken(c.Ctx), &utils.ResultDTO{}
+	defer dto.JSONResult(&c.Controller)
+
+	ue := &models.UserExtra{ID: tk.ID}
+	if err := ue.Read(); err != nil {
+		beego.Error("获取用户统计信息失败", err)
+		dto.Message = "获取用户统计信息失败" + err.Error()
+	}
+
+	dto.Data = ue
+	dto.Sucess = true
+	dto.Message = "获取成功"
 }
 
 //Update .
