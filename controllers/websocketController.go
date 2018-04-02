@@ -493,7 +493,7 @@ func (c *ChatChannel) wsMsgDeal(msg *WsMessage) {
 		}
 
 		var errs []error
-		vc, vcp, m := &VideoCost{}, &VideoCost{}, &WsMessage{MessageType: wsMessageTypeChannelEnd}
+		vcp, m := &VideoCost{Cost: c.Amount}, &WsMessage{MessageType: wsMessageTypeChannelEnd}
 		if err := utils.JSONUnMarshal(msg.Content, vcp); err == nil {
 			if c.NIMChannelID == 0 {
 				c.NIMChannelID = vcp.NIMChannelID
@@ -501,11 +501,8 @@ func (c *ChatChannel) wsMsgDeal(msg *WsMessage) {
 
 			if !c.Inited && c.Dst != nil { //未收到房间初始化信息，直接进入结费,按客户端传入的时长计算结费信息
 				c.StartTime = c.StopTime - int64(vcp.Timelong)
-
 				c.Amount = c.Price * ((vcp.Timelong + 59) / 60)
-				vc.Cost = c.Amount
-				income, _, _ := computeIncome(c.Amount)
-				vc.Income = uint64(income)
+				vcp.Cost = c.Amount
 
 				//扣费
 				if err := videoAllocateFund(c.Src.User, c.Dst.User, c.Amount); err != nil { //扣费失败关闭聊天频道
@@ -518,10 +515,12 @@ func (c *ChatChannel) wsMsgDeal(msg *WsMessage) {
 			beego.Error("解析结费请求参数错误", msg.Content, msg.MessageType, msg.Content)
 		}
 
+		income, _, _ := computeIncome(c.Amount)
 		c.StopTime = time.Now().Unix()
 		c.Timelong = uint64(c.StopTime - c.StartTime)
-		vc.Timelong = c.Timelong
-		m.Content, _ = utils.JSONMarshalToString(vc)
+		vcp.Income = uint64(income)
+		vcp.Timelong = c.Timelong
+		m.Content, _ = utils.JSONMarshalToString(vcp)
 
 		c.Src.Send <- m
 		c.Dst.Send <- m
