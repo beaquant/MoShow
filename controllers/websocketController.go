@@ -295,6 +295,7 @@ func (c *ChatChannel) genVideoCost() (*VideoCost, error) {
 
 	vc.Balance = up.Balance
 	vc.Cost = c.Amount
+	vc.Timelong = c.Timelong
 	return vc, nil
 }
 
@@ -409,7 +410,7 @@ func (c *ChatChannel) wsMsgDeal(msg *WsMessage) {
 				c.NIMChannelID = vcp.NIMChannelID
 			}
 		} else {
-			beego.Error("解析客户端消息参数失败", err)
+			beego.Error("解析客户端消息参数失败", msg.Content, err)
 		}
 
 		if !c.Inited { //双方进入房间，初始化房间，开始视频
@@ -417,6 +418,7 @@ func (c *ChatChannel) wsMsgDeal(msg *WsMessage) {
 			c.StartTime = time.Now().Unix()
 
 			beego.Info("视频开始，开始扣费")
+			c.Amount += c.Price
 			//扣费
 			if err := videoAllocateFund(c.Src.User, c.Dst.User, c.Price); err != nil {
 				beego.Error("扣费失败", err)
@@ -471,7 +473,6 @@ func (c *ChatChannel) wsMsgDeal(msg *WsMessage) {
 			}()
 		}
 
-		c.Amount += c.Price
 		vc, err := c.genVideoCost()
 		if err != nil {
 			beego.Error("生成消费信息失败", err)
@@ -492,15 +493,12 @@ func (c *ChatChannel) wsMsgDeal(msg *WsMessage) {
 		}
 
 		var errs []error
-		vcp := &VideoCost{}
+		vc, vcp, m := &VideoCost{}, &VideoCost{}, &WsMessage{MessageType: wsMessageTypeChannelEnd}
 		if err := utils.JSONUnMarshal(msg.Content, vcp); err == nil {
 			if c.NIMChannelID == 0 {
 				c.NIMChannelID = vcp.NIMChannelID
 			}
 
-			m := &WsMessage{MessageType: wsMessageTypeChannelEnd}
-			vc := &VideoCost{Timelong: c.Timelong}
-			c.StopTime = time.Now().Unix()
 			if !c.Inited && c.Dst != nil { //未收到房间初始化信息，直接进入结费,按客户端传入的时长计算结费信息
 				c.StartTime = c.StopTime - int64(vcp.Timelong)
 
@@ -515,16 +513,18 @@ func (c *ChatChannel) wsMsgDeal(msg *WsMessage) {
 					errs = append(errs, err)
 				}
 			}
-
-			c.Timelong = uint64(c.StopTime - c.StartTime)
-			m.Content, _ = utils.JSONMarshalToString(vc)
-
-			c.Src.Send <- m
-			c.Dst.Send <- m
 		} else {
 			errs = append(errs, errors.New("解析结费请求参数错误"))
-			beego.Error("解析结费请求参数错误", msg.MessageType, msg.Content)
+			beego.Error("解析结费请求参数错误", msg.Content, msg.MessageType, msg.Content)
 		}
+
+		c.StopTime = time.Now().Unix()
+		c.Timelong = uint64(c.StopTime - c.StartTime)
+		vc.Timelong = c.Timelong
+		m.Content, _ = utils.JSONMarshalToString(vc)
+
+		c.Src.Send <- m
+		c.Dst.Send <- m
 
 		c.Exit <- errs
 	}
