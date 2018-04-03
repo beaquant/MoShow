@@ -1,6 +1,7 @@
 package test
 
 import (
+	"MoShow/models"
 	"MoShow/utils"
 	"fmt"
 	"net/url"
@@ -60,8 +61,11 @@ func TestJson(t *testing.T) {
 	// g[2] = models.GiftHisInfo{Count: 10, GiftInfo: models.Gift{ID: 2}}
 	// t.Log(utils.JSONMarshalToString(g))
 
-	a := &struct{}{}
-	t.Log(utils.JSONUnMarshal("null", a))
+	// a := &struct{}{}
+	// t.Log(utils.JSONUnMarshal("null", a))
+
+	a := &models.Banner{}
+	t.Log(utils.JSONMarshalToString(a))
 }
 
 func TestSlice(t *testing.T) {

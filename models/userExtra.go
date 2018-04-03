@@ -11,11 +11,12 @@ import (
 
 //UserExtra 用户附加信息
 type UserExtra struct {
-	ID          uint64 `json:"user_id" gorm:"column:id;primary_key" description:"用户ID"`
-	GiftHistory string `json:"-" gorm:"column:gift_his" description:"收到的礼物"`
-	IncomeHis   uint64 `json:"income_his" gorm:"column:income_his" description:"历史总收益"`
-	BalanceHis  uint64 `json:"balance_his" gorm:"column:balance_his" description:"历史总充值"`
-	InviteCount uint64 `json:"invite_count" gorm:"column:invite_count" description:"邀请总人数"`
+	ID              uint64 `json:"user_id" gorm:"column:id;primary_key" description:"用户ID"`
+	GiftHistory     string `json:"-" gorm:"column:gift_his" description:"收到的礼物"`
+	VideoIncomeHis  uint64 `json:"income_his" gorm:"column:income_his" description:"直播历史总收益"`
+	InviteIncomeHis uint64 `json:"invite_income_his" gorm:"column:invite_income_his" description:"邀请历史总收益"`
+	BalanceHis      uint64 `json:"balance_his" gorm:"column:balance_his" description:"历史总充值"`
+	InviteCount     uint64 `json:"invite_count" gorm:"column:invite_count" description:"邀请总人数"`
 }
 
 //GiftHisInfo .
@@ -95,8 +96,8 @@ func (u *UserExtra) GetGiftHis() ([]GiftHisInfo, error) {
 	return gfts, nil
 }
 
-//AddBalanceHist .
-func (u *UserExtra) AddBalanceHist(count uint64, trans *gorm.DB) error {
+//AddBalanceHis .
+func (u *UserExtra) AddBalanceHis(count uint64, trans *gorm.DB) error {
 	if u.ID == 0 {
 		return errors.New("user_extra 更新用户历史余额 必须指定用户ID")
 	}
@@ -107,8 +108,8 @@ func (u *UserExtra) AddBalanceHist(count uint64, trans *gorm.DB) error {
 	return db.Model(u).Update("balance_his", gorm.Expr("balance_his + ?", count)).Error
 }
 
-//AddIncomeHist .
-func (u *UserExtra) AddIncomeHist(count uint64, trans *gorm.DB) error {
+//AddIncomeHis 增加历史总收益
+func (u *UserExtra) AddIncomeHis(count uint64, trans *gorm.DB) error {
 	if u.ID == 0 {
 		return errors.New("user_extra 更新用户历史收益 必须指定用户ID")
 	}
@@ -117,6 +118,18 @@ func (u *UserExtra) AddIncomeHist(count uint64, trans *gorm.DB) error {
 		return trans.Model(u).Update("income_his", gorm.Expr("income_his + ?", count)).Error
 	}
 	return db.Model(u).Update("income_his", gorm.Expr("income_his + ?", count)).Error
+}
+
+//AddInviteIncomeHis 增加邀请历史总收益
+func (u *UserExtra) AddInviteIncomeHis(count uint64, trans *gorm.DB) error {
+	if u.ID == 0 {
+		return errors.New("user_extra 更新用户历史收益 必须指定用户ID")
+	}
+
+	if trans != nil {
+		return trans.Model(u).Update("invite_income_his", gorm.Expr("invite_income_his + ?", count)).Error
+	}
+	return db.Model(u).Update("invite_income_his", gorm.Expr("invite_income_his + ?", count)).Error
 }
 
 //AddInviteCount .

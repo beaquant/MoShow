@@ -2,6 +2,7 @@ package models
 
 import (
 	"errors"
+	"time"
 
 	"github.com/jinzhu/gorm"
 )
@@ -66,6 +67,10 @@ func (b *BalanceChg) Add(trans *gorm.DB) error {
 
 	if trans != nil {
 		return trans.Create(b).Error
+	}
+
+	if b.Time == 0 {
+		b.Time = time.Now().Unix()
 	}
 	return db.Create(b).Error
 }

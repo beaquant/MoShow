@@ -174,7 +174,7 @@ func (c *OrderController) AlipayConfirm() {
 		return
 	}
 
-	if err := (&models.UserExtra{ID: order.UserID}).AddBalanceHist(order.CoinCount, trans); err != nil {
+	if err := (&models.UserExtra{ID: order.UserID}).AddBalanceHis(order.CoinCount, trans); err != nil {
 		beego.Error("用户充值，增加历史余额失败", err)
 		models.TransactionRollback(trans)
 		return

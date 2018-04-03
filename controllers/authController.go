@@ -116,42 +116,6 @@ func (c *AuthController) Login() {
 
 	tk := &Token{}
 	if u.ID == 0 { //该手机号未注册，执行注册逻辑
-		// trans := models.TransactionGen()
-
-		// u.AcctType = models.AcctTypeTelephone
-		// u.AcctStatus = models.AcctStatusNormal
-		// u.CreatedAt = time.Now().Unix()
-
-		// if err := u.Add(trans); err != nil {
-		// 	beego.Error(err, c.Ctx.Request.UserAgent())
-		// 	dto.Message = err.Error()
-		// 	models.TransactionRollback(trans)
-		// 	return
-		// }
-
-		// imUser := &netease.ImUser{ID: strconv.FormatUint(u.ID, 10)}
-		// imtk, err := utils.ImCreateUser(imUser)
-		// if err != nil {
-		// 	beego.Error("创建IMUser失败", err, c.Ctx.Request.UserAgent())
-		// 	dto.Message = "创建IMUser失败\t" + err.Error()
-		// 	models.TransactionRollback(trans)
-		// 	return
-		// }
-
-		// up := models.UserProfile{ID: u.ID}
-		// up.ImToken = imtk.Token
-		// up.Birthday = 0
-		// up.CoverPic = "{}"
-		// up.OnlineStatus = models.OnlineStatusOnline
-		// if err := up.Add(trans); err != nil {
-		// 	beego.Error(err, c.Ctx.Request.UserAgent())
-		// 	dto.Message = err.Error()
-		// 	models.TransactionRollback(trans)
-		// 	return
-		// }
-
-		// models.TransactionCommit(trans)
-
 		up, err := initUser(u, models.AcctTypeTelephone)
 		if err != nil {
 			beego.Error("注册用户失败", err, c.Ctx.Request.UserAgent())
@@ -238,42 +202,6 @@ func (c *AuthController) WechatLogin() {
 
 	tk := &Token{}
 	if u.ID == 0 { //执行微信注册
-		// trans := models.TransactionGen()
-
-		// u.AcctType = models.AcctTypeWechat
-		// u.AcctStatus = models.AcctStatusNormal
-		// u.CreatedAt = time.Now().Unix()
-
-		// if err := u.Add(trans); err != nil {
-		// 	beego.Error(err, c.Ctx.Request.UserAgent())
-		// 	dto.Message = err.Error()
-		// 	models.TransactionRollback(trans)
-		// 	return
-		// }
-
-		// imUser := &netease.ImUser{ID: strconv.FormatUint(u.ID, 10)}
-		// imtk, err := utils.ImCreateUser(imUser)
-		// if err != nil {
-		// 	beego.Error("创建IMUser失败", err, c.Ctx.Request.UserAgent())
-		// 	dto.Message = "创建IMUser失败\t" + err.Error()
-		// 	models.TransactionRollback(trans)
-		// 	return
-		// }
-
-		// up := models.UserProfile{ID: u.ID}
-		// up.ImToken = imtk.Token
-		// up.Birthday = 0
-		// up.CoverPic = "{}"
-		// up.OnlineStatus = models.OnlineStatusOnline
-		// if err := up.Add(trans); err != nil {
-		// 	beego.Error(err, c.Ctx.Request.UserAgent())
-		// 	dto.Message = err.Error()
-		// 	models.TransactionRollback(trans)
-		// 	return
-		// }
-
-		// models.TransactionCommit(trans)
-
 		up, err := initUser(u, models.AcctTypeWechat)
 		if err != nil {
 			beego.Error("注册用户失败", err, c.Ctx.Request.UserAgent())

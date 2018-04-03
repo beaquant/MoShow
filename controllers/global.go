@@ -128,6 +128,8 @@ func SetToken(ctx *context.Context, tk *Token) error {
 		return err
 	}
 
+	(&models.User{ID: tk.ID}).UpdateLoginInfo(&models.UserLoginInfo{UserAgent: ctx.Request.UserAgent(), IPAddress: ctx.Input.IP()})
+
 	ctx.SetCookie(cookieName, tkStr)
 	return nil
 }

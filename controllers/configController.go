@@ -12,6 +12,27 @@ type ConfigController struct {
 	beego.Controller
 }
 
+//GetCommonConfig .
+// @Title 获取通用配置
+// @Description 获取通用配置
+// @Success 200 {object} utils.ResultDTO
+// @router /common [get]
+func (c *ConfigController) GetCommonConfig() {
+	dto := utils.ResultDTO{}
+	defer dto.JSONResult(&c.Controller)
+
+	conf := &models.Config{}
+	val, err := conf.GetCommonConfig()
+	if err != nil {
+		dto.Message = "获取通用配置失败\t" + err.Error()
+		beego.Error(err, c.Ctx.Request.UserAgent())
+		return
+	}
+
+	dto.Data = val
+	dto.Sucess = true
+}
+
 //GetGiftList .
 // @Title 获取礼物列表
 // @Description 获取礼物列表

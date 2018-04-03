@@ -65,6 +65,14 @@ func init() {
 
 	beego.GlobalControllerRouter["MoShow/controllers:ConfigController"] = append(beego.GlobalControllerRouter["MoShow/controllers:ConfigController"],
 		beego.ControllerComments{
+			Method: "GetCommonConfig",
+			Router: `/common`,
+			AllowHTTPMethods: []string{"get"},
+			MethodParams: param.Make(),
+			Params: nil})
+
+	beego.GlobalControllerRouter["MoShow/controllers:ConfigController"] = append(beego.GlobalControllerRouter["MoShow/controllers:ConfigController"],
+		beego.ControllerComments{
 			Method: "GetCosSign",
 			Router: `/cossign`,
 			AllowHTTPMethods: []string{"get"},

@@ -11,15 +11,15 @@ const (
 	configTypeGift       = "gifts"
 	configTypeProduct    = "products"
 	configTypeIncomeRate = "income_rate"
-	configTypeBanner     = "banner"
+	configTypeCommon     = "common_config"
 )
 
 var (
-	giftList    []Gift
-	productList []Product
-	updateTime  = make(map[string]time.Time)
-	incomeRate  *IncomeRate
-	banners     []Banner
+	giftList     []Gift
+	productList  []Product
+	updateTime   = make(map[string]time.Time)
+	incomeRate   *IncomeRate
+	commonConfig *CommonConfig
 )
 
 //Config .
@@ -40,6 +40,7 @@ type CommonConfig struct {
 	CheckStaffWechat      string          `json:"check_staff_wechat"`
 	WithdrawCopywriting   string          `json:"withdraw_copywriting"`
 	RechargeCopywriting   string          `json:"recharge_copywriting"`
+	Banners               []Banner        `json:"banners"`
 }
 
 //ForceUpdateInfo .
@@ -91,9 +92,9 @@ const (
 
 //Banner 首页banner
 type Banner struct {
-	Image      string
-	URL        string
-	BannerType int
+	Image      string `json:"img"`
+	URL        string `json:"url"`
+	BannerType int    `json:"banner_type"`
 }
 
 //TableName .
@@ -174,8 +175,21 @@ func (c *Config) GetIncomeRate() (*IncomeRate, error) {
 	return incomeRate, nil
 }
 
-//GetBanners 获取banner
-func (c *Config) GetBanners() {
-	if tm, ok := updateTime[configTypeBanner]; banners == nil || !ok || tm.Add(time.Minute*5).Before(time.Now()) {
+//GetCommonConfig 获取banner
+func (c *Config) GetCommonConfig() (*CommonConfig, error) {
+	if tm, ok := updateTime[configTypeCommon]; commonConfig == nil || !ok || tm.Add(time.Minute*5).Before(time.Now()) {
+		if err := db.Model(c).Where("conf_key = ?", configTypeCommon).First(c).Error; err != nil {
+			return nil, err
+		}
+
+		var cc CommonConfig
+		if err := utils.JSONUnMarshal(c.Value, &cc); err != nil {
+			return nil, err
+		}
+
+		updateTime[configTypeCommon] = time.Now()
+		commonConfig = &cc
+		return commonConfig, nil
 	}
+	return commonConfig, nil
 }

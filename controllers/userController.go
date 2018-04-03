@@ -1034,13 +1034,13 @@ func sendGift(from, to *models.UserProfile, gift *models.GiftChgInfo) error {
 	}
 
 	//增加历史收益，邀请人历史收益
-	if err := (&models.UserExtra{ID: to.ID}).AddIncomeHist(uint64(income), trans); err != nil {
+	if err := (&models.UserExtra{ID: to.ID}).AddIncomeHis(uint64(income), trans); err != nil {
 		models.TransactionRollback(trans)
 		return errors.New("增加赠礼目标用户历史收益失败\t" + err.Error())
 	}
 
 	if u.InvitedBy != 0 { //如果有邀请人，增加邀请人历史收益
-		if err := (&models.UserExtra{ID: u.InvitedBy}).AddIncomeHist(uint64(inviteIncome), trans); err != nil {
+		if err := (&models.UserExtra{ID: u.InvitedBy}).AddInviteIncomeHis(uint64(inviteIncome), trans); err != nil {
 			models.TransactionRollback(trans)
 			return errors.New("增加赠礼目标用户邀请人历史收益失败\t" + err.Error())
 		}
@@ -1093,13 +1093,13 @@ func videoDone(from, to *models.UserProfile, video *models.VideoChgInfo, amount 
 	}
 
 	//增加历史收益，邀请人历史收益
-	if err := (&models.UserExtra{ID: to.ID}).AddIncomeHist(uint64(income), trans); err != nil {
+	if err := (&models.UserExtra{ID: to.ID}).AddIncomeHis(uint64(income), trans); err != nil {
 		models.TransactionRollback(trans)
 		return errors.New("增加赠礼目标用户历史收益失败\t" + err.Error())
 	}
 
 	if u.InvitedBy != 0 { //如果有邀请人，增加邀请人历史收益
-		if err := (&models.UserExtra{ID: u.InvitedBy}).AddIncomeHist(uint64(inviteIncome), trans); err != nil {
+		if err := (&models.UserExtra{ID: u.InvitedBy}).AddInviteIncomeHis(uint64(inviteIncome), trans); err != nil {
 			models.TransactionRollback(trans)
 			return errors.New("增加赠礼目标用户邀请人历史收益失败\t" + err.Error())
 		}
