@@ -1,8 +1,6 @@
 package utils
 
 import (
-	"encoding/json"
-
 	jsoniter "github.com/json-iterator/go"
 )
 
@@ -10,7 +8,7 @@ var jsonTool = jsoniter.ConfigCompatibleWithStandardLibrary
 
 //JSONMarshal .
 func JSONMarshal(v interface{}) ([]byte, error) {
-	return json.Marshal(v)
+	return jsonTool.Marshal(v)
 }
 
 //JSONMarshalToString .

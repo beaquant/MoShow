@@ -45,6 +45,7 @@ type GiftChgInfo struct {
 
 //VideoChgInfo .
 type VideoChgInfo struct {
+	DialID   uint64 `json:"dial_id"`
 	TimeLong uint64 `json:"time_long"`
 	Price    uint64 `json:"price"`
 }

@@ -176,6 +176,10 @@ func (u *UserProfile) GetInviteList(skip, limit int) (ul []UserProfile, err erro
 
 //AddDialDuration 增加通话时间
 func (u *UserProfile) AddDialDuration(duration uint64, trans *gorm.DB) error {
+	if duration == 0 {
+		return nil
+	}
+
 	if trans != nil {
 		return trans.Model(u).Updates(map[string]interface{}{"dial_duration": gorm.Expr("dial_duration + ?", duration), "dial_accept + ?": 1}).Error
 	}
@@ -192,6 +196,10 @@ func (u *UserProfile) AddDialReject(trans *gorm.DB) error {
 
 //AddBalance .
 func (u *UserProfile) AddBalance(amount int, trans *gorm.DB) error {
+	if amount == 0 {
+		return nil
+	}
+
 	if trans != nil {
 		return trans.Model(u).Update("balance", gorm.Expr("balance + ?", amount)).Error
 	}
@@ -200,6 +208,10 @@ func (u *UserProfile) AddBalance(amount int, trans *gorm.DB) error {
 
 //AddIncome .
 func (u *UserProfile) AddIncome(amount int, trans *gorm.DB) error {
+	if amount == 0 {
+		return nil
+	}
+
 	if trans != nil {
 		return trans.Model(u).Update("income", gorm.Expr("income + ?", amount)).Error
 	}
@@ -208,6 +220,10 @@ func (u *UserProfile) AddIncome(amount int, trans *gorm.DB) error {
 
 //DeFund 用户扣款
 func (u *UserProfile) DeFund(amount uint64, trans *gorm.DB) error {
+	if amount == 0 {
+		return nil
+	}
+
 	if u.Balance+u.Income < amount { //检查余额
 		return errors.New("用户余额不足，扣款(" + strconv.FormatUint(amount, 10) + ")失败,所有钱包余额合计:" + strconv.FormatUint(u.Balance+u.Income, 10))
 	}

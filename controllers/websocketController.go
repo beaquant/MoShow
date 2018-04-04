@@ -337,7 +337,7 @@ func (c *ChatChannel) Run() {
 			beego.Info("准备生成变动", c.Src, c.Dst)
 			if c.Dst != nil {
 				//结费并生成变动
-				if err := videoDone(c.Src.User, c.Dst.User, &models.VideoChgInfo{TimeLong: c.Timelong, Price: c.Price}, c.Amount); err != nil {
+				if err := videoDone(c.Src.User, c.Dst.User, &models.VideoChgInfo{TimeLong: c.Timelong, Price: c.Price, DialID: c.DialID}, c.Amount); err != nil {
 					beego.Error("[websocket结算异常]视频结费错误", err, "发起人:", c.ID, "接受人:", c.DstID, "金额:", c.Amount, "通话时长:", c.Timelong)
 					dt.ErrorMsg = append(dt.ErrorMsg, "[websocket结算异常]视频结费错误")
 					dt.ErrorMsg = append(dt.ErrorMsg, err.Error())
@@ -354,7 +354,13 @@ func (c *ChatChannel) Run() {
 				dl := &models.Dial{ID: c.DialID}
 
 				if !c.Inited {
-					dl.Status = models.DialStatusFail
+					if c.Dst == nil {
+						dl.Status = models.DialStatusFail
+					} else {
+						dl.Status = models.DialStatusException
+					}
+				} else {
+					dl.Status = models.DialStatusSuccess
 				}
 
 				if exp != nil {
@@ -365,7 +371,7 @@ func (c *ChatChannel) Run() {
 					dl.Tag, _ = utils.JSONMarshalToString(dt)
 				}
 
-				if err := dl.Update(map[string]interface{}{"duration": c.Timelong, "create_at": c.ChannelStartTime, "status": models.DialStatusSuccess, "clearing": ciStr}, nil); err != nil {
+				if err := dl.Update(map[string]interface{}{"duration": c.Timelong, "create_at": c.ChannelStartTime, "status": dl.Status, "clearing": ciStr}, nil); err != nil {
 					js, _ := utils.JSONMarshalToString(dl)
 					beego.Error("[websocket结算异常]通话记录更新失败", err, js)
 				}

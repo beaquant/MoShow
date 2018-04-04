@@ -13,10 +13,17 @@ type TimelineController struct {
 	beego.Controller
 }
 
-//TimelineUserInfo 首页专区用户信息
+//TimelineInfo 首页专区用户信息
+type TimelineInfo struct {
+	Users   []TimelineUserInfo `json:"users"`
+	Banners []models.Banner    `json:"banners"`
+}
+
+//TimelineUserInfo .
 type TimelineUserInfo struct {
-	models.TimelineUser
-	CoverInfo *models.UserCoverInfo `json:"cover_info"`
+	UserPorfileInfo
+	CreatedAt int64  `json:"create_at" gorm:"column:create_at"`
+	Duration  uint64 `json:"recent_duration" gorm:"column:recent_duration"`
 }
 
 //NewCommers .
@@ -78,13 +85,17 @@ func (c *TimelineController) NewCommers() {
 		return
 	}
 
-	var ti []*UserPorfileInfo
+	var ti []TimelineUserInfo
 	for index := range ul {
 		upi := &UserPorfileInfo{UserProfile: ul[index].UserProfile}
 		genUserPorfileInfoCommon(upi, upi.GetCover())
-		ti = append(ti, upi)
+		ti = append(ti, TimelineUserInfo{UserPorfileInfo: *upi, CreatedAt: ul[index].CreatedAt, Duration: ul[index].Duration})
 	}
 
-	dto.Data = ti
+	tli := TimelineInfo{Users: ti}
+	if config, _ := (&models.Config{}).GetCommonConfig(); config != nil {
+		tli.Banners = config.Banners
+	}
+	dto.Data = tli
 	dto.Sucess = true
 }
