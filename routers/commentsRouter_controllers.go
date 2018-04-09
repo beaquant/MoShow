@@ -201,6 +201,14 @@ func init() {
 
 	beego.GlobalControllerRouter["MoShow/controllers:UserController"] = append(beego.GlobalControllerRouter["MoShow/controllers:UserController"],
 		beego.ControllerComments{
+			Method: "GuestList",
+			Router: `/:userid/guests`,
+			AllowHTTPMethods: []string{"get"},
+			MethodParams: param.Make(),
+			Params: nil})
+
+	beego.GlobalControllerRouter["MoShow/controllers:UserController"] = append(beego.GlobalControllerRouter["MoShow/controllers:UserController"],
+		beego.ControllerComments{
 			Method: "Report",
 			Router: `/:userid/report`,
 			AllowHTTPMethods: []string{"post"},
@@ -251,14 +259,6 @@ func init() {
 		beego.ControllerComments{
 			Method: "GetFollowedLst",
 			Router: `/fanslist`,
-			AllowHTTPMethods: []string{"get"},
-			MethodParams: param.Make(),
-			Params: nil})
-
-	beego.GlobalControllerRouter["MoShow/controllers:UserController"] = append(beego.GlobalControllerRouter["MoShow/controllers:UserController"],
-		beego.ControllerComments{
-			Method: "GuestList",
-			Router: `/guests`,
 			AllowHTTPMethods: []string{"get"},
 			MethodParams: param.Make(),
 			Params: nil})

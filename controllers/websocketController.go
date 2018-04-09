@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"os"
+	"path"
 	"runtime/debug"
 	"strconv"
 	"time"
@@ -309,7 +310,7 @@ func (c *ChatChannel) Run() {
 	c.ChannelStartTime = time.Now().Unix()
 	//初始化日志模块
 	c.logger = logrus.WithFields(logrus.Fields{"dial_id": c.DialID})
-	file, err := os.OpenFile("logs/"+strconv.FormatUint(c.ID, 10)+"_ws.log", os.O_CREATE|os.O_WRONLY, 0666)
+	file, err := os.OpenFile(path.Join("logs", strconv.FormatUint(c.ID, 10)+"_ws.log"), os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		c.logger.Error("打开日志文件失败", err)
 	} else {

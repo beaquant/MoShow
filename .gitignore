@@ -22,3 +22,4 @@ conf/app.conf
 swagger
 MoShow
 MoShow.tar.gz
+logs/*_ws.log

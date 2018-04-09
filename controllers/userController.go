@@ -371,6 +371,7 @@ func (c *UserController) Follow() {
 		return
 	}
 
+	dto.Message = "关注成功"
 	dto.Sucess = true
 }
 
@@ -396,7 +397,7 @@ func (c *UserController) UnFollow() {
 		dto.Message = "取消关注失败\t" + err.Error()
 		return
 	}
-
+	dto.Message = "取消关注成功"
 	dto.Sucess = true
 }
 
@@ -733,13 +734,27 @@ func (c *UserController) AnchorApply() {
 //GuestList .
 // @Title 获取访客记录
 // @Description 获取访客记录
+// @Param   userid     	path     int	true        "用户id,填me表示当前用户"
 // @Param   length     	query    int  	false       "长度"
 // @Param   skip		query    int  	false       "偏移量"
 // @Success 200 {object} utils.ResultDTO
-// @router /guests [get]
+// @router /:userid/guests [get]
 func (c *UserController) GuestList() {
-	dto, tk := utils.ResultDTO{}, GetToken(c.Ctx)
+	dto, tk, uidStr := utils.ResultDTO{}, GetToken(c.Ctx), c.Ctx.Input.Param(":userid")
 	defer dto.JSONResult(&c.Controller)
+
+	var uid uint64
+	if uidStr == "me" {
+		uid = tk.ID
+	} else {
+		var err error
+		if uid, err = strconv.ParseUint(uidStr, 10, 64); err != nil {
+			beego.Error("参数解析错误:userid\t"+err.Error(), c.Ctx.Request.UserAgent(), uidStr)
+			dto.Message = "参数解析错误:userid\t" + err.Error()
+			dto.Code = utils.DtoStatusParamError
+			return
+		}
+	}
 
 	length, err := c.GetInt("length")
 	if err != nil {
@@ -760,7 +775,7 @@ func (c *UserController) GuestList() {
 		return
 	}
 
-	lst, err := (&models.Guest{}).GetGuestList(tk.ID, length, skip)
+	lst, err := (&models.Guest{}).GetGuestList(uid, length, skip)
 	if err != nil {
 		beego.Error("获取访客列表失败", err, c.Ctx.Request.UserAgent())
 		dto.Message = "获取访客列表失败\t" + err.Error()
