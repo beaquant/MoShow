@@ -5,12 +5,14 @@ import (
 	"MoShow/utils"
 	"errors"
 	"net/http"
+	"os"
 	"runtime/debug"
 	"strconv"
 	"time"
 
 	"github.com/astaxie/beego"
 	"github.com/gorilla/websocket"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -62,6 +64,7 @@ type ChatChannel struct {
 	StopTime         int64
 	Price            uint64
 	Amount           uint64
+	logger           *logrus.Entry
 	Src              *ChatClient
 	Dst              *ChatClient
 	Send             chan *WsMessage
@@ -304,6 +307,16 @@ func (c *ChatChannel) Run() {
 	defer c.CloseChannel()
 
 	c.ChannelStartTime = time.Now().Unix()
+	//初始化日志模块
+	c.logger = logrus.WithFields(logrus.Fields{"dial_id": c.DialID})
+	file, err := os.OpenFile("logs/"+strconv.FormatUint(c.ID, 10)+"_ws.log", os.O_CREATE|os.O_WRONLY, 0666)
+	if err != nil {
+		c.logger.Error("打开日志文件失败", err)
+	} else {
+		c.logger.Logger.Out = file
+		defer file.Close()
+	}
+
 	for {
 		select {
 		case client := <-c.Join:
@@ -314,7 +327,7 @@ func (c *ChatChannel) Run() {
 			}
 
 			client.Send <- &WsMessage{MessageType: wsMessageTypeJoinSuccess, Content: "加入房间成功"}
-			beego.Info("用户加入房间成功", client.User.ID)
+			c.logger.Info("用户加入房间成功", client.User.ID)
 		case msg := <-c.Send:
 			go c.wsMsgDeal(msg)
 		case exp := <-c.Exit:
@@ -330,15 +343,15 @@ func (c *ChatChannel) Run() {
 				c.Timelong = uint64(c.StopTime - c.StartTime)
 			}
 
-			beego.Info("房间关闭，准备结算,房间ID:", c.ID, "主播ID:", c.DstID)
+			c.logger.Info("房间关闭，准备结算,房间ID:", c.ID, "主播ID:", c.DstID)
 
 			dt := &models.DialTag{}
 
-			beego.Info("准备生成变动", c.Src, c.Dst)
+			c.logger.Info("准备生成变动", c.Src, c.Dst)
 			if c.Dst != nil {
 				//结费并生成变动
 				if err := videoDone(c.Src.User, c.Dst.User, &models.VideoChgInfo{TimeLong: c.Timelong, Price: c.Price, DialID: c.DialID}, c.Amount); err != nil {
-					beego.Error("[websocket结算异常]视频结费错误", err, "发起人:", c.ID, "接受人:", c.DstID, "金额:", c.Amount, "通话时长:", c.Timelong)
+					c.logger.Error("[websocket结算异常]视频结费错误", err, "发起人:", c.ID, "接受人:", c.DstID, "金额:", c.Amount, "通话时长:", c.Timelong)
 					dt.ErrorMsg = append(dt.ErrorMsg, "[websocket结算异常]视频结费错误")
 					dt.ErrorMsg = append(dt.ErrorMsg, err.Error())
 				}
@@ -373,20 +386,20 @@ func (c *ChatChannel) Run() {
 
 				if err := dl.Update(map[string]interface{}{"duration": c.Timelong, "create_at": c.ChannelStartTime, "status": dl.Status, "clearing": ciStr}, nil); err != nil {
 					js, _ := utils.JSONMarshalToString(dl)
-					beego.Error("[websocket结算异常]通话记录更新失败", err, js)
+					c.logger.Error("[websocket结算异常]通话记录更新失败", err, js)
 				}
 			}
 
 			if c.Timelong > 0 && c.Dst != nil {
 				if err := c.Src.User.AddDialDuration(c.Timelong, nil); err != nil {
-					beego.Error("[websocket结算异常]用户增加通话时长失败", err, c.ID)
+					c.logger.Error("[websocket结算异常]用户增加通话时长失败", err, c.ID)
 				}
 				if err := c.Dst.User.AddDialDuration(c.Timelong, nil); err != nil {
-					beego.Error("[websocket结算异常]用户增加通话时长失败", err, c.DstID)
+					c.logger.Error("[websocket结算异常]用户增加通话时长失败", err, c.DstID)
 				}
 			}
 
-			beego.Info("房间结算成功,房间ID:", c.ID, "主播ID:", c.DstID)
+			c.logger.Info("房间结算成功,房间ID:", c.ID, "主播ID:", c.DstID)
 			return
 		}
 	}
@@ -395,13 +408,13 @@ func (c *ChatChannel) Run() {
 func (c *ChatChannel) wsMsgDeal(msg *WsMessage) {
 	defer func() {
 		if err := recover(); err != nil {
-			beego.Error(err)
+			c.logger.Error(err)
 			debug.PrintStack()
 		}
 	}()
 
-	beego.Info("收到客户端消息")
-	beego.Info(utils.JSONMarshalToString(msg))
+	c.logger.Info("收到客户端消息")
+	c.logger.Info(utils.JSONMarshalToString(msg))
 
 	switch msg.MessageType {
 	case wsMessageTypeChannelStart:
@@ -416,18 +429,18 @@ func (c *ChatChannel) wsMsgDeal(msg *WsMessage) {
 				c.NIMChannelID = vcp.NIMChannelID
 			}
 		} else {
-			beego.Error("解析客户端消息参数失败", msg.Content, err)
+			c.logger.Error("解析客户端消息参数失败", msg.Content, err)
 		}
 
 		if !c.Inited { //双方进入房间，初始化房间，开始视频
 			c.Inited = true
 			c.StartTime = time.Now().Unix()
 
-			beego.Info("视频开始，开始扣费")
+			c.logger.Info("视频开始，开始扣费")
 			c.Amount += c.Price
 			//扣费
 			if err := videoAllocateFund(c.Src.User, c.Dst.User, c.Price); err != nil {
-				beego.Error("扣费失败", err)
+				c.logger.Error("扣费失败", err)
 				c.Exit <- nil
 			}
 
@@ -435,7 +448,7 @@ func (c *ChatChannel) wsMsgDeal(msg *WsMessage) {
 				ticker := time.NewTicker(60 * time.Second)
 				defer func() {
 					if err := recover(); err != nil {
-						beego.Error(err)
+						c.logger.Error(err)
 						debug.PrintStack()
 					}
 					ticker.Stop()
@@ -449,7 +462,7 @@ func (c *ChatChannel) wsMsgDeal(msg *WsMessage) {
 
 							//扣费
 							if err := videoAllocateFund(c.Src.User, c.Dst.User, c.Price); err != nil { //扣费失败关闭聊天频道
-								beego.Error(err)
+								c.logger.Error(err)
 								m := &WsMessage{MessageType: wsMessageTypeSystem, Content: "用户扣费失败"}
 								c.Src.Send <- m
 								c.Dst.Send <- m
@@ -462,7 +475,7 @@ func (c *ChatChannel) wsMsgDeal(msg *WsMessage) {
 
 							vc, err := c.genVideoCost()
 							if err != nil {
-								beego.Error("生成消费信息失败", err)
+								c.logger.Error("生成消费信息失败", err)
 								c.Exit <- nil
 								return
 							}
@@ -481,7 +494,7 @@ func (c *ChatChannel) wsMsgDeal(msg *WsMessage) {
 
 		vc, err := c.genVideoCost()
 		if err != nil {
-			beego.Error("生成消费信息失败", err)
+			c.logger.Error("生成消费信息失败", err)
 			c.Exit <- nil
 		}
 
@@ -512,13 +525,13 @@ func (c *ChatChannel) wsMsgDeal(msg *WsMessage) {
 
 				//扣费
 				if err := videoAllocateFund(c.Src.User, c.Dst.User, c.Amount); err != nil { //扣费失败关闭聊天频道
-					beego.Error("扣费失败", err)
+					c.logger.Error("扣费失败", err)
 					errs = append(errs, err)
 				}
 			}
 		} else {
 			errs = append(errs, errors.New("解析结费请求参数错误"))
-			beego.Error("解析结费请求参数错误", msg.Content, msg.MessageType, msg.Content)
+			c.logger.Error("解析结费请求参数错误", msg.Content, msg.MessageType, msg.Content)
 		}
 
 		income, _, _ := computeIncome(c.Amount)
@@ -571,12 +584,12 @@ func (c *ChatClient) Read() {
 			// time.Sleep(30 * time.Second) //等待30秒,如过连接没有恢复,执行退出
 
 			if curConnection != c.Conn { //重连成功
-				beego.Info("重连成功，房间继续保留,房间ID:", c.Channel.ID)
+				c.Channel.logger.Info("重连成功，房间继续保留,房间ID:", c.Channel.ID)
 				return
 			}
 		}
 
-		beego.Info("用户主动挂断或等待重连超时，执行退出流程")
+		c.Channel.logger.Info("用户主动挂断或等待重连超时，执行退出流程")
 		if c.Channel.StopTime == 0 { //未结算
 			c.Channel.Exit <- nil //发送退出信号,关闭通道后write方法会立即退出
 		}
@@ -584,7 +597,7 @@ func (c *ChatClient) Read() {
 	curConnection.SetReadLimit(maxMessageSize)
 	curConnection.SetReadDeadline(time.Now().Add(pongWait))
 	curConnection.SetPongHandler(func(pong string) error {
-		beego.Info("收到pong", pong, "用户ID:", c.User.ID, "Agent:", c.Request.UserAgent())
+		c.Channel.logger.Info("收到pong", pong, "用户ID:", c.User.ID, "Agent:", c.Request.UserAgent())
 
 		if _, ok := chatChannels[c.Channel.ID]; ok {
 			curConnection.SetReadDeadline(time.Now().Add(pongWait))
@@ -598,9 +611,9 @@ func (c *ChatClient) Read() {
 		if err != nil {
 			if _, ok := err.(*websocket.CloseError); ok {
 				if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-					beego.Error("客户端异常挂断", err, "用户ID:", c.User.ID, "Agent:", c.Request.UserAgent())
+					c.Channel.logger.Error("客户端异常挂断", err, "用户ID:", c.User.ID, "Agent:", c.Request.UserAgent())
 				} else {
-					beego.Info("客户端主动挂断", err, "用户ID:", c.User.ID, "Agent:", c.Request.UserAgent())
+					c.Channel.logger.Info("客户端主动挂断", err, "用户ID:", c.User.ID, "Agent:", c.Request.UserAgent())
 				}
 			} else {
 				// time.Sleep(pongWait - pingPeriod) //等待重连
@@ -635,7 +648,7 @@ func (c *ChatClient) Write() {
 			// time.Sleep(pongWait - pingPeriod) //等待重连
 		}
 
-		beego.Info("ws写入超时,尝试挂断,用户ID:", c.User.ID)
+		c.Channel.logger.Info("ws写入超时,尝试挂断,用户ID:", c.User.ID)
 		curConnection.Close()
 	}()
 	for {
@@ -651,7 +664,7 @@ func (c *ChatClient) Write() {
 			}
 
 			ms, _ := utils.JSONMarshalToString(message)
-			beego.Info("发送消息", ms)
+			c.Channel.logger.Info("发送消息", ms)
 
 			err := curConnection.WriteJSON(message)
 			if err != nil {
@@ -660,9 +673,9 @@ func (c *ChatClient) Write() {
 		case <-ticker.C:
 			curConnection.SetWriteDeadline(time.Now().Add(writeWait))
 
-			beego.Info("开始写入,用户ID:", c.User.ID)
+			c.Channel.logger.Info("开始写入,用户ID:", c.User.ID)
 			if err := curConnection.WriteMessage(websocket.PingMessage, nil); err != nil {
-				beego.Info("写入消息错误", c.User.ID)
+				c.Channel.logger.Info("写入消息错误", c.User.ID)
 				return
 			}
 		}

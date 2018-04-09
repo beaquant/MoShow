@@ -5,6 +5,7 @@ import (
 	"MoShow/utils"
 	"fmt"
 	"net/url"
+	"os"
 	"regexp"
 	"runtime/debug"
 	"strings"
@@ -142,4 +143,21 @@ func TestMapDelete(t *testing.T) {
 func TestUint64Sub(t *testing.T) {
 	a := uint64(10)
 	t.Log(-time.Duration(a) * time.Second)
+}
+
+func TestOsFileMode(t *testing.T) {
+	t.Logf("ModePerm:%o", os.ModePerm)
+	t.Logf("ModeAppend:%o", os.ModeAppend)
+	t.Logf("ModeCharDevice:%o", os.ModeCharDevice)
+	t.Logf("ModeDevice:%o", os.ModeDevice)
+	t.Logf("ModeDir:%o", os.ModeDir)
+	t.Logf("ModeExclusive:%o", os.ModeExclusive)
+	t.Logf("ModeNamedPipe:%o", os.ModeNamedPipe)
+	t.Logf("ModeSetgid:%o", os.ModeSetgid)
+	t.Logf("ModeSetuid:%o", os.ModeSetuid)
+	t.Logf("ModeSocket:%o", os.ModeSocket)
+	t.Logf("ModeSticky:%o", os.ModeSticky)
+	t.Logf("ModeSymlink:%o", os.ModeSymlink)
+	t.Logf("ModeTemporary:%o", os.ModeTemporary)
+	t.Logf("ModeType:%o", os.ModeType)
 }

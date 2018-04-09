@@ -116,7 +116,7 @@ func (c *AuthController) Login() {
 
 	tk := &Token{}
 	if u.ID == 0 { //该手机号未注册，执行注册逻辑
-		up, err := initUser(u, models.AcctTypeTelephone)
+		up, err := c.initUser(u, models.AcctTypeTelephone)
 		if err != nil {
 			beego.Error("注册用户失败", err, c.Ctx.Request.UserAgent())
 			dto.Message = "注册用户失败\t" + err.Error()
@@ -202,7 +202,7 @@ func (c *AuthController) WechatLogin() {
 
 	tk := &Token{}
 	if u.ID == 0 { //执行微信注册
-		up, err := initUser(u, models.AcctTypeWechat)
+		up, err := c.initUser(u, models.AcctTypeWechat)
 		if err != nil {
 			beego.Error("注册用户失败", err, c.Ctx.Request.UserAgent())
 			dto.Message = "注册用户失败\t" + err.Error()
@@ -255,12 +255,14 @@ func (c *AuthController) WechatLogin() {
 	}
 }
 
-func initUser(u *models.User, acctType int) (*models.UserProfile, error) {
+func (c *AuthController) initUser(u *models.User, acctType int) (*models.UserProfile, error) {
 	trans := models.TransactionGen()
 
 	u.AcctType = acctType
 	u.AcctStatus = models.AcctStatusNormal
 	u.CreatedAt = time.Now().Unix()
+	uli := &models.UserLoginInfo{UserAgent: c.Ctx.Request.UserAgent(), IPAddress: c.Ctx.Input.IP()}
+	u.LastLoginInfo, _ = utils.JSONMarshalToString(uli)
 
 	if err := u.Add(trans); err != nil {
 		models.TransactionRollback(trans)
