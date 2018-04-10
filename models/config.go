@@ -88,6 +88,12 @@ const (
 	BannerTypeImg = iota
 	//BannerTypeLink 链接跳转banner
 	BannerTypeLink
+	//BannerTypeUserDetail 用户详情
+	BannerTypeUserDetail
+	//BannerTypeInvite 邀请用户
+	BannerTypeInvite
+	//BannerTypeRecharge 充值
+	BannerTypeRecharge
 )
 
 //Banner 首页banner
