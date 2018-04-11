@@ -42,5 +42,5 @@ func (g *Guest) GetGuestList(uid uint64, limit, skip int) ([]Guest, error) {
 	}
 
 	var gg []Guest
-	return gg, db.Where("user_id = ?", uid).Find(&gg).Limit(limit).Offset(skip).Order("time desc").Error
+	return gg, db.Where("user_id = ?", uid).Limit(limit).Offset(skip).Order("time desc").Find(&gg).Error
 }

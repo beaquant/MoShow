@@ -77,6 +77,7 @@ type UserProfile struct {
 	DialDeny         int    `json:"-" gorm:"column:dial_deny" description:"视频拒接数"`
 	UpdateAt         int64  `json:"update_at" gorm:"column:update_at" description:"更新时间"`
 	DialDuration     uint64 `json:"dial_duration" gorm:"column:dial_duration" description:"通话时间"`
+	AlipayAcct       string `json:"-" gorm:"column:alipay_acct" description:"支付宝账号"`
 }
 
 //UserCoverInfo .
@@ -145,6 +146,11 @@ func (u *UserProfile) Update(fields map[string]interface{}, trans *gorm.DB) erro
 		return trans.Model(u).Updates(fields).Error
 	}
 	return db.Model(u).Updates(fields).Error
+}
+
+//UpdatePayAcct .
+func (u *UserProfile) UpdatePayAcct(acct string) error {
+	return db.Model(u).Update("alipay_acct", acct).Error
 }
 
 //UpdateOnlineStatus .

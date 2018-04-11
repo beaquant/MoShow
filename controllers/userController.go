@@ -20,14 +20,17 @@ type UserController struct {
 //UserPorfileInfo 用户信息
 type UserPorfileInfo struct {
 	models.UserProfile
-	ImTk        string             `json:"im_token,omitempty"`
-	Followed    bool               `json:"followed" description:"是否已关注"`
-	IsFill      bool               `json:"is_fill" description:"资料是否完善"`
-	AnswerRate  float64            `json:"answer_rate" description:"接通率"`
-	CheckStatus *models.ProfileChg `json:"check_status" description:"审核状态"`
-	Avatar      string             `json:"avatar"`
-	Gallery     []string           `json:"gallery"`
-	Video       string             `json:"video"`
+	ImTk        string               `json:"im_token,omitempty"`
+	Alipay      string               `json:"alipay_acct,omitempty"`
+	Followed    bool                 `json:"followed" description:"是否已关注"`
+	IsFill      bool                 `json:"is_fill" description:"资料是否完善"`
+	AnswerRate  float64              `json:"answer_rate" description:"接通率"`
+	CheckStatus *models.ProfileChg   `json:"check_status" description:"审核状态"`
+	Avatar      string               `json:"avatar"`
+	Gallery     []string             `json:"gallery"`
+	Video       string               `json:"video"`
+	VideoPayed  bool                 `json:"video_payed"`
+	GiftRecv    []models.GiftHisInfo `json:"gift_recv"`
 }
 
 //UserOperateInfo .
@@ -83,7 +86,25 @@ func (c *UserController) Read() {
 			dto.Message = "增加访客记录失败\t" + err.Error()
 		}
 		genUserPorfileInfoCommon(upi, up.GetCover())
+		if len(upi.Video) > 0 {
+			upi.VideoPayed, err = (&models.BalanceChg{UserID: tk.ID}).IsVideoPayed(upi.Video, upi.ID)
+			if err != nil {
+				beego.Error("获取视频付费信息失败", err, c.Ctx.Request.UserAgent())
+				dto.Message = "获取视频付费信息失败" + err.Error()
+				dto.Code = utils.DtoStatusDatabaseError
+				return
+			}
+		}
 	}
+
+	lst, err := (&models.UserExtra{ID: uid}).GetGiftHis()
+	if err != nil {
+		beego.Error("获取礼物历史记录失败", err, c.Ctx.Request.UserAgent())
+		dto.Message = "获取礼物历史记录失败\t" + err.Error()
+		dto.Code = utils.DtoStatusDatabaseError
+		return
+	}
+	upi.GiftRecv = lst
 
 	sb := &models.Subscribe{ID: uid}
 	if err := sb.Read(nil); err != nil {
@@ -682,6 +703,31 @@ func (c *UserController) SetBusyStatus() {
 	dto.Message = "设置成功"
 }
 
+//BindPayAcct .
+// @Title 绑定支付宝账号
+// @Description 绑定支付宝账号
+// @Param   acct     	formData    string  	true       "支付宝账号"
+// @Success 200 {object} utils.ResultDTO
+// @router /bindacct [post]
+func (c *UserController) BindPayAcct() {
+	tk, dto := GetToken(c.Ctx), &utils.ResultDTO{}
+	defer dto.JSONResult(&c.Controller)
+
+	acct := c.GetString("acct")
+	if len(acct) == 0 {
+		return
+	}
+
+	if err := (&models.UserProfile{ID: tk.ID}).UpdatePayAcct(acct); err != nil {
+		beego.Error("更新提现账号失败", err, c.Ctx.Request.UserAgent())
+		dto.Message = "更新提现账号失败\t" + err.Error()
+		return
+	}
+
+	dto.Message = "绑定成功"
+	dto.Sucess = true
+}
+
 //AnchorApply .
 // @Title 申请主播
 // @Description 申请主播
@@ -800,7 +846,9 @@ func (c *UserController) GuestList() {
 //ReduceAmount .
 // @Title 扣款
 // @Description 扣款
-// @Param   type     	formData    int  	true       "扣款类型(0:消息,1:视频)"
+// @Param   type     	formData    int  		true       "扣款类型(0:消息,1:视频)"
+// @Param   target     	formData    int  		true       "目标用户ID"
+// @Param   url     	formData    string  	false      "视频地址,扣款类型为1时必填"
 // @Success 200 {object} utils.ResultDTO
 // @router /cutamount [post]
 func (c *UserController) ReduceAmount() {
@@ -816,9 +864,38 @@ func (c *UserController) ReduceAmount() {
 		return
 	}
 
+	tid, err := c.GetUint64("target")
+	if err != nil {
+		beego.Error(err, c.Ctx.Request.UserAgent())
+		dto.Message = "参数错误\t" + err.Error()
+		dto.Code = utils.DtoStatusParamError
+		return
+	}
+
+	uri := c.GetString("url")
+	if dType == 1 && len(uri) == 0 {
+		dto.Message = "扣款类型为视频付费时，必须指定视频地址"
+		dto.Code = utils.DtoStatusParamError
+		return
+	}
+
 	if dType == 0 {
 		amount = 10
 	} else if dType == 1 {
+		payed, err := (&models.BalanceChg{UserID: tid}).IsVideoPayed(uri, tid)
+		if err != nil {
+			beego.Error("获取消费记录失败", err, c.Ctx.Request.UserAgent())
+			dto.Message = "获取消费记录失败"
+			dto.Code = utils.DtoStatusDatabaseError
+			return
+		}
+
+		if payed { //已付过费
+			dto.Message = "该视频已付费,无需再付费"
+			dto.Sucess = true
+			return
+		}
+
 		amount = 20
 	}
 
@@ -830,7 +907,10 @@ func (c *UserController) ReduceAmount() {
 		return
 	}
 
-	chg := &models.BalanceChg{UserID: tk.ID, Amount: -amount, ChgInfo: "{}"}
+	mc := &models.MessageOrVideoChgInfo{TargetID: tid, URL: uri}
+	mcstr, _ := utils.JSONMarshalToString(mc)
+
+	chg := &models.BalanceChg{UserID: tk.ID, Amount: -amount, ChgInfo: mcstr}
 	if dType == 0 {
 		chg.ChgType = models.BalanceChgTypeMessage
 	} else if dType == 1 {

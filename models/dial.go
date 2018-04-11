@@ -79,7 +79,7 @@ func (d *Dial) GetDialList(uid uint64, limit, skip int) ([]Dial, error) {
 	}
 
 	var lst []Dial
-	return lst, db.Where("from_user_id = ?", uid).Find(&lst).Order("create_at desc").Limit(limit).Offset(skip).Error
+	return lst, db.Where("from_user_id = ?", uid).Order("create_at desc").Limit(limit).Offset(skip).Find(&lst).Error
 }
 
 //Del .

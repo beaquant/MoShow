@@ -241,6 +241,14 @@ func init() {
 
 	beego.GlobalControllerRouter["MoShow/controllers:UserController"] = append(beego.GlobalControllerRouter["MoShow/controllers:UserController"],
 		beego.ControllerComments{
+			Method: "BindPayAcct",
+			Router: `/bindacct`,
+			AllowHTTPMethods: []string{"post"},
+			MethodParams: param.Make(),
+			Params: nil})
+
+	beego.GlobalControllerRouter["MoShow/controllers:UserController"] = append(beego.GlobalControllerRouter["MoShow/controllers:UserController"],
+		beego.ControllerComments{
 			Method: "ReduceAmount",
 			Router: `/cutamount`,
 			AllowHTTPMethods: []string{"post"},

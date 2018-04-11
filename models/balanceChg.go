@@ -50,9 +50,10 @@ type VideoChgInfo struct {
 	Price    uint64 `json:"price"`
 }
 
-//BalanceChgInfo .
-type BalanceChgInfo struct {
-	Content string `json:"content"`
+//MessageOrVideoChgInfo .
+type MessageOrVideoChgInfo struct {
+	URL      string `json:"url"`
+	TargetID uint64 `json:"target_id"`
 }
 
 //TableName .
@@ -65,14 +66,13 @@ func (b *BalanceChg) Add(trans *gorm.DB) error {
 	if b.UserID == 0 {
 		return errors.New("余额变动记录必须指定用户ID")
 	}
-
+	if b.Time == 0 {
+		b.Time = time.Now().Unix()
+	}
 	if trans != nil {
 		return trans.Create(b).Error
 	}
 
-	if b.Time == 0 {
-		b.Time = time.Now().Unix()
-	}
 	return db.Create(b).Error
 }
 
@@ -99,6 +99,16 @@ func (b *BalanceChg) AddChg(trans *gorm.DB, chg ...*BalanceChg) error {
 	return nil
 }
 
+//IsVideoPayed .
+func (b *BalanceChg) IsVideoPayed(uri string, tid uint64) (bool, error) {
+	var count int
+	err := db.Where("user_id = ?", b.UserID).Where("chg_type = ?", BalanceChgTypeVideoView).Where(`chg_info ->>'$.target_id' = ?`, tid).Where(`chg_info ->>'$.url' = ?`, uri).Count(&count).Error
+	if count > 0 {
+		return true, err
+	}
+	return false, err
+}
+
 //GetIncomeChgs .
 func (b *BalanceChg) GetIncomeChgs(limit, skip int) ([]BalanceChg, error) {
 	if limit == 0 {
@@ -106,7 +116,7 @@ func (b *BalanceChg) GetIncomeChgs(limit, skip int) ([]BalanceChg, error) {
 	}
 
 	var lst []BalanceChg
-	return lst, db.Where("user_id = ?", b.UserID).Where("chg_type in (?)", []int{BalanceChgTypeInvitationRechargeIncome, BalanceChgTypeInvitationIncome}).Find(&lst).Order("time desc").Limit(limit).Offset(skip).Error
+	return lst, db.Where("user_id = ?", b.UserID).Where("chg_type in (?)", []int{BalanceChgTypeRecharge, BalanceChgTypeInvitationRechargeIncome, BalanceChgTypeInvitationIncome}).Order("time desc").Limit(limit).Offset(skip).Find(&lst).Error
 }
 
 //GetPaymentChgs .
@@ -116,5 +126,5 @@ func (b *BalanceChg) GetPaymentChgs(limit, skip int) ([]BalanceChg, error) {
 	}
 
 	var lst []BalanceChg
-	return lst, db.Where("user_id = ?", b.UserID).Where("chg_type in (?)", []int{BalanceChgTypeGift, BalanceChgTypeVideo, BalanceChgTypeMessage, BalanceChgTypeVideoView}).Find(&lst).Order("time desc").Limit(limit).Offset(skip).Error
+	return lst, db.Where("user_id = ?", b.UserID).Where("chg_type in (?)", []int{BalanceChgTypeGift, BalanceChgTypeVideo, BalanceChgTypeMessage, BalanceChgTypeVideoView}).Order("time desc").Limit(limit).Offset(skip).Find(&lst).Error
 }

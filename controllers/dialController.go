@@ -20,6 +20,40 @@ type DialDetail struct {
 	models.ClearingInfo
 }
 
+//DialInfo .
+type DialInfo struct {
+	Dial   models.Dial
+	Parter UserPorfileInfo
+}
+
+func genDialInfo(self uint64, dials []models.Dial) []DialInfo {
+	var dis []DialInfo
+	upkv := make(map[uint64]*UserPorfileInfo)
+
+	for index := range dials {
+		di := DialInfo{Dial: dials[index]}
+		u := &UserPorfileInfo{}
+		if dials[index].FromUserID == self {
+			u.ID = dials[index].ToUserID
+		} else {
+			u.ID = dials[index].FromUserID
+		}
+
+		if upi, ok := upkv[u.ID]; ok {
+			di.Parter = *upi
+		} else {
+			u.Read()
+			genUserPorfileInfoCommon(u, u.GetCover())
+			upkv[u.ID] = u
+			di.Parter = *u
+		}
+
+		dis = append(dis, di)
+	}
+
+	return dis
+}
+
 func genDialDetail(d *models.Dial) (*DialDetail, error) {
 	ci := &models.ClearingInfo{}
 	var err error
@@ -34,7 +68,7 @@ func genDialDetail(d *models.Dial) (*DialDetail, error) {
 //DialList .
 // @Title 获取通话记录列表
 // @Description 获取通话记录列表
-// @Param   length     	query    int  	true       "长度"
+// @Param   length     	query    int  	true       "长度,最大20"
 // @Param   skip		query    int  	true       "偏移量"
 // @Success 200 {object} utils.ResultDTO
 // @router /list [get]
@@ -48,6 +82,10 @@ func (c *DialController) DialList() {
 		dto.Message = "参数解析错误:length\t" + err.Error()
 		dto.Code = utils.DtoStatusParamError
 		return
+	}
+
+	if len > 20 {
+		len = 20
 	}
 
 	skip, err := c.GetInt("skip")
@@ -66,7 +104,7 @@ func (c *DialController) DialList() {
 		return
 	}
 
-	dto.Data = lst
+	dto.Data = genDialInfo(tk.ID, lst)
 	dto.Sucess = true
 }
 
