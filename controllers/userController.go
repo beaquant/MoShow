@@ -21,7 +21,7 @@ type UserController struct {
 type UserPorfileInfo struct {
 	models.UserProfile
 	ImTk        string                 `json:"im_token,omitempty"`
-	Alipay      *models.AlipayAcctInfo `json:"alipay_acct,omitempty"`
+	Alipay      *models.AlipayAcctInfo `json:"tx _acct,omitempty"`
 	Followed    bool                   `json:"followed" description:"是否已关注"`
 	IsFill      bool                   `json:"is_fill" description:"资料是否完善"`
 	AnswerRate  float64                `json:"answer_rate" description:"接通率"`
@@ -414,7 +414,7 @@ func (c *UserController) UnFollow() {
 		return
 	}
 
-	if err := (&models.Subscribe{ID: toID}).UnFollow(tk.ID); err != nil {
+	if err := (&models.Subscribe{ID: tk.ID}).UnFollow(toID); err != nil {
 		beego.Error(err)
 		dto.Message = "取消关注失败\t" + err.Error()
 		return

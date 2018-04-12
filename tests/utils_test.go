@@ -65,7 +65,8 @@ func TestJson(t *testing.T) {
 	// a := &struct{}{}
 	// t.Log(utils.JSONUnMarshal("null", a))
 
-	a := &models.Banner{}
+	// a := &models.Banner{}
+	a := &models.UserCoverInfo{CoverPicture: &models.Picture{ImageURL: "1"}, DesVideo: &models.Video{VideoURL: "1"}}
 	t.Log(utils.JSONMarshalToString(a))
 }
 

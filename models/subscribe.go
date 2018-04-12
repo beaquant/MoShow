@@ -80,12 +80,12 @@ func (s *Subscribe) AddFollow(id uint64) error {
 func (s *Subscribe) UnFollow(id uint64) error {
 	idStr := strconv.FormatUint(id, 10)
 	trans := db.Begin()
-	if err := trans.Model(s).Update("following", gorm.Expr(`JSON_REMOVE(follower,'$."`+idStr+`"')`)).Error; err != nil {
+	if err := trans.Model(s).Update("following", gorm.Expr(`JSON_REMOVE(following,'$."`+idStr+`"')`)).Error; err != nil {
 		trans.Rollback()
 		return err
 	}
 
-	if err := trans.Model(&Subscribe{ID: id}).Update("follower", gorm.Expr(`JSON_REMOVE(follower,'$."`+idStr+`"')`)).Error; err != nil {
+	if err := trans.Model(&Subscribe{ID: id}).Update("follower", gorm.Expr(`JSON_REMOVE(follower,'$."`+strconv.FormatUint(s.ID, 10)+`"')`)).Error; err != nil {
 		trans.Rollback()
 		return err
 	}
