@@ -205,9 +205,9 @@ func (c *UserController) Update() {
 	}
 
 	if coverPic := c.GetString("cover_pic"); len(coverPic) > 0 {
-		cv.CoverPicture, imgChg = &models.Picture{ImageURL: coverPic}, false //头像先审核再更新
-		pcParam["cover_pic"] = coverPic                                      //用户头像信息变动
-		pcParam["cover_pic_check"] = models.CheckStatusUncheck               //用户头像信息变动状态
+		// cv.CoverPicture, imgChg = &models.Picture{ImageURL: coverPic}, false //头像先审核再更新
+		pcParam["cover_pic"] = coverPic                        //用户头像信息变动
+		pcParam["cover_pic_check"] = models.CheckStatusUncheck //用户头像信息变动状态
 	}
 
 	if gallery := c.GetStrings("gallery"); gallery != nil && len(gallery) > 0 {
@@ -226,12 +226,13 @@ func (c *UserController) Update() {
 		if len(cv.Gallery) > 9 { //相册最多9张
 			cv.Gallery = cv.Gallery[:9]
 		}
+		up.CoverPic, _ = utils.JSONMarshalToString(cv)
 	}
 
 	if video := c.GetString("video"); len(video) > 0 {
-		cv.DesVideo, imgChg = &models.Video{VideoURL: video}, false //视频先审核再更新
-		pcParam["video"] = video                                    //用户视频信息变动
-		pcParam["video_check"] = models.CheckStatusUncheck          //用户视频信息变动状态
+		// cv.DesVideo, imgChg = &models.Video{VideoURL: video}, false //视频先审核再更新
+		pcParam["video"] = video                           //用户视频信息变动
+		pcParam["video_check"] = models.CheckStatusUncheck //用户视频信息变动状态
 	}
 
 	if description := c.GetString("description"); len(description) > 0 {
@@ -1274,5 +1275,34 @@ func selectPic(imgURL string, arr []models.Picture) *models.Picture {
 }
 
 func checkPorn(up *models.UserProfile, cover *models.UserCoverInfo) {
+	var glrNew []models.Picture
 
+	needUpdate := false
+	if cover.Gallery != nil && len(cover.Gallery) > 0 {
+		for index := range cover.Gallery {
+			if cover.Gallery[index].CloudCheck {
+				glrNew = append(glrNew, cover.Gallery[index])
+				continue
+			}
+
+			needUpdate = true
+			isPorn, err := utils.ImgPornCheckSingle(cover.Gallery[index].ImageURL)
+			if err == nil {
+				if isPorn {
+					continue
+				}
+				cover.Gallery[index].CloudCheck = true
+			} else {
+				beego.Error("万象优图鉴黄出错", err)
+			}
+			glrNew = append(glrNew, cover.Gallery[index])
+		}
+	}
+
+	cover.Gallery = glrNew
+	if needUpdate {
+		if err := up.UpdateCover(cover); err != nil {
+			beego.Error("鉴黄完成，更新数据库失败", err)
+		}
+	}
 }

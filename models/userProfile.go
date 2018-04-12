@@ -113,8 +113,8 @@ func (UserProfile) TableName() string {
 func (u *UserCoverInfo) ToString() string {
 	str, err := utils.JSONMarshalToString(u)
 	if err != nil {
-		beego.Error(err)
-		return ""
+		beego.Error("用户头像，相册解析出错", err)
+		return "{}"
 	}
 	return str
 }
@@ -148,10 +148,19 @@ func (u *UserProfile) Update(fields map[string]interface{}, trans *gorm.DB) erro
 		return nil
 	}
 
-	if trans != nil {
-		return trans.Model(u).Updates(fields).Error
+	if trans == nil {
+		trans = db
 	}
-	return db.Model(u).Updates(fields).Error
+	return trans.Model(u).Updates(fields).Error
+}
+
+//UpdateCover .
+func (u *UserProfile) UpdateCover(cover *UserCoverInfo) error {
+	cs, err := utils.JSONMarshalToString(cover)
+	if err != nil {
+		return err
+	}
+	return db.Model(u).Updates(map[string]interface{}{"cover": cs}).Error
 }
 
 //UpdatePayAcct .

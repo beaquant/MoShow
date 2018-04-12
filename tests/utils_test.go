@@ -104,7 +104,8 @@ func TestCosSign(t *testing.T) {
 }
 
 func TestPornImg(t *testing.T) {
-	utils.ImgPornCheckSingle("http://bluemr-1254204939.cossh.myqcloud.com/img/1521621081565194700.jpg")
+	os.Setenv("HTTP_PROXY", "http://127.0.0.1:8889")
+	t.Log(utils.ImgPornCheckSingle("http://bluemr-1254204939.cossh.myqcloud.com/photo/117516201804121657141391-959x1317.jpg"))
 }
 
 func TestReg(t *testing.T) {
