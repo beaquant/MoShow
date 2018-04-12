@@ -56,7 +56,7 @@ func (s *Subscribe) Read(trans *gorm.DB) error {
 	return trans.Find(s).Error
 }
 
-//AddFollow 添加关注
+//AddFollow 关注用户
 func (s *Subscribe) AddFollow(id uint64) error {
 	idStr := strconv.FormatUint(id, 10)
 	fis, _ := utils.JSONMarshalToString(&FollowInfo{FollowTime: time.Now().Unix()})
@@ -67,7 +67,7 @@ func (s *Subscribe) AddFollow(id uint64) error {
 		return err
 	}
 
-	if err := trans.Model(&Subscribe{ID: id}).Update("follower", gorm.Expr(`JSON_SET(COALESCE(follower,'{}'),'$."`+idStr+`"',CAST('`+fis+`' AS JSON))`)).Error; err != nil {
+	if err := trans.Model(&Subscribe{ID: id}).Update("follower", gorm.Expr(`JSON_SET(COALESCE(follower,'{}'),'$."`+strconv.FormatUint(s.ID, 10)+`"',CAST('`+fis+`' AS JSON))`)).Error; err != nil {
 		trans.Rollback()
 		return err
 	}

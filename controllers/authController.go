@@ -325,7 +325,11 @@ func (c *AuthController) Logout() {
 }
 
 func genSelfUserPorfileInfo(up *models.UserProfile, pc *models.ProfileChg) (*UserPorfileInfo, error) { //获取用户自己信息时,给出审核状态，已经在审核状态的图片等信息
-	upi := &UserPorfileInfo{UserProfile: *up, ImTk: up.ImToken, Alipay: up.AlipayAcct}
+	upi := &UserPorfileInfo{UserProfile: *up, ImTk: up.ImToken}
+
+	upi.Alipay = &models.AlipayAcctInfo{}
+	utils.JSONUnMarshal(upi.AlipayAcct, upi.Alipay) //忽略json解析错误
+
 	cv := up.GetCover()
 	genUserPorfileInfoCommon(upi, cv)
 

@@ -98,6 +98,12 @@ type Video struct {
 	VideoURL string `json:"video_url"`
 }
 
+//AlipayAcctInfo .
+type AlipayAcctInfo struct {
+	Acct string `json:"acct"`
+	Name string `json:"name"`
+}
+
 //TableName .
 func (UserProfile) TableName() string {
 	return "user_profile"
@@ -149,8 +155,9 @@ func (u *UserProfile) Update(fields map[string]interface{}, trans *gorm.DB) erro
 }
 
 //UpdatePayAcct .
-func (u *UserProfile) UpdatePayAcct(acct string) error {
-	return db.Model(u).Update("alipay_acct", acct).Error
+func (u *UserProfile) UpdatePayAcct(acct *AlipayAcctInfo) error {
+	acctStr, _ := utils.JSONMarshalToString(acct)
+	return db.Model(u).Update("alipay_acct", acctStr).Error
 }
 
 //UpdateOnlineStatus .

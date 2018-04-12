@@ -20,17 +20,17 @@ type UserController struct {
 //UserPorfileInfo 用户信息
 type UserPorfileInfo struct {
 	models.UserProfile
-	ImTk        string               `json:"im_token,omitempty"`
-	Alipay      string               `json:"alipay_acct,omitempty"`
-	Followed    bool                 `json:"followed" description:"是否已关注"`
-	IsFill      bool                 `json:"is_fill" description:"资料是否完善"`
-	AnswerRate  float64              `json:"answer_rate" description:"接通率"`
-	CheckStatus *models.ProfileChg   `json:"check_status" description:"审核状态"`
-	Avatar      string               `json:"avatar"`
-	Gallery     []string             `json:"gallery"`
-	Video       string               `json:"video"`
-	VideoPayed  bool                 `json:"video_payed"`
-	GiftRecv    []models.GiftHisInfo `json:"gift_recv"`
+	ImTk        string                 `json:"im_token,omitempty"`
+	Alipay      *models.AlipayAcctInfo `json:"alipay_acct,omitempty"`
+	Followed    bool                   `json:"followed" description:"是否已关注"`
+	IsFill      bool                   `json:"is_fill" description:"资料是否完善"`
+	AnswerRate  float64                `json:"answer_rate" description:"接通率"`
+	CheckStatus *models.ProfileChg     `json:"check_status" description:"审核状态"`
+	Avatar      string                 `json:"avatar"`
+	Gallery     []string               `json:"gallery"`
+	Video       string                 `json:"video"`
+	VideoPayed  bool                   `json:"video_payed"`
+	GiftRecv    []models.GiftHisInfo   `json:"gift_recv"`
 }
 
 //UserOperateInfo .
@@ -386,7 +386,7 @@ func (c *UserController) Follow() {
 		return
 	}
 
-	if err := (&models.Subscribe{ID: toID}).AddFollow(tk.ID); err != nil {
+	if err := (&models.Subscribe{ID: tk.ID}).AddFollow(toID); err != nil {
 		beego.Error(err)
 		dto.Message = "添加关注失败\t" + err.Error()
 		return
@@ -707,6 +707,7 @@ func (c *UserController) SetBusyStatus() {
 // @Title 绑定支付宝账号
 // @Description 绑定支付宝账号
 // @Param   acct     	formData    string  	true       "支付宝账号"
+// @Param   name     	formData    string  	true       "姓名"
 // @Success 200 {object} utils.ResultDTO
 // @router /bindacct [post]
 func (c *UserController) BindPayAcct() {
@@ -715,10 +716,17 @@ func (c *UserController) BindPayAcct() {
 
 	acct := c.GetString("acct")
 	if len(acct) == 0 {
+		dto.Message = "必须填写支付宝账号"
 		return
 	}
 
-	if err := (&models.UserProfile{ID: tk.ID}).UpdatePayAcct(acct); err != nil {
+	name := c.GetString("name")
+	if len(name) == 0 {
+		dto.Message = "必须填写姓名"
+		return
+	}
+
+	if err := (&models.UserProfile{ID: tk.ID}).UpdatePayAcct(&models.AlipayAcctInfo{Acct: acct, Name: name}); err != nil {
 		beego.Error("更新提现账号失败", err, c.Ctx.Request.UserAgent())
 		dto.Message = "更新提现账号失败\t" + err.Error()
 		return
