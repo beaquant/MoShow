@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/jinzhu/gorm"
+
 	"github.com/astaxie/beego"
 )
 
@@ -151,7 +153,7 @@ func (c *OrderController) AlipayConfirm() {
 		return
 	}
 
-	up, param, chg, trans := &models.UserProfile{ID: order.UserID}, make(map[string]interface{}), &models.BalanceChg{UserID: order.UserID, Amount: int(order.CoinCount), Time: time.Now().Unix(), ChgType: models.BalanceChgTypeRecharge, ChgInfo: order.ProductInfo}, models.TransactionGen()
+	param, trans := make(map[string]interface{}), models.TransactionGen()
 	param["pay_info"], _ = utils.JSONMarshalToString(noti)
 	param["success"] = true
 	param["pay_time"] = time.Now().Unix()
@@ -162,20 +164,7 @@ func (c *OrderController) AlipayConfirm() {
 		return
 	}
 
-	if err := up.AddBalance(int(order.CoinCount), trans); err != nil {
-		beego.Error("增加用户余额失败", err)
-		models.TransactionRollback(trans)
-		return
-	}
-
-	if err := chg.Add(trans); err != nil {
-		beego.Error("用户充值，生成变动失败", err)
-		models.TransactionRollback(trans)
-		return
-	}
-
-	if err := (&models.UserExtra{ID: order.UserID}).AddBalanceHis(order.CoinCount, trans); err != nil {
-		beego.Error("用户充值，增加历史余额失败", err)
+	if err := userRecharge(order.UserID, order.CoinCount, order.ProductInfo, trans); err != nil {
 		models.TransactionRollback(trans)
 		return
 	}
@@ -197,4 +186,67 @@ func getProdFromID(pid uint64) (*models.Product, error) {
 	}
 
 	return nil, errors.New("未能找到指定套餐")
+}
+
+func userRecharge(uid, coinCount uint64, chgInfo string, trans *gorm.DB) error {
+	up, chg := &models.UserProfile{ID: uid}, &models.BalanceChg{UserID: uid, Amount: int(coinCount), Time: time.Now().Unix(), ChgType: models.BalanceChgTypeRecharge, ChgInfo: chgInfo}
+
+	if err := up.AddBalance(int(coinCount), trans); err != nil {
+		beego.Error("增加用户余额失败", err)
+		return err
+	}
+
+	if err := chg.Add(trans); err != nil {
+		beego.Error("用户充值，生成变动失败", err)
+		return err
+	}
+
+	if err := (&models.UserExtra{ID: uid}).AddBalanceHis(coinCount, trans); err != nil {
+		beego.Error("用户充值，增加历史余额失败", err)
+		return err
+	}
+
+	prod := &models.Product{}
+	utils.JSONUnMarshal(chgInfo, prod)
+	if prod.CoinCount != 0 {
+		coinCount = prod.CoinCount
+	}
+
+	return invitorRechargeIncome(uid, coinCount, chgInfo, trans)
+}
+
+func invitorRechargeIncome(fromUID, amount uint64, chginfo string, trans *gorm.DB) error {
+	u := &models.User{ID: fromUID}
+	if err := u.Read(); err != nil {
+		beego.Error("获取目标用户信息失败,id:", fromUID, err)
+		return err
+	}
+
+	rate, err := (&models.Config{}).GetIncomeRate()
+	if err != nil {
+		beego.Error("获取收益分成率失败", err)
+		return err
+	}
+
+	if u.InvitedBy != 0 {
+		ivtIncome, up := int((float64(amount) * rate.InviteRechargeRate)), &models.UserProfile{ID: u.InvitedBy}
+		chg := &models.BalanceChg{UserID: u.InvitedBy, Amount: ivtIncome, Time: time.Now().Unix(), ChgType: models.BalanceChgTypeInvitationRechargeIncome, ChgInfo: chginfo}
+
+		if err := up.AddIncome(ivtIncome, trans); err != nil {
+			beego.Error("邀请人增加收益失败", err)
+			return err
+		}
+
+		if err := chg.Add(trans); err != nil {
+			beego.Error("生成邀请人余额变动失败", err)
+			return err
+		}
+
+		if err := (&models.UserExtra{ID: u.InvitedBy}).AddInviteIncomeHis(uint64(ivtIncome), trans); err != nil {
+			beego.Error("增加邀请人邀请收益历史记录失败", err)
+			return err
+		}
+	}
+
+	return nil
 }
