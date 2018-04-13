@@ -30,6 +30,11 @@ func GetTecentImgSign() (string, error) {
 	return sign.AppSignV2(qcloudAppid, qcloudSID, qcloudSKey, bucket, uint(time.Now().Add(time.Hour).Unix()))
 }
 
+//GetTecentImgSignV5 .
+func GetTecentImgSignV5(dir string) (string, error) {
+	return sign.AppSignV5(qcloudSID, qcloudSKey, dir, "put", 3600*24)
+}
+
 //ImgPornCheckSingle .
 func ImgPornCheckSingle(url string) (bool, error) {
 	res, err := cloud.PornDetect(url)

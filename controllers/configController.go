@@ -78,13 +78,16 @@ func (c *ConfigController) GetProductList() {
 //GetCosSign .
 // @Title 获取对象存储签名
 // @Description 获取对象存储签名
+// @Param   dir			query    string  	true       "文件目录"
 // @Success 200 {object} utils.ResultDTO
 // @router /cossign [get]
 func (c *ConfigController) GetCosSign() {
 	dto := utils.ResultDTO{}
 	defer dto.JSONResult(&c.Controller)
 
-	sign, err := utils.GetTecentImgSign()
+	dir := c.GetString("dir")
+
+	sign, err := utils.GetTecentImgSignV5(dir)
 	if err != nil {
 		beego.Error("获取腾讯COS签名失败\t"+err.Error(), c.Ctx.Request.UserAgent())
 		dto.Message = "获取腾讯COS签名失败\t" + err.Error()

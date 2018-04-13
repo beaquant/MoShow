@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/sha1"
+	"encoding/hex"
+	"strings"
 )
 
 //PKCS7Padding .
@@ -46,4 +49,16 @@ func AesDecrypt(crypted, key []byte) ([]byte, error) {
 	blockMode.CryptBlocks(origData, crypted)
 	origData = PKCS7UnPadding(origData)
 	return origData, nil
+}
+
+//ShaHashToHexString SHA1加密字符串，并将加密结果转成16进制字符串
+func ShaHashToHexString(bv []byte) string {
+	hasher := sha1.New()
+	hasher.Write(bv)
+	return strings.ToLower(hex.EncodeToString(hasher.Sum(nil)))
+}
+
+//ShaHashToHexStringFromString .
+func ShaHashToHexStringFromString(src string) string {
+	return ShaHashToHexString([]byte(src))
 }

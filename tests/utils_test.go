@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	sign "github.com/MrSong0607/image-go-sdk/sign"
 	"github.com/silenceper/wechat/oauth"
 )
 
@@ -101,7 +102,8 @@ func TestStringReplace(t *testing.T) {
 }
 
 func TestCosSign(t *testing.T) {
-
+	s, err := sign.AppSignV5("AKIDJYdWDvGCiCdxFUwqtxyujZXVPI9ztbDe", "RlxUvFPOCoIguzugHoBNhsshP1To1X6a", "/photo", "put", 3600*24)
+	t.Log(s, err)
 }
 
 func TestPornImg(t *testing.T) {
