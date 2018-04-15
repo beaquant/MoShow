@@ -100,14 +100,14 @@ func (b *BalanceChg) AddChg(trans *gorm.DB, chg ...*BalanceChg) error {
 }
 
 //IsVideoPayed .
-func (b *BalanceChg) IsVideoPayed(uri string, tid uint64) (bool, error) {
-	var count int
-	err := db.Model(b).Where("user_id = ?", b.UserID).Where("chg_type = ?", BalanceChgTypeVideoView).Where(`chg_info ->>'$.target_id' = ?`, tid).Where(`chg_info ->>'$.url' = ?`, uri).Count(&count).Error
-	if count > 0 {
-		return true, err
-	}
-	return false, err
-}
+// func (b *BalanceChg) IsVideoPayed(uri string, tid uint64) (bool, error) {
+// 	var count int
+// 	err := db.Model(b).Where("user_id = ?", b.UserID).Where("chg_type = ?", BalanceChgTypeVideoView).Where(`chg_info ->>'$.target_id' = ?`, tid).Where(`chg_info ->>'$.url' = ?`, uri).Count(&count).Error
+// 	if count > 0 {
+// 		return true, err
+// 	}
+// 	return false, err
+// }
 
 //GetIncomeChgs .
 func (b *BalanceChg) GetIncomeChgs(limit, skip int) ([]BalanceChg, error) {
@@ -116,7 +116,17 @@ func (b *BalanceChg) GetIncomeChgs(limit, skip int) ([]BalanceChg, error) {
 	}
 
 	var lst []BalanceChg
-	return lst, db.Where("user_id = ?", b.UserID).Where("chg_type in (?)", []int{BalanceChgTypeRecharge, BalanceChgTypeInvitationRechargeIncome, BalanceChgTypeInvitationIncome}).Order("time desc").Limit(limit).Offset(skip).Find(&lst).Error
+	return lst, db.Where("user_id = ?", b.UserID).Where("amount >= 0").Order("id desc").Limit(limit).Offset(skip).Find(&lst).Error
+}
+
+//GetInviteIncomeChgs .
+func (b *BalanceChg) GetInviteIncomeChgs(limit, skip int) ([]BalanceChg, error) {
+	if limit == 0 {
+		limit = 20
+	}
+
+	var lst []BalanceChg
+	return lst, db.Where("user_id = ?", b.UserID).Where("chg_type in (?)", []int{BalanceChgTypeInvitationRechargeIncome, BalanceChgTypeInvitationIncome}).Order("id desc").Limit(limit).Offset(skip).Find(&lst).Error
 }
 
 //GetPaymentChgs .
@@ -126,5 +136,5 @@ func (b *BalanceChg) GetPaymentChgs(limit, skip int) ([]BalanceChg, error) {
 	}
 
 	var lst []BalanceChg
-	return lst, db.Where("user_id = ?", b.UserID).Where("chg_type in (?)", []int{BalanceChgTypeGift, BalanceChgTypeVideo, BalanceChgTypeMessage, BalanceChgTypeVideoView}).Order("time desc").Limit(limit).Offset(skip).Find(&lst).Error
+	return lst, db.Where("user_id = ?", b.UserID).Where("amount < 0").Order("id desc").Limit(limit).Offset(skip).Find(&lst).Error
 }

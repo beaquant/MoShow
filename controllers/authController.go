@@ -8,9 +8,9 @@ import (
 	"time"
 
 	netease "github.com/MrSong0607/netease-im"
+	"github.com/MrSong0607/wechat/oauth"
 	"github.com/astaxie/beego"
 	"github.com/garyburd/redigo/redis"
-	"github.com/silenceper/wechat/oauth"
 )
 
 var timeFormat = "2006-01-02T15:04:05.000Z"
@@ -123,6 +123,7 @@ func (c *AuthController) Login() {
 			return
 		}
 
+		tk.ID = up.ID
 		if err := SetToken(c.Ctx, tk); err != nil {
 			beego.Error("设置token失败", err, c.Ctx.Request.UserAgent())
 			dto.Message = "设置token失败\t" + err.Error()
@@ -209,6 +210,7 @@ func (c *AuthController) WechatLogin() {
 			return
 		}
 
+		tk.ID = up.ID
 		if err := SetToken(c.Ctx, tk); err != nil {
 			beego.Error("设置token失败", err, c.Ctx.Request.UserAgent())
 			dto.Message = "设置token失败\t" + err.Error()
@@ -364,17 +366,17 @@ func genSelfUserPorfileInfo(up *models.UserProfile, pc *models.ProfileChg) (*Use
 func genUserPorfileInfoCommon(upi *UserPorfileInfo, cv *models.UserCoverInfo) {
 	if cv != nil {
 		if cv.CoverPicture != nil {
-			upi.Avatar = cv.CoverPicture.ImageURL
+			upi.Avatar = utils.TransCosToCDN(cv.CoverPicture.ImageURL)
 		}
 
 		if cv.DesVideo != nil {
-			upi.Video = cv.DesVideo.VideoURL
+			upi.Video = utils.TransCosToCDN(cv.DesVideo.VideoURL)
 		}
 
 		if cv.Gallery != nil && len(cv.Gallery) > 0 {
 			var g []string
 			for index := range cv.Gallery {
-				g = append(g, cv.Gallery[index].ImageURL)
+				g = append(g, utils.TransCosToCDN(cv.Gallery[index].ImageURL))
 			}
 			upi.Gallery = g
 		}

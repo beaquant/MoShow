@@ -5,6 +5,7 @@ import (
 	"errors"
 	"sort"
 	"strconv"
+	"time"
 
 	"github.com/jinzhu/gorm"
 )
@@ -17,12 +18,19 @@ type UserExtra struct {
 	InviteIncomeHis uint64 `json:"invite_income_his" gorm:"column:invite_income_his" description:"邀请历史总收益"`
 	BalanceHis      uint64 `json:"balance_his" gorm:"column:balance_his" description:"历史总充值"`
 	InviteCount     uint64 `json:"invite_count" gorm:"column:invite_count" description:"邀请总人数"`
+	VideoViewPay    string `json:"-" gorm:"column:video_view_pay" description:"视频付费记录"`
 }
 
 //GiftHisInfo .
 type GiftHisInfo struct {
 	Count    uint64 `json:"count"`
 	GiftInfo Gift   `json:"gift_info"`
+}
+
+//VideoViewInfo .
+type VideoViewInfo struct {
+	Amount uint64 `json:"amount"`
+	Time   int64  `json:"time"`
 }
 
 //GiftHisInfoList .
@@ -45,6 +53,10 @@ func (u *UserExtra) Add(trans *gorm.DB) error {
 
 	if len(u.GiftHistory) == 0 {
 		u.GiftHistory = "{}"
+	}
+
+	if len(u.VideoViewPay) == 0 {
+		u.VideoViewPay = "{}"
 	}
 
 	return trans.Create(u).Error
@@ -70,6 +82,35 @@ func (u *UserExtra) AddGiftCount(gft Gift, count uint64, trans *gorm.DB) error {
 	countStr := strconv.FormatUint(count, 10)
 
 	return trans.Model(u).Update("gift_his", gorm.Expr(`if(isnull(gift_his ->>'$."`+idStr+`"'),JSON_SET(COALESCE(gift_his,"{}"),'$."`+idStr+`"',cast(? as json)),JSON_SET(gift_his,'$."`+idStr+`"."Count"',gift_his->>'$."`+idStr+`"."Count"' + `+countStr+`))`, gstr)).Error
+}
+
+//AddVideoViewed .
+func (u *UserExtra) AddVideoViewed(videoURL string, amout uint64, trans *gorm.DB) error {
+	if trans == nil {
+		trans = db
+	}
+
+	vv := &VideoViewInfo{Time: time.Now().Unix(), Amount: amout}
+
+	vvstr, err := utils.JSONMarshalToString(vv)
+	if err != nil {
+		return err
+	}
+
+	return trans.Model(u).Update("video_view_pay", gorm.Expr(`JSON_SET(COALESCE(gift_his,"{}"),'$."`+videoURL+`"',cast(? as json))`, vvstr)).Error
+}
+
+//IsVideoPayed .
+func (u *UserExtra) IsVideoPayed(videoURL string) (bool, error) {
+	var count int
+	if err := db.Model(u).Where("id = ?", u.ID).Where(`JSON_CONTAINS_PATH(video_view_pay,'one','$."` + videoURL + `"')`).Count(&count).Error; err != nil {
+		return false, err
+	}
+
+	if count > 0 {
+		return true, nil
+	}
+	return false, nil
 }
 
 //GetGiftHis .

@@ -57,6 +57,14 @@ func init() {
 
 	beego.GlobalControllerRouter["MoShow/controllers:BalanceChgController"] = append(beego.GlobalControllerRouter["MoShow/controllers:BalanceChgController"],
 		beego.ControllerComments{
+			Method: "GetInviteIncomList",
+			Router: `/ivtincome`,
+			AllowHTTPMethods: []string{"get"},
+			MethodParams: param.Make(),
+			Params: nil})
+
+	beego.GlobalControllerRouter["MoShow/controllers:BalanceChgController"] = append(beego.GlobalControllerRouter["MoShow/controllers:BalanceChgController"],
+		beego.ControllerComments{
 			Method: "GetPaymentList",
 			Router: `/payments`,
 			AllowHTTPMethods: []string{"get"},

@@ -21,7 +21,7 @@ type UserController struct {
 type UserPorfileInfo struct {
 	models.UserProfile
 	ImTk        string                 `json:"im_token,omitempty"`
-	Alipay      *models.AlipayAcctInfo `json:"tx _acct,omitempty"`
+	Alipay      *models.AlipayAcctInfo `json:"tx_acct,omitempty"`
 	Followed    bool                   `json:"followed" description:"是否已关注"`
 	IsFill      bool                   `json:"is_fill" description:"资料是否完善"`
 	AnswerRate  float64                `json:"answer_rate" description:"接通率"`
@@ -87,7 +87,7 @@ func (c *UserController) Read() {
 		}
 		genUserPorfileInfoCommon(upi, up.GetCover())
 		if len(upi.Video) > 0 {
-			upi.VideoPayed, err = (&models.BalanceChg{UserID: tk.ID}).IsVideoPayed(upi.Video, upi.ID)
+			upi.VideoPayed, err = (&models.UserExtra{ID: tk.ID}).IsVideoPayed(upi.Video)
 			if err != nil {
 				beego.Error("获取视频付费信息失败", err, c.Ctx.Request.UserAgent())
 				dto.Message = "获取视频付费信息失败" + err.Error()
@@ -293,6 +293,7 @@ func (c *UserController) Update() {
 
 	models.TransactionCommit(trans)
 
+	dto.Message = "更新成功"
 	dto.Data = upi
 	dto.Sucess = true
 
@@ -891,7 +892,7 @@ func (c *UserController) ReduceAmount() {
 	if dType == 0 {
 		amount = 10
 	} else if dType == 1 {
-		payed, err := (&models.BalanceChg{UserID: tid}).IsVideoPayed(uri, tid)
+		payed, err := (&models.UserExtra{ID: tid}).IsVideoPayed(uri)
 		if err != nil {
 			beego.Error("获取消费记录失败", err, c.Ctx.Request.UserAgent())
 			dto.Message = "获取消费记录失败"
@@ -934,7 +935,7 @@ func (c *UserController) ReduceAmount() {
 	trans := models.TransactionGen() //开始事务
 	if err := up.DeFund(uint64(amount), trans); err != nil {
 		models.TransactionRollback(trans)
-		beego.Error(err, c.Ctx.Request.UserAgent())
+		beego.Error("扣款失败", err, c.Ctx.Request.UserAgent())
 		dto.Message = "扣款失败\t" + err.Error()
 		dto.Code = utils.DtoStatusDatabaseError
 		return
@@ -942,8 +943,16 @@ func (c *UserController) ReduceAmount() {
 
 	if err := chg.Add(trans); err != nil {
 		models.TransactionRollback(trans)
-		beego.Error(err, c.Ctx.Request.UserAgent())
+		beego.Error("添加余额变动失败", err, c.Ctx.Request.UserAgent())
 		dto.Message = "添加余额变动失败\t" + err.Error()
+		dto.Code = utils.DtoStatusDatabaseError
+		return
+	}
+
+	if err := (&models.UserExtra{ID: tk.ID}).AddVideoViewed(uri, uint64(amount), trans); err != nil {
+		models.TransactionRollback(trans)
+		beego.Error("增加视频付费记录失败", err, c.Ctx.Request.UserAgent())
+		dto.Message = "增加视频付费记录失败\t" + err.Error()
 		dto.Code = utils.DtoStatusDatabaseError
 		return
 	}
@@ -988,6 +997,12 @@ func (c *UserController) Withdraw() {
 		return
 	}
 
+	if len(up.AlipayAcct) == 0 || up.AlipayAcct == "{}" {
+		beego.Error("提现账号未绑定，提现失败,id:", tk.ID, c.Ctx.Request.UserAgent())
+		dto.Message = "提现账号未绑定，提现失败"
+		return
+	}
+
 	trans := models.TransactionGen()
 	if err := up.AddIncome(-int(amount), trans); err != nil {
 		beego.Error("申请提现扣款失败", err, c.Ctx.Request.UserAgent())
@@ -997,7 +1012,7 @@ func (c *UserController) Withdraw() {
 		return
 	}
 
-	wd := &models.Withdraw{UserID: tk.ID, Amount: amount, CreateAt: time.Now().Unix()}
+	wd := &models.Withdraw{UserID: tk.ID, Amount: amount, CreateAt: time.Now().Unix(), Tag: up.AlipayAcct}
 	if err := wd.Add(trans); err != nil {
 		beego.Error("生成提现申请失败", err, c.Ctx.Request.UserAgent())
 		dto.Message = "生成提现申请失败" + err.Error()

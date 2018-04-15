@@ -125,10 +125,19 @@ func (u *UserProfile) Add(trans *gorm.DB) error {
 		return errors.New("必须指定用户ID")
 	}
 
-	if trans != nil {
-		return trans.Create(u).Error
+	if trans == nil {
+		trans = db
 	}
-	return db.Create(u).Error
+
+	if len(u.AlipayAcct) == 0 {
+		u.AlipayAcct = "{}"
+	}
+
+	if len(u.CoverPic) == 0 {
+		u.CoverPic = "{}"
+	}
+
+	return trans.Create(u).Error
 }
 
 //Read .

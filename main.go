@@ -1,7 +1,7 @@
 package main
 
 import (
-	_ "github.com/jinzhu/gorm/dialects/mysql"
+	_ "github.com/go-sql-driver/mysql"
 
 	_ "MoShow/routers"
 

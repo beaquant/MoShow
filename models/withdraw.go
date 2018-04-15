@@ -18,6 +18,7 @@ type Withdraw struct {
 	Amount   uint64 `json:"amount" gorm:"column:amount"`
 	Status   int    `json:"status" gorm:"column:status"`
 	CreateAt int64  `json:"create_at" gorm:"column:create_at"`
+	Tag      string `json:"-" gorm:"column:tag"`
 }
 
 //TableName .

@@ -125,6 +125,7 @@ func (c *Config) GetCommonGiftInfo() ([]Gift, error) {
 			}
 
 			g.ID = cf[index].ID
+			g.ImgURL = utils.TransCosToCDN(g.ImgURL)
 			gf = append(gf, g)
 		}
 

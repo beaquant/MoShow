@@ -333,74 +333,74 @@ func (c *ChatChannel) Run() {
 		case msg := <-c.Send:
 			go c.wsMsgDeal(msg)
 		case exp := <-c.Exit:
-			if c.StopTime == 0 {
-				c.StopTime = time.Now().Unix()
-			}
-
 			if c.StartTime == 0 {
 				c.StartTime = c.ChannelStartTime
 			}
 
-			if c.Timelong == 0 && c.Dst != nil {
-				c.Timelong = uint64(c.StopTime - c.StartTime)
+			if c.Dst == nil || (c.StopTime == 0 && !c.Inited) {
+				return //主播未加入房间，直接退出 || 没有初始化聊天，直接退出
 			}
 
-			c.logger.Info("房间关闭，准备结算,房间ID:", c.ID, "主播ID:", c.DstID)
+			if c.StopTime == 0 { //未进入正常结算流程
+				//房间初始化成功，但是没有进入正常结费流程(未收到 wsMessageTypeChannelEnd)
+				c.StopTime = time.Now().Unix()
+				c.Timelong = uint64(c.StopTime - c.StartTime)
+			} else { //收到 wsMessageTypeChannelEnd 正常结算流程
+				if !c.Inited { //没有正常开始聊天，需要补扣用户的钱
+					if err := videoAllocateFund(c.Src.User, c.Dst.User, c.Amount); err != nil { //扣费失败关闭聊天频道
+						c.logger.Error("扣费失败", err)
+						exp = append(exp, err)
+					}
+				}
+			}
 
-			dt := &models.DialTag{}
-
-			c.logger.Info("开始结算")
-			if c.Dst != nil {
-				//结费并生成变动
+			c.logger.Info("开始结算,房间ID:", c.ID, "主播ID:", c.DstID)
+			if exp == nil || len(exp) == 0 { //没有异常的情况下再给主播结费，否则只生成异常通话记录
 				if err := videoDone(c.Src.User, c.Dst.User, &models.VideoChgInfo{TimeLong: c.Timelong, Price: c.Price, DialID: c.DialID}, c.Amount); err != nil {
 					c.logger.Error("[websocket结算异常]视频结费错误", err, "发起人:", c.ID, "接受人:", c.DstID, "金额:", c.Amount, "通话时长:", c.Timelong)
-					dt.ErrorMsg = append(dt.ErrorMsg, "[websocket结算异常]视频结费错误")
-					dt.ErrorMsg = append(dt.ErrorMsg, err.Error())
-				}
-
-				income, _, _ := computeIncome(c.Amount)
-				ci := &models.ClearingInfo{NIMChannelID: c.NIMChannelID, Cost: c.Amount, Income: uint64(income), Timelong: c.Timelong}
-				ciStr, _ := utils.JSONMarshalToString(ci)
-				if len(ciStr) == 0 {
-					ciStr = "{}"
-				}
-
-				//生成通话记录
-				dl := &models.Dial{ID: c.DialID}
-
-				if !c.Inited {
-					if c.Dst == nil {
-						dl.Status = models.DialStatusFail
-					} else {
-						dl.Status = models.DialStatusException
-					}
-				} else {
-					dl.Status = models.DialStatusSuccess
-				}
-
-				if exp != nil {
-					dl.Status = models.DialStatusException
-					for _, val := range exp {
-						dt.ErrorMsg = append(dt.ErrorMsg, val.Error())
-					}
-					dl.Tag, _ = utils.JSONMarshalToString(dt)
-				}
-
-				if err := dl.Update(map[string]interface{}{"duration": c.Timelong, "create_at": c.ChannelStartTime, "status": dl.Status, "clearing": ciStr}, nil); err != nil {
-					js, _ := utils.JSONMarshalToString(dl)
-					c.logger.Error("[websocket结算异常]通话记录更新失败", err, js)
+					exp = append(exp, errors.New("[websocket结算异常]视频结费错误:"+err.Error()))
 				}
 			}
 
-			if c.Timelong > 0 && c.Dst != nil {
-				if err := c.Src.User.AddDialDuration(c.Timelong, nil); err != nil {
-					c.logger.Error("[websocket结算异常]用户增加通话时长失败", err, c.ID)
+			income, _, _ := computeIncome(c.Amount)
+			ciStr, _ := utils.JSONMarshalToString(&models.ClearingInfo{NIMChannelID: c.NIMChannelID, Cost: c.Amount, Income: uint64(income), Timelong: c.Timelong})
+
+			//生成通话记录
+			dl, dt := &models.Dial{ID: c.DialID}, &models.DialTag{}
+			if exp != nil {
+				dl.Status = models.DialStatusException
+				for _, val := range exp {
+					dt.ErrorMsg = append(dt.ErrorMsg, val.Error())
 				}
-				if err := c.Dst.User.AddDialDuration(c.Timelong, nil); err != nil {
-					c.logger.Error("[websocket结算异常]用户增加通话时长失败", err, c.DstID)
-				}
+				dl.Tag, _ = utils.JSONMarshalToString(dt)
+			} else {
+				dl.Status = models.DialStatusSuccess
 			}
 
+			trans := models.TransactionGen()
+			if err := dl.Update(map[string]interface{}{"duration": c.Timelong, "create_at": c.ChannelStartTime, "status": dl.Status, "clearing": ciStr}, trans); err != nil {
+				js, _ := utils.JSONMarshalToString(dl)
+				c.logger.Error("[websocket结算异常]通话记录更新失败", err, js)
+				models.TransactionRollback(trans)
+				return
+			}
+
+			if err := c.Src.User.AddDialDuration(c.Timelong, trans); err != nil {
+				c.logger.Error("[websocket结算异常]用户增加通话时长失败", err, c.ID)
+				models.TransactionRollback(trans)
+				return
+			}
+			if err := c.Dst.User.AddDialDuration(c.Timelong, trans); err != nil {
+				c.logger.Error("[websocket结算异常]用户增加通话时长失败", err, c.DstID)
+				models.TransactionRollback(trans)
+				return
+			}
+
+			models.TransactionCommit(trans)
+			ms := &WsMessage{MessageType: wsMessageTypeChannelEnd, DialID: c.DialID}
+			ms.Content, _ = utils.JSONMarshalToString(&VideoCost{Cost: c.Amount, Income: uint64(income), Timelong: c.Timelong, NIMChannelID: c.NIMChannelID})
+			c.Src.Send <- ms
+			c.Dst.Send <- ms
 			c.logger.Info("房间结算成功")
 			return
 		}
@@ -443,52 +443,7 @@ func (c *ChatChannel) wsMsgDeal(msg *WsMessage) {
 				c.Exit <- nil
 			}
 
-			go func() {
-				ticker := time.NewTicker(60 * time.Second)
-				defer func() {
-					if err := recover(); err != nil {
-						c.logger.Error(err)
-						debug.PrintStack()
-					}
-					ticker.Stop()
-				}()
-
-				for {
-					select {
-					case <-ticker.C:
-						if c.StopTime == 0 { //若频道未关闭,每隔60秒扣费一次
-							c.Timelong = uint64(time.Now().Unix() - c.StartTime)
-
-							//扣费
-							if err := videoAllocateFund(c.Src.User, c.Dst.User, c.Price); err != nil { //扣费失败关闭聊天频道
-								c.logger.Error(err)
-								m := &WsMessage{MessageType: wsMessageTypeSystem, Content: "用户扣费失败"}
-								c.Src.Send <- m
-								c.Dst.Send <- m
-
-								time.Sleep(time.Second)
-								c.Exit <- nil
-								return
-							}
-							c.Amount += c.Price
-
-							vc, err := c.genVideoCost()
-							if err != nil {
-								c.logger.Error("生成消费信息失败", err)
-								c.Exit <- nil
-								return
-							}
-
-							m := &WsMessage{MessageType: wsMessageTypeAllocateFund}
-							m.Content, _ = utils.JSONMarshalToString(vc)
-							c.Src.Send <- m
-							c.Dst.Send <- m
-						} else {
-							break
-						}
-					}
-				}
-			}()
+			go c.ticktokPay()
 		}
 
 		vc, err := c.genVideoCost()
@@ -506,44 +461,77 @@ func (c *ChatChannel) wsMsgDeal(msg *WsMessage) {
 			break
 		}
 
-		if c.StartTime == 0 {
-			c.StartTime = c.ChannelStartTime
-		}
+		c.StopTime = time.Now().Unix()
 
 		var errs []error
-		vcp, m := &VideoCost{Cost: c.Amount}, &WsMessage{MessageType: wsMessageTypeChannelEnd}
+		vcp := &VideoCost{}
 		if err := utils.JSONUnMarshal(msg.Content, vcp); err == nil {
 			if c.NIMChannelID == 0 {
 				c.NIMChannelID = vcp.NIMChannelID
 			}
 
-			if !c.Inited && c.Dst != nil { //未收到房间初始化信息，直接进入结费,按客户端传入的时长计算结费信息
-				c.StartTime = c.StopTime - int64(vcp.Timelong)
-				c.Amount = c.Price * ((vcp.Timelong + 59) / 60)
-				vcp.Cost = c.Amount
-
-				//扣费
-				if err := videoAllocateFund(c.Src.User, c.Dst.User, c.Amount); err != nil { //扣费失败关闭聊天频道
-					c.logger.Error("扣费失败", err)
-					errs = append(errs, err)
+			if !c.Inited { //未收到房间初始化信息，直接进入结费,按客户端传入的时长计算结费信息
+				if vcp.Timelong == 0 || vcp.Timelong > uint64((c.StopTime-c.ChannelStartTime)*2) {
+					vcp.Timelong = uint64(c.StopTime - c.ChannelStartTime)
 				}
+				c.StartTime = c.StopTime - int64(vcp.Timelong)
+				c.Timelong = vcp.Timelong
+				c.Amount = c.Price * ((vcp.Timelong + 59) / 60)
+			} else {
+				c.Timelong = uint64(c.StopTime - c.StartTime)
 			}
 		} else {
-			errs = append(errs, errors.New("解析结费请求参数错误"))
+			errs = append(errs, errors.New("解析结费请求参数错误:"+msg.Content))
 			c.logger.Error("解析结费请求参数错误", msg.Content, msg.MessageType, msg.Content)
 		}
-
-		income, _, _ := computeIncome(c.Amount)
-		c.StopTime = time.Now().Unix()
-		c.Timelong = uint64(c.StopTime - c.StartTime)
-		vcp.Income = uint64(income)
-		vcp.Timelong = c.Timelong
-		m.Content, _ = utils.JSONMarshalToString(vcp)
-
-		c.Src.Send <- m
-		c.Dst.Send <- m
-
 		c.Exit <- errs
+	}
+}
+
+func (c *ChatChannel) ticktokPay() {
+	ticker := time.NewTicker(60 * time.Second)
+	defer func() {
+		if err := recover(); err != nil {
+			c.logger.Error(err)
+			debug.PrintStack()
+		}
+		ticker.Stop()
+	}()
+
+	for {
+		select {
+		case <-ticker.C:
+			if c.StopTime == 0 { //若频道未关闭,每隔60秒扣费一次
+				c.Timelong = uint64(time.Now().Unix() - c.StartTime)
+
+				//扣费
+				if err := videoAllocateFund(c.Src.User, c.Dst.User, c.Price); err != nil { //扣费失败关闭聊天频道
+					c.logger.Error(err)
+					m := &WsMessage{MessageType: wsMessageTypeSystem, Content: "用户扣费失败"}
+					c.Src.Send <- m
+					c.Dst.Send <- m
+
+					time.Sleep(time.Second)
+					c.Exit <- nil
+					return
+				}
+				c.Amount += c.Price
+
+				vc, err := c.genVideoCost()
+				if err != nil {
+					c.logger.Error("生成消费信息失败", err)
+					c.Exit <- nil
+					return
+				}
+
+				m := &WsMessage{MessageType: wsMessageTypeAllocateFund}
+				m.Content, _ = utils.JSONMarshalToString(vc)
+				c.Src.Send <- m
+				c.Dst.Send <- m
+			} else {
+				break
+			}
+		}
 	}
 }
 

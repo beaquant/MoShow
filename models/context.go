@@ -1,6 +1,8 @@
 package models
 
 import (
+	"time"
+
 	"github.com/astaxie/beego"
 	"github.com/jinzhu/gorm"
 )
@@ -14,8 +16,9 @@ func init() {
 		panic(err)
 	}
 
-	db.DB().SetMaxIdleConns(10)
-	db.DB().SetMaxOpenConns(100)
+	// db.DB().SetMaxIdleConns(10)
+	// db.DB().SetMaxOpenConns(100)
+	db.DB().SetConnMaxLifetime(time.Minute * 5)
 
 	if beego.BConfig.RunMode == "dev" {
 		db = db.Debug()
