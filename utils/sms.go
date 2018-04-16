@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/KenmyZhang/aliyun-communicate/app"
@@ -28,5 +29,10 @@ func SendMsgByAPIKey(mobile, content string) (string, error) {
 		return "", err
 	}
 
-	return JSONMarshalToString(result)
+	rs, err := JSONMarshalToString(result)
+	if val, ok := result["Code"].(string); ok && val != "OK" {
+		return "", errors.New(rs)
+	}
+
+	return rs, err
 }

@@ -3,6 +3,7 @@ package controllers
 import (
 	"MoShow/models"
 	"MoShow/utils"
+	"boys/common"
 	"errors"
 	"strconv"
 	"time"
@@ -279,9 +280,11 @@ func (c *AuthController) initUser(u *models.User, acctType int) (*models.UserPro
 	}
 
 	up := &models.UserProfile{ID: u.ID}
+	index := common.RandNumber(0, len(randomName))
+	up.Alias = randomName[index] //随机生成花名
 	up.ImToken = imtk.Token
 	up.Birthday = 0
-	up.CoverPic = "{}"
+	up.CoverPic = `{"cover_pic_info": {"image_url": "` + defaultAvatar + `", "cloud_porn_check": true}}`
 	up.OnlineStatus = models.OnlineStatusOnline
 	if err := up.Add(trans); err != nil {
 		models.TransactionRollback(trans)
