@@ -41,6 +41,8 @@ type CommonConfig struct {
 	WithdrawCopywriting   string          `json:"withdraw_copywriting"`
 	RechargeCopywriting   string          `json:"recharge_copywriting"`
 	Banners               []Banner        `json:"banners"`
+	VideoPrice            uint64          `json:"video_price"`
+	MessagePrice          uint64          `json:"message_price"`
 }
 
 //ForceUpdateInfo .

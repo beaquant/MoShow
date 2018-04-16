@@ -897,8 +897,15 @@ func (c *UserController) ReduceAmount() {
 		return
 	}
 
+	cfg, err := (&models.Config{}).GetCommonConfig()
+	if err != nil {
+		dto.Message = "获取配置信息失败"
+		dto.Code = utils.DtoStatusDatabaseError
+		return
+	}
+
 	if dType == 0 {
-		amount = 10
+		amount = int(cfg.MessagePrice)
 	} else if dType == 1 {
 		payed, err := (&models.UserExtra{ID: tid}).IsVideoPayed(uri)
 		if err != nil {
@@ -914,7 +921,7 @@ func (c *UserController) ReduceAmount() {
 			return
 		}
 
-		amount = 20
+		amount = int(cfg.VideoPrice)
 	}
 
 	up := &models.UserProfile{ID: tk.ID}
