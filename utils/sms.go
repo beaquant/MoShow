@@ -4,15 +4,15 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/KenmyZhang/aliyun-communicate/app"
+	"github.com/MrSong0607/aliyun-communicate"
 	"github.com/astaxie/beego"
 )
 
 var (
 	smsAccessKeyID, smsAccessKeySecret string
 	gatewayURL                         = "http://dysmsapi.aliyuncs.com/"
-	signName                           = "美拉拉"
-	templateCode                       = "SMS_107930001"
+	signName                           = "蜜秀MX"
+	templateCode                       = "SMS_130924577"
 	templateParam                      = "{\"code\":\"%s\"}"
 )
 
@@ -23,14 +23,14 @@ func init() {
 
 //SendMsgByAPIKey .
 func SendMsgByAPIKey(mobile, content string) (string, error) {
-	smsClient := app.NewSmsClient(gatewayURL)
+	smsClient := aliyunsmsclient.New(gatewayURL)
 	result, err := smsClient.Execute(smsAccessKeyID, smsAccessKeySecret, mobile, signName, templateCode, fmt.Sprintf(templateParam, content))
 	if err != nil {
 		return "", err
 	}
 
 	rs, err := JSONMarshalToString(result)
-	if val, ok := result["Code"].(string); ok && val != "OK" {
+	if result.Code != "OK" {
 		return "", errors.New(rs)
 	}
 

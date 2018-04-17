@@ -51,7 +51,7 @@ func (c *AuthController) SendCode() {
 	ci := &codeInfo{}
 	utils.JSONUnMarshal(codeEx, ci)
 
-	if ci != nil && ci.Time > time.Now().Add(time.Minute*13).Unix() {
+	if ci != nil && ci.Time > time.Now().Add(time.Minute*27).Unix() {
 		dto.Message = "验证码请求太频繁，请稍等"
 		return
 	}
@@ -62,7 +62,7 @@ func (c *AuthController) SendCode() {
 		beego.Error("发送验证码失败:\t" + res + "\r\n" + err.Error())
 		dto.Message = err.Error()
 	} else {
-		cs, _ := utils.JSONMarshalToString(&codeInfo{Code: code, Time: time.Now().Add(time.Minute * 15).Unix()})
+		cs, _ := utils.JSONMarshalToString(&codeInfo{Code: code, Time: time.Now().Add(time.Minute * 30).Unix()})
 
 		con.Do("HSET", SmsCodeRedisKey, num, cs)
 		dto.Sucess = true
@@ -347,11 +347,11 @@ func genSelfUserPorfileInfo(up *models.UserProfile, pc *models.ProfileChg) (*Use
 	}
 
 	//当前用户获取自身信息时，给出正在审核的图片和视频
-	if len(pc.CoverPic) > 0 {
+	if len(pc.CoverPic) > 0 && pc.CoverPicCheckStatus == models.CheckStatusUncheck {
 		upi.Avatar = pc.CoverPic
 	}
 
-	if len(pc.Video) > 0 {
+	if len(pc.Video) > 0 && pc.VideoCheckStatus == models.CheckStatusUncheck {
 		upi.Video = pc.Video
 	}
 	upi.CheckStatus = pc
