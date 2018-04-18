@@ -97,6 +97,14 @@ func init() {
 
 	beego.GlobalControllerRouter["MoShow/controllers:ConfigController"] = append(beego.GlobalControllerRouter["MoShow/controllers:ConfigController"],
 		beego.ControllerComments{
+			Method: "GetInviteURL",
+			Router: `/inviteurl`,
+			AllowHTTPMethods: []string{"get"},
+			MethodParams: param.Make(),
+			Params: nil})
+
+	beego.GlobalControllerRouter["MoShow/controllers:ConfigController"] = append(beego.GlobalControllerRouter["MoShow/controllers:ConfigController"],
+		beego.ControllerComments{
 			Method: "GetProductList",
 			Router: `/products`,
 			AllowHTTPMethods: []string{"get"},

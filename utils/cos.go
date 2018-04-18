@@ -67,7 +67,7 @@ func GetTecentImgSignV5() (*QCloedToken, error) {
 //TransCosToCDN .
 func TransCosToCDN(origin string) string {
 	return strings.Replace(origin,
-		"https://moshow-1255921343.cos.ap-shanghai.myqcloud.com", "moshow-1255921343.file.myqcloud.com", -1)
+		"moshow-1255921343.cos.ap-shanghai.myqcloud.com", "moshow-1255921343.file.myqcloud.com", -1)
 }
 
 //ImgPornCheckSingle .
