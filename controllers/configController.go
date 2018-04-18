@@ -3,8 +3,13 @@ package controllers
 import (
 	"MoShow/models"
 	"MoShow/utils"
+	"fmt"
 
 	"github.com/astaxie/beego"
+)
+
+var (
+	shareLink = beego.AppConfig.String("moshowHomeUrl") + `/ivt/%d`
 )
 
 //ConfigController 获取礼物列表，系统设置等
@@ -92,5 +97,19 @@ func (c *ConfigController) GetCosSign() {
 	}
 
 	dto.Data = tk
+	dto.Sucess = true
+}
+
+//GetInviteURL .
+// @Title 生成邀请链接
+// @Description 生成邀请链接
+// @Success 200 {object} utils.ResultDTO
+// @router /inviteurl [get]
+func (c *ConfigController) GetInviteURL() {
+	dto, tk := utils.ResultDTO{}, GetToken(c.Ctx)
+	defer dto.JSONResult(&c.Controller)
+
+	dto.Message = "获取成功"
+	dto.Data = fmt.Sprintf(shareLink, tk.ID)
 	dto.Sucess = true
 }

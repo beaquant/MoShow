@@ -41,6 +41,8 @@ func (dto *ResultDTO) JSONResult(c *beego.Controller) {
 	if !dto.Sucess && len(dto.Message) == 0 && dto.Code == 0 {
 		dto.Message = "未知错误"
 		dto.Code = DtoStatusUnkownError
+	} else if dto.Sucess && dto.Code == 0 && len(dto.Message) == 0 {
+		dto.Message = "Success"
 	}
 
 	c.Data["json"] = dto
