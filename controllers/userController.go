@@ -370,12 +370,19 @@ func (c *UserController) SendGift() {
 	}
 
 	giftChg := &models.GiftChgInfo{Count: giftCount, GiftInfo: *gift}
+	if giftCount*gift.Price > fromUserProfile.Balance+fromUserProfile.Income {
+		dto.Message = "余额不足"
+		beego.Error("赠送礼物余额不足,用户ID:", fromUserProfile.ID, "礼物总价:", giftCount*gift.Price, "用户余额:", fromUserProfile.Balance, "用户收益:", fromUserProfile.Income)
+		return
+	}
+
 	if err := sendGift(fromUserProfile, toUserProfile, giftChg); err != nil {
 		beego.Error(err)
 		dto.Message = "支付过程出现异常\t" + err.Error()
 		return
 	}
 
+	dto.Data = fromUserProfile
 	dto.Sucess = true
 }
 
@@ -1052,6 +1059,8 @@ func (c *UserController) Withdraw() {
 	}
 
 	models.TransactionCommit(trans)
+	up.Income -= amount
+	dto.Data = up
 	dto.Sucess = true
 	dto.Message = "提现申请已提交"
 }

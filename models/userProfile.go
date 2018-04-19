@@ -233,10 +233,11 @@ func (u *UserProfile) AddBalance(amount int, trans *gorm.DB) error {
 		return nil
 	}
 
-	if trans != nil {
-		return trans.Model(u).Update("balance", gorm.Expr("balance + ?", amount)).Error
+	if trans == nil {
+		trans = db
 	}
-	return db.Model(u).Update("balance", gorm.Expr("balance + ?", amount)).Error
+
+	return trans.Model(u).Update("balance", gorm.Expr("balance + ?", amount)).Error
 }
 
 //AddIncome .
@@ -265,14 +266,18 @@ func (u *UserProfile) DeFund(amount uint64, trans *gorm.DB) error {
 		if err := u.AddBalance(-int(amount), trans); err != nil { //扣款
 			return errors.New(strconv.FormatUint(u.ID, 10) + "扣款失败\t" + err.Error())
 		}
+		u.Balance -= amount
 	} else { //余额钱包金额不足以扣款
+		deIncome := amount - u.Balance
 		if err := u.AddBalance(-int(u.Balance), trans); err != nil { //从余额钱包扣款
 			return errors.New(strconv.FormatUint(u.ID, 10) + "扣款失败\t" + err.Error())
 		}
 
-		if err := u.AddIncome(-int(amount-u.Balance), trans); err != nil { //从收益钱包扣款
+		if err := u.AddIncome(-int(deIncome), trans); err != nil { //从收益钱包扣款
 			return errors.New(strconv.FormatUint(u.ID, 10) + "扣款失败\t" + err.Error())
 		}
+		u.Income -= deIncome
+		u.Balance = 0
 	}
 	return nil
 }

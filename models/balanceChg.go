@@ -116,7 +116,7 @@ func (b *BalanceChg) GetIncomeChgs(limit, skip int) ([]BalanceChg, error) {
 	}
 
 	var lst []BalanceChg
-	return lst, db.Where("user_id = ?", b.UserID).Where("amount >= 0").Order("id desc").Limit(limit).Offset(skip).Find(&lst).Error
+	return lst, db.Where("user_id = ?", b.UserID).Where("amount > 0").Order("id desc").Limit(limit).Offset(skip).Find(&lst).Error
 }
 
 //GetInviteIncomeChgs .

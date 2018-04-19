@@ -60,6 +60,7 @@ type ChatChannel struct {
 	NIMChannelID     uint64 //网易云信房间ID
 	DstID            uint64
 	Inited           bool
+	Stoped           bool
 	ChannelStartTime int64
 	StartTime        int64
 	Timelong         uint64 //聊天时长,单位:秒
@@ -283,7 +284,7 @@ func (c *WebsocketController) Reject() {
 		return
 	}
 
-	if cn.StopTime == 0 { //未结算
+	if !cn.Stoped { //未结算
 		cn.Exit <- nil
 		(&models.UserProfile{ID: tk.ID}).AddDialReject(nil)
 	}
@@ -333,11 +334,14 @@ func (c *ChatChannel) Run() {
 		case msg := <-c.Send:
 			go c.wsMsgDeal(msg)
 		case exp := <-c.Exit:
+			c.Stoped = true
+
 			if c.StartTime == 0 {
 				c.StartTime = c.ChannelStartTime
 			}
 
 			if c.Dst == nil || (c.StopTime == 0 && !c.Inited) {
+				c.logger.Info("视频未接通:用户挂断,用户ID:", c.ID, "主播ID:", c.DstID)
 				return //主播未加入房间，直接退出 || 没有初始化聊天，直接退出
 			}
 
@@ -435,12 +439,14 @@ func (c *ChatChannel) wsMsgDeal(msg *WsMessage) {
 			c.Inited = true
 			c.StartTime = time.Now().Unix()
 
-			c.logger.Info("视频开始，开始扣费")
+			c.logger.Info("视频开始,开始扣费")
 			c.Amount += c.Price
 			//扣费
 			if err := videoAllocateFund(c.Src.User, c.Dst.User, c.Price); err != nil {
 				c.logger.Error("扣费失败", err)
-				c.Exit <- nil
+				if !c.Stoped {
+					c.Exit <- nil
+				}
 			}
 
 			go c.ticktokPay()
@@ -449,7 +455,9 @@ func (c *ChatChannel) wsMsgDeal(msg *WsMessage) {
 		vc, err := c.genVideoCost()
 		if err != nil {
 			c.logger.Error("生成消费信息失败", err)
-			c.Exit <- nil
+			if !c.Stoped {
+				c.Exit <- nil
+			}
 		}
 
 		m := &WsMessage{MessageType: wsMessageTypeChannelStart}
@@ -512,7 +520,9 @@ func (c *ChatChannel) ticktokPay() {
 					c.Dst.Send <- m
 
 					time.Sleep(time.Second)
-					c.Exit <- nil
+					if !c.Stoped {
+						c.Exit <- nil
+					}
 					return
 				}
 				c.Amount += c.Price
@@ -520,7 +530,9 @@ func (c *ChatChannel) ticktokPay() {
 				vc, err := c.genVideoCost()
 				if err != nil {
 					c.logger.Error("生成消费信息失败", err)
-					c.Exit <- nil
+					if !c.Stoped {
+						c.Exit <- nil
+					}
 					return
 				}
 
@@ -571,20 +583,20 @@ func (c *ChatClient) Read() {
 			// time.Sleep(30 * time.Second) //等待30秒,如过连接没有恢复,执行退出
 
 			if curConnection != c.Conn { //重连成功
-				c.Channel.logger.Info("重连成功，房间继续保留,房间ID:", c.Channel.ID)
+				c.Channel.logger.Info("重连成功,房间继续保留,房间ID:", c.Channel.ID)
 				return
 			}
 		}
 
-		c.Channel.logger.Info(fmt.Sprintf("[ws:%p]", c.Conn), "用户主动挂断或等待重连超时，执行退出流程")
-		if c.Channel.StopTime == 0 { //未结算
+		c.Channel.logger.Info(fmt.Sprintf("[ws:%p]", c.Conn), "用户主动挂断或等待重连超时,执行退出流程")
+		if !c.Channel.Stoped { //未结算
 			c.Channel.Exit <- nil //发送退出信号,关闭通道后write方法会立即退出
 		}
 	}()
 	curConnection.SetReadLimit(maxMessageSize)
 	curConnection.SetReadDeadline(time.Now().Add(pongWait))
 	curConnection.SetPongHandler(func(pong string) error {
-		c.Channel.logger.Info("[", c.User.ID, "]收到pong消息,刷新deadline")
+		c.Channel.logger.Info("[uid:", c.User.ID, "]收到pong消息,刷新deadline")
 
 		if _, ok := chatChannels[c.Channel.ID]; ok {
 			curConnection.SetReadDeadline(time.Now().Add(pongWait))
