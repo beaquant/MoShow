@@ -25,6 +25,8 @@ const (
 	UserTypeNormal = iota
 	//UserTypeAnchor 主播
 	UserTypeAnchor
+	//UserTypeFaker 马甲号
+	UserTypeFaker
 )
 
 const (
@@ -65,9 +67,9 @@ type UserProfile struct {
 	Description      string `json:"description" gorm:"column:description" description:"签名"`
 	Birthday         int64  `json:"birthday" gorm:"column:birthday" description:"生日"`
 	Location         string `json:"location" gorm:"column:location" description:"地区"`
-	Balance          uint64 `json:"balance" gorm:"column:balance" description:"余额"`
-	Income           uint64 `json:"income" gorm:"column:income" description:"收益"`
-	Price            uint64 `json:"price" gorm:"column:price" description:"视频价格/分"`
+	Balance          uint64 `json:"balance,omitempty" gorm:"column:balance" description:"余额"`
+	Income           uint64 `json:"income,omitempty" gorm:"column:income" description:"收益"`
+	Price            uint64 `json:"price,omitempty" gorm:"column:price" description:"视频价格/分"`
 	UserType         int    `json:"user_type" gorm:"column:user_type" description:"用户类型"`
 	ImToken          string `json:"-" gorm:"column:im_token" description:"网易云信token"`
 	UserStatus       int    `json:"user_status" gorm:"column:user_status" description:"用户状态"`
