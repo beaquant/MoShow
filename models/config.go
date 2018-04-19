@@ -31,18 +31,18 @@ type Config struct {
 
 //CommonConfig 通用配置
 type CommonConfig struct {
-	AnchorVideoRecord     bool            `json:"anchor_video_record"`
-	UserVideoRecordbool   bool            `json:"user_video_record"`
-	UserProtocol          string          `json:"user_protocal"`
-	ForceUpdate           ForceUpdateInfo `json:"force_update"`
-	Share                 ShareInfo       `json:"share"`
-	CustomerServiceWechat string          `json:"customer_service_wechat"`
-	CheckStaffWechat      string          `json:"check_staff_wechat"`
-	WithdrawCopywriting   string          `json:"withdraw_copywriting"`
-	RechargeCopywriting   string          `json:"recharge_copywriting"`
-	Banners               []Banner        `json:"banners"`
-	VideoPrice            uint64          `json:"video_price"`
-	MessagePrice          uint64          `json:"message_price"`
+	AnchorVideoRecord     bool             `json:"ac_video_record"`
+	UserVideoRecordbool   bool             `json:"user_video_record"`
+	UserProtocol          string           `json:"user_protocal"`
+	ForceUpdate           *ForceUpdateInfo `json:"force_update,omitempty"`
+	Share                 ShareInfo        `json:"share"`
+	CustomerServiceWechat string           `json:"customer_service_wechat"`
+	CheckStaffWechat      string           `json:"check_staff_wechat"`
+	WithdrawCopywriting   string           `json:"wd_copywriting"`
+	RechargeCopywriting   string           `json:"rcg_copywriting"`
+	Banners               []Banner         `json:"banners"`
+	VideoPrice            uint64           `json:"vod_value"`
+	MessagePrice          uint64           `json:"msg_value"`
 }
 
 //ForceUpdateInfo .
@@ -56,9 +56,9 @@ type ForceUpdateInfo struct {
 
 //ShareInfo .
 type ShareInfo struct {
-	Rule             string `json:"rule"`
-	URL              string `json:"url"`
-	AwardCopyWriting string `json:"award_copywriting"`
+	Rule             string   `json:"rule"`
+	URL              string   `json:"url"`
+	AwardCopyWriting []string `json:"award_copywriting"`
 }
 
 //Gift .

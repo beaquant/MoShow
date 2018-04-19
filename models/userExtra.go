@@ -81,7 +81,7 @@ func (u *UserExtra) AddGiftCount(gft Gift, count uint64, trans *gorm.DB) error {
 	idStr := strconv.FormatUint(gft.ID, 10)
 	countStr := strconv.FormatUint(count, 10)
 
-	return trans.Model(u).Update("gift_his", gorm.Expr(`if(isnull(gift_his ->>'$."`+idStr+`"'),JSON_SET(COALESCE(gift_his,"{}"),'$."`+idStr+`"',cast(? as json)),JSON_SET(gift_his,'$."`+idStr+`"."Count"',gift_his->>'$."`+idStr+`"."Count"' + `+countStr+`))`, gstr)).Error
+	return trans.Model(u).Update("gift_his", gorm.Expr(`if(isnull(gift_his ->>'$."`+idStr+`"'),JSON_SET(COALESCE(gift_his,"{}"),'$."`+idStr+`"',cast(? as json)),JSON_SET(gift_his,'$."`+idStr+`"."count"',gift_his->>'$."`+idStr+`"."count"' + `+countStr+`))`, gstr)).Error
 }
 
 //AddVideoViewed .
