@@ -165,3 +165,11 @@ func TestOsFileMode(t *testing.T) {
 	t.Logf("ModeTemporary:%o", os.ModeTemporary)
 	t.Logf("ModeType:%o", os.ModeType)
 }
+
+func TestGetIP(t *testing.T) {
+	if i, err := utils.GetIPInfo("45.78.22.174"); err != nil {
+		t.Error(err)
+	} else {
+		t.Log(utils.JSONMarshalToString(i))
+	}
+}

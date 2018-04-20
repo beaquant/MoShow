@@ -26,7 +26,7 @@ type TimelineUserInfo struct {
 	Duration  uint64 `json:"recent_duration" gorm:"column:recent_duration"`
 }
 
-//NewCommers .
+//Users .
 // @Title 首页专区列表
 // @Description newcomer:新用户专区,注册时间最近15天内的用户在此参与排序。active:活跃专区,所有用户参与查询。 suggestion:推荐专区,用户由运营人员推荐
 // @Param   cate		    query    string  	true       	"专区分类,newcomer,active,suggestion"
@@ -34,7 +34,7 @@ type TimelineUserInfo struct {
 // @Param   limit		    query    int  		false       "返回结果数限制"
 // @Success 200 {object} models.UserProfile
 // @router /users [get]
-func (c *TimelineController) NewCommers() {
+func (c *TimelineController) Users() {
 	dto, tk := utils.ResultDTO{}, GetToken(c.Ctx)
 	defer dto.JSONResult(&c.Controller)
 
@@ -56,12 +56,15 @@ func (c *TimelineController) NewCommers() {
 	}
 
 	var gender int
-	if up.Gender == models.GenderMan {
-		gender = models.GenderWoman
-	} else if up.Gender == models.GenderWoman {
+	var faker bool
+	if up.Gender == models.GenderWoman {
 		gender = models.GenderMan
 	} else {
-		gender = models.GenderDefault
+		gender = models.GenderWoman
+	}
+
+	if up.UserType == models.UserTypeFaker {
+		faker = true
 	}
 
 	cate := c.GetString("cate")
@@ -72,11 +75,11 @@ func (c *TimelineController) NewCommers() {
 	var ul []models.TimelineUser
 	switch cate {
 	case "newcomer":
-		ul, err = (&models.TimelineUser{}).QueryRecent(time.Now().AddDate(0, 0, -15).Unix(), gender, skip, limit)
+		ul, err = (&models.TimelineUser{}).QueryRecent(faker, time.Now().AddDate(0, 0, -15).Unix(), gender, skip, limit)
 	case "active":
-		ul, err = (&models.TimelineUser{}).QueryAll(gender, skip, limit)
+		ul, err = (&models.TimelineUser{}).QueryAll(faker, gender, skip, limit)
 	case "suggestion":
-		ul, err = (&models.TimelineUser{}).QueryHot(skip, limit)
+		ul, err = (&models.TimelineUser{}).QueryHot(faker, gender, skip, limit)
 	}
 
 	if err != nil {

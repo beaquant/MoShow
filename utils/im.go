@@ -8,7 +8,8 @@ var (
 	neteaseAppKey    = "b2c60dbed0ae2d3c48e6c85664836dc9"
 	neteaseAppSecret = "1ed04f7d7085"
 	imClient         = netease.CreateImClient(neteaseAppKey, neteaseAppSecret, "") //http://127.0.0.1:8889
-	imSysAdminID     = "1"
+	//ImSysAdminID 系统管理员ID
+	ImSysAdminID = "1"
 )
 
 const (
@@ -43,7 +44,7 @@ func SendP2PMessage(fromID, toID, content string) error {
 
 //SendP2PSysMessage 发送点对点系统消息
 func SendP2PSysMessage(content string, toID string) error {
-	return SendP2PMessage(imSysAdminID, toID, content)
+	return SendP2PMessage(ImSysAdminID, toID, content)
 }
 
 //SendDIYSysMessage 发送自定义系统消息
@@ -52,5 +53,5 @@ func SendDIYSysMessage(content *ImSysNotifyMessage, toIds []string) error {
 	if err != nil {
 		return err
 	}
-	return imClient.SendBatchAttachMsg(imSysAdminID, msgStr, toIds, nil)
+	return imClient.SendBatchAttachMsg(ImSysAdminID, msgStr, toIds, nil)
 }

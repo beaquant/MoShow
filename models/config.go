@@ -12,14 +12,16 @@ const (
 	configTypeProduct    = "products"
 	configTypeIncomeRate = "income_rate"
 	configTypeCommon     = "common_config"
+	configTypeCkModeRegs = "checkMode_regs"
 )
 
 var (
-	giftList     []Gift
-	productList  []Product
-	updateTime   = make(map[string]time.Time)
-	incomeRate   *IncomeRate
-	commonConfig *CommonConfig
+	giftList      []Gift
+	productList   []Product
+	checkModeRegs []string
+	updateTime    = make(map[string]time.Time)
+	incomeRate    *IncomeRate
+	commonConfig  *CommonConfig
 )
 
 //Config .
@@ -201,4 +203,23 @@ func (c *Config) GetCommonConfig() (*CommonConfig, error) {
 		return commonConfig, nil
 	}
 	return commonConfig, nil
+}
+
+//GetcheckModeRegs 获取审核模式正则串
+func (c *Config) GetcheckModeRegs() ([]string, error) {
+	if tm, ok := updateTime[configTypeCkModeRegs]; checkModeRegs == nil || !ok || tm.Add(time.Minute*5).Before(time.Now()) {
+		if err := db.Model(c).Where("conf_key = ?", configTypeCkModeRegs).First(c).Error; err != nil {
+			return nil, err
+		}
+
+		var cc []string
+		if err := utils.JSONUnMarshal(c.Value, &cc); err != nil {
+			return nil, err
+		}
+
+		updateTime[configTypeCkModeRegs] = time.Now()
+		checkModeRegs = cc
+		return checkModeRegs, nil
+	}
+	return checkModeRegs, nil
 }

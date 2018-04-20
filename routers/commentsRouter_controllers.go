@@ -185,7 +185,7 @@ func init() {
 
 	beego.GlobalControllerRouter["MoShow/controllers:TimelineController"] = append(beego.GlobalControllerRouter["MoShow/controllers:TimelineController"],
 		beego.ControllerComments{
-			Method: "NewCommers",
+			Method: "Users",
 			Router: `/users`,
 			AllowHTTPMethods: []string{"get"},
 			MethodParams: param.Make(),

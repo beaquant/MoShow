@@ -13,23 +13,38 @@ func (TimelineUser) TableName() string {
 }
 
 //QueryAll .
-func (t *TimelineUser) QueryAll(gender, skip, limit int) ([]TimelineUser, error) {
+func (t *TimelineUser) QueryAll(faker bool, gender, skip, limit int) ([]TimelineUser, error) {
 	var tl []TimelineUser
-	return tl, db.Offset(skip).Limit(limit).Where("gender = ?", gender).Find(&tl).Error
+
+	q := db.Where("gender = ?", gender)
+	if faker {
+		q = q.Where("user_type = ?", UserTypeFaker)
+	}
+	return tl, q.Offset(skip).Limit(limit).Find(&tl).Error
 }
 
 //QueryRecent .
-func (t *TimelineUser) QueryRecent(timestamp int64, gender, skip, limit int) ([]TimelineUser, error) {
+func (t *TimelineUser) QueryRecent(faker bool, timestamp int64, gender, skip, limit int) ([]TimelineUser, error) {
 	var tl []TimelineUser
 
+	q := db.Offset(skip).Limit(limit).Where("create_at > ?", timestamp, gender).Where("gender = ?", gender)
 	if gender == 1 {
-		return tl, db.Offset(skip).Limit(limit).Where("create_at > ? and gender = ?", timestamp, gender).Find(&tl).Error
+		q = q.Where("user_type = ?", UserTypeAnchor)
 	}
-	return tl, db.Offset(skip).Limit(limit).Where("create_at > ? and gender = ? and user_type = ?", timestamp, gender, UserTypeAnchor).Find(&tl).Error
+
+	if faker {
+		q = q.Where("user_type = ?", UserTypeFaker)
+	}
+	return tl, q.Offset(skip).Limit(limit).Find(&tl).Error
 }
 
 //QueryHot .
-func (t *TimelineUser) QueryHot(skip, limit int) ([]TimelineUser, error) {
+func (t *TimelineUser) QueryHot(faker bool, gender, skip, limit int) ([]TimelineUser, error) {
 	var tl []TimelineUser
-	return tl, db.Offset(skip).Limit(limit).Where("user_status = ? and gender = ?", UserStatusHot, GenderWoman).Find(&tl).Error
+
+	q := db.Where("user_status = ?", UserStatusHot).Where("gender = ?", gender)
+	if faker {
+		q = q.Where("user_type = ?", UserTypeFaker)
+	}
+	return tl, q.Offset(skip).Limit(limit).Find(&tl).Error
 }

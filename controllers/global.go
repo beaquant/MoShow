@@ -34,6 +34,7 @@ var (
 type Token struct {
 	ID         uint64
 	AcctStatus int
+	UserType   int
 	ExpireTime int64
 	UUID       string
 }
@@ -179,6 +180,46 @@ func GetToken(ctx *context.Context) *Token {
 	}
 
 	return tk
+}
+
+//IsCheckMode .
+func IsCheckMode(agent string) bool {
+	regs, err := (&models.Config{}).GetcheckModeRegs()
+	if err != nil {
+		beego.Error("获取审核模式正则失败", err)
+		return false
+	}
+
+	for index := range regs {
+		if ok, err := regexp.MatchString(regs[index], agent); err != nil {
+			beego.Error("审核模式正则匹配异常", err)
+			return false
+		} else if ok {
+			return true
+		}
+	}
+
+	return false
+}
+
+//IsCheckMode4Context .
+func IsCheckMode4Context(ctx *context.Context) bool {
+	if ctx.Request.Header.Get("Azwx") == "0" {
+		return true
+	}
+
+	if strings.Contains(strings.ToLower(ctx.Request.UserAgent()), "ipad") {
+		return true
+	}
+
+	timeZone := strings.ToLower(ctx.Request.Header.Get("Client"))
+	if strings.Contains(timeZone, "us") || strings.Contains(timeZone, "america") {
+		if ii, err := utils.GetIPInfo(ctx.Input.IP()); err != nil && ii.CountryCode == "US" {
+			return true
+		}
+	}
+
+	return IsCheckMode(ctx.Request.UserAgent())
 }
 
 //ClearToken 清除token字段
