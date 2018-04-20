@@ -42,6 +42,7 @@ type UserPorfileInfo struct {
 type UserOperateInfo struct {
 	User   *UserPorfileInfo `json:"user"`
 	OpTime int64            `json:"time"`
+	Award  uint64           `json:"awd"`
 }
 
 //Read .
@@ -618,6 +619,7 @@ func (c *UserController) Report() {
 		return
 	}
 
+	dto.Message = "举报成功"
 	dto.Sucess = true
 }
 
@@ -663,23 +665,17 @@ func (c *UserController) InviteList() {
 	var uoi []UserOperateInfo
 	for index := range lst {
 		u := &models.User{ID: lst[index].ID}
-		if err := u.GetRegistTime(); err != nil {
+		if err := u.GetRegistTimeAndAward(); err != nil {
 			beego.Error("获取用户信息失败", err, c.Ctx.Request.UserAgent())
 			dto.Message = "获取用户信息失败" + err.Error()
 			dto.Code = utils.DtoStatusDatabaseError
 			return
 		}
 
-		upi := &UserPorfileInfo{UserProfile: models.UserProfile{ID: lst[index].ID}}
-		if err := upi.Read(); err != nil {
-			beego.Error("获取用户信息失败", err, c.Ctx.Request.UserAgent())
-			dto.Message = "获取用户信息失败" + err.Error()
-			dto.Code = utils.DtoStatusDatabaseError
-			return
-		}
+		upi := &UserPorfileInfo{UserProfile: lst[index]}
 
 		genUserPorfileInfoCommon(upi, upi.GetCover())
-		uoi = append(uoi, UserOperateInfo{User: upi, OpTime: u.CreatedAt})
+		uoi = append(uoi, UserOperateInfo{User: upi, OpTime: u.CreatedAt, Award: u.InvitedAward})
 	}
 
 	dto.Data = uoi
@@ -1187,6 +1183,11 @@ func sendGift(from, to *models.UserProfile, gift *models.GiftChgInfo) error {
 			models.TransactionRollback(trans)
 			return errors.New("增加赠礼目标用户邀请人历史收益失败\t" + err.Error())
 		}
+
+		if err := u.AddAward(uint64(inviteIncome), trans); err != nil {
+			models.TransactionRollback(trans)
+			return errors.New("增加邀请奖励总额失败\t" + err.Error())
+		}
 	}
 
 	fuChg := &models.BalanceChg{UserID: from.ID, FromUserID: to.ID, ChgType: models.BalanceChgTypeGift, Amount: -int(amount)} //源用户扣款变动
@@ -1245,6 +1246,11 @@ func videoDone(from, to *models.UserProfile, video *models.VideoChgInfo, amount 
 		if err := (&models.UserExtra{ID: u.InvitedBy}).AddInviteIncomeHis(uint64(inviteIncome), trans); err != nil {
 			models.TransactionRollback(trans)
 			return errors.New("增加赠礼目标用户邀请人历史收益失败\t" + err.Error())
+		}
+
+		if err := u.AddAward(uint64(inviteIncome), trans); err != nil {
+			models.TransactionRollback(trans)
+			return errors.New("增加邀请奖励总额失败\t" + err.Error())
 		}
 	}
 

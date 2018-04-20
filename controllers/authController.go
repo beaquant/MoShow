@@ -128,13 +128,14 @@ func (c *AuthController) Login() {
 		}
 
 		tk.ID = up.ID
+		tk.AcctStatus = u.AcctStatus
+		tk.UserType = up.UserType
 		if err := SetToken(c.Ctx, tk); err != nil {
 			beego.Error("设置token失败", err, c.Ctx.Request.UserAgent())
 			dto.Message = "设置token失败\t" + err.Error()
 			return
 		}
 
-		tk.ID = u.ID
 		dto.Message = "注册成功"
 		dto.Data = &UserPorfileInfo{UserProfile: *up, ImTk: up.ImToken}
 		dto.Sucess = true
@@ -146,7 +147,6 @@ func (c *AuthController) Login() {
 				return
 			}
 
-			tk.ID = u.ID
 			up := &models.UserProfile{ID: u.ID}
 			if err := up.Read(); err != nil {
 				beego.Error("获取用户信息失败", err, c.Ctx.Request.UserAgent())
@@ -161,6 +161,9 @@ func (c *AuthController) Login() {
 				return
 			}
 
+			tk.ID = u.ID
+			tk.AcctStatus = u.AcctStatus
+			tk.UserType = up.UserType
 			if err := SetToken(c.Ctx, tk); err != nil {
 				beego.Error("设置token失败", err, c.Ctx.Request.UserAgent())
 				dto.Message = "设置token失败\t" + err.Error()
@@ -215,13 +218,14 @@ func (c *AuthController) WechatLogin() {
 		}
 
 		tk.ID = up.ID
+		tk.AcctStatus = u.AcctStatus
+		tk.UserType = up.UserType
 		if err := SetToken(c.Ctx, tk); err != nil {
 			beego.Error("设置token失败", err, c.Ctx.Request.UserAgent())
 			dto.Message = "设置token失败\t" + err.Error()
 			return
 		}
 
-		tk.ID = u.ID
 		dto.Message = "注册成功"
 		dto.Data = &UserPorfileInfo{UserProfile: *up, ImTk: up.ImToken}
 		dto.Sucess = true
@@ -233,7 +237,6 @@ func (c *AuthController) WechatLogin() {
 				return
 			}
 
-			tk.ID = u.ID
 			up := &models.UserProfile{ID: u.ID}
 			if err := up.Read(); err != nil {
 				beego.Error("获取用户信息失败", err, c.Ctx.Request.UserAgent())
@@ -247,6 +250,9 @@ func (c *AuthController) WechatLogin() {
 				return
 			}
 
+			tk.ID = u.ID
+			tk.AcctStatus = u.AcctStatus
+			tk.UserType = up.UserType
 			if err := SetToken(c.Ctx, tk); err != nil {
 				beego.Error("设置token失败", err, c.Ctx.Request.UserAgent())
 				dto.Message = "设置token失败\t" + err.Error()
@@ -289,6 +295,10 @@ func (c *AuthController) initUser(u *models.User, acctType int) (*models.UserPro
 	up.Birthday = 0
 	up.CoverPic = `{"cover_pic_info": {"image_url": "` + defaultAvatar + `", "cloud_porn_check": true}}`
 	up.OnlineStatus = models.OnlineStatusOnline
+	if IsCheckMode(c.Ctx.Request.UserAgent()) {
+		up.UserType = models.UserTypeFaker
+	}
+
 	if err := up.Add(trans); err != nil {
 		models.TransactionRollback(trans)
 		return nil, errors.New("创建用户详情失败\t" + err.Error())
@@ -390,5 +400,10 @@ func genUserPorfileInfoCommon(upi *UserPorfileInfo, cv *models.UserCoverInfo) {
 
 	if upi.DialAccept+upi.DialDeny > 0 {
 		upi.AnswerRate = float64(upi.DialAccept) / float64((upi.DialAccept + upi.DialDeny)) //计算接通率
+	}
+
+	if upi.UserType == models.UserTypeFaker { //马甲号隐藏掉金额相关字段
+		upi.Balance = 0
+		upi.Income = 0
 	}
 }

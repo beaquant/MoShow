@@ -23,7 +23,7 @@ type ConfigController struct {
 // @Success 200 {object} utils.ResultDTO
 // @router /common [get]
 func (c *ConfigController) GetCommonConfig() {
-	dto := utils.ResultDTO{}
+	tk, dto := GetToken(c.Ctx), &utils.ResultDTO{}
 	defer dto.JSONResult(&c.Controller)
 
 	conf := &models.Config{}
@@ -32,6 +32,10 @@ func (c *ConfigController) GetCommonConfig() {
 		dto.Message = "获取通用配置失败\t" + err.Error()
 		beego.Error(err, c.Ctx.Request.UserAgent())
 		return
+	}
+
+	if tk.UserType == models.UserTypeFaker {
+		val.ForceUpdate = nil
 	}
 
 	dto.Data = val

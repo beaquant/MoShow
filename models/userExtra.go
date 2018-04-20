@@ -143,10 +143,10 @@ func (u *UserExtra) AddBalanceHis(count uint64, trans *gorm.DB) error {
 		return errors.New("user_extra 更新用户历史余额 必须指定用户ID")
 	}
 
-	if trans != nil {
-		return trans.Model(u).Update("balance_his", gorm.Expr("balance_his + ?", count)).Error
+	if trans == nil {
+		trans = db
 	}
-	return db.Model(u).Update("balance_his", gorm.Expr("balance_his + ?", count)).Error
+	return trans.Model(u).Update("balance_his", gorm.Expr("balance_his + ?", count)).Error
 }
 
 //AddIncomeHis 增加历史总收益
@@ -155,10 +155,10 @@ func (u *UserExtra) AddIncomeHis(count uint64, trans *gorm.DB) error {
 		return errors.New("user_extra 更新用户历史收益 必须指定用户ID")
 	}
 
-	if trans != nil {
-		return trans.Model(u).Update("income_his", gorm.Expr("income_his + ?", count)).Error
+	if trans == nil {
+		trans = db
 	}
-	return db.Model(u).Update("income_his", gorm.Expr("income_his + ?", count)).Error
+	return trans.Model(u).Update("income_his", gorm.Expr("income_his + ?", count)).Error
 }
 
 //AddInviteIncomeHis 增加邀请历史总收益

@@ -1,6 +1,7 @@
 package models
 
 import (
+	"MoShow/utils"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -23,7 +24,7 @@ func (Guest) TableName() string {
 //AddView .
 func (g *Guest) AddView(uid, guest uint64) error {
 	var gg []Guest
-	if err := db.Where("user_id = ? and guest_id = ?", uid, guest).Find(&gg).Error; err != nil {
+	if err := db.Where("user_id = ?", uid).Where("guest_id = ?", guest).Find(&gg).Error; err != nil {
 		return err
 	}
 
@@ -42,5 +43,5 @@ func (g *Guest) GetGuestList(uid uint64, limit, skip int) ([]Guest, error) {
 	}
 
 	var gg []Guest
-	return gg, db.Where("user_id = ?", uid).Limit(limit).Offset(skip).Order("time desc").Find(&gg).Error
+	return gg, db.Where("user_id = ?", uid).Where("guest_id <> ?", utils.ImSysAdminID).Limit(limit).Offset(skip).Order("time desc").Find(&gg).Error
 }

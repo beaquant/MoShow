@@ -33,6 +33,7 @@ type User struct {
 	AcctStatus    int    `json:"acct_status" gorm:"column:acct_status" description:"账号状态"`
 	CreatedAt     int64  `json:"create_at" gorm:"column:create_at" description:"注册时间"`
 	InvitedBy     uint64 `json:"invited_by" gorm:"column:invited_by" description:"邀请人ID"`
+	InvitedAward  uint64 `json:"-" gorm:"column:invited_award" description:"给邀请人的奖励"`
 	LastLoginInfo string `json:"last_login_info" gorm:"column:last_login_info" description:"最近一次登录信息"`
 }
 
@@ -90,7 +91,15 @@ func (u *User) ReadFromWechatID() (err error) {
 	return
 }
 
-//GetRegistTime .
-func (u *User) GetRegistTime() error {
-	return db.Select("create_at").Find(u).Error
+//AddAward .
+func (u *User) AddAward(count uint64, trans *gorm.DB) error {
+	if trans == nil {
+		trans = db
+	}
+	return trans.Model(u).Update("invited_award", gorm.Expr("invited_award + ?", count)).Error
+}
+
+//GetRegistTimeAndAward .
+func (u *User) GetRegistTimeAndAward() error {
+	return db.Select("create_at,invited_award").Find(u).Error
 }
