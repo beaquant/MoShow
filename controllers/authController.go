@@ -86,7 +86,7 @@ func (c *AuthController) Login() {
 	phoneNum := c.Ctx.Input.Param(":phone")
 	code := c.GetString("code")
 
-	if phoneNum != adminPhone && code != adminCode {
+	if phoneNum != adminPhone {
 		codeEx, err := redis.String(con.Do("HGET", SmsCodeRedisKey, phoneNum))
 		if err != nil {
 			beego.Error("读取验证码失败", err)
@@ -106,6 +106,9 @@ func (c *AuthController) Login() {
 			dto.Message = "验证码错误"
 			return
 		}
+	} else if code != adminCode {
+		dto.Message = "验证码错误"
+		return
 	}
 
 	u := &models.User{PhoneNumber: phoneNum}
