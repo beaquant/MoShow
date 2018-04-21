@@ -83,7 +83,7 @@ func (c *TimelineController) Users() {
 	}
 
 	if err != nil {
-		dto.Message = "获取新用户列表失败\t" + err.Error()
+		dto.Message = "获取用户列表失败\t" + err.Error()
 		beego.Error(err)
 		return
 	}

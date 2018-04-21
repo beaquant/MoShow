@@ -13,8 +13,9 @@ import (
 )
 
 var (
-	defaultAvatar = ""
-	randomName    = []string{"方块", "守护", "阿夜", "奇迹", "嘻嘻", "皮皮", "大地", "节奏", "武藏", "依流", "慧流", "娜娜", "配角", "二堂", "复社", "日奈", "森亚建", "露露", "尤里佳", "黑执事", "夏尔", "米卡", "亚洛斯", "伊丽", "克洛德", "索玛", "阿格尼", "梅林", "巴德尔", "葬依屋", "雷格尔", "刘时", "蓝猫", "汉娜", "田中先生", "菲尼安", "骑士", "玖兰枢", "玖兰", "锥生零", "黑主灰阎", "一条", "矢野", "锥生", "绯樱闲", "早园", "架园晓", "蓝堂荌", "玖兰李士", "夜刈", "琉星", "支葵", "凡多", "姆海威", "艾利斯", "弗斯塔斯", "琉佳", "千里", "十牙", "莎白", "米多", "福特", "优姬", "托兰西", "拓麻", "莉磨", "天天", "冷冷", "拜拜", "白白", "陌陌", "默默", "可可", "拉拉", "东东", "栋栋", "奇奇", "于鏊", "魔能", "嘿嘿", "哒哒", "呵呵", "大佬", "大爷"}
+	defaultBoysAvatar  = "https://moshow-1255921343.file.myqcloud.com/sys/default_boys.jpg"
+	defaultGirlsAvatar = "https://moshow-1255921343.file.myqcloud.com/sys/default_girl.jpg"
+	randomName         = []string{"方块", "守护", "阿夜", "奇迹", "嘻嘻", "皮皮", "大地", "节奏", "武藏", "依流", "慧流", "娜娜", "配角", "二堂", "复社", "日奈", "森亚建", "露露", "尤里佳", "黑执事", "夏尔", "米卡", "亚洛斯", "伊丽", "克洛德", "索玛", "阿格尼", "梅林", "巴德尔", "葬依屋", "雷格尔", "刘时", "蓝猫", "汉娜", "田中先生", "菲尼安", "骑士", "玖兰枢", "玖兰", "锥生零", "黑主灰阎", "一条", "矢野", "锥生", "绯樱闲", "早园", "架园晓", "蓝堂荌", "玖兰李士", "夜刈", "琉星", "支葵", "凡多", "姆海威", "艾利斯", "弗斯塔斯", "琉佳", "千里", "十牙", "莎白", "米多", "福特", "优姬", "托兰西", "拓麻", "莉磨", "天天", "冷冷", "拜拜", "白白", "陌陌", "默默", "可可", "拉拉", "东东", "栋栋", "奇奇", "于鏊", "魔能", "嘿嘿", "哒哒", "呵呵", "大佬", "大爷"}
 )
 
 //UserController 用户信息查询，更新等接口
@@ -967,12 +968,14 @@ func (c *UserController) ReduceAmount() {
 		return
 	}
 
-	if err := (&models.UserExtra{ID: tk.ID}).AddVideoViewed(uri, uint64(amount), trans); err != nil {
-		models.TransactionRollback(trans)
-		beego.Error("增加视频付费记录失败", err, c.Ctx.Request.UserAgent())
-		dto.Message = "增加视频付费记录失败\t" + err.Error()
-		dto.Code = utils.DtoStatusDatabaseError
-		return
+	if chg.ChgType == models.BalanceChgTypeVideoView {
+		if err := (&models.UserExtra{ID: tk.ID}).AddVideoViewed(uri, uint64(amount), trans); err != nil {
+			models.TransactionRollback(trans)
+			beego.Error("增加视频付费记录失败", err, c.Ctx.Request.UserAgent())
+			dto.Message = "增加视频付费记录失败\t" + err.Error()
+			dto.Code = utils.DtoStatusDatabaseError
+			return
+		}
 	}
 
 	models.TransactionCommit(trans)
@@ -1330,7 +1333,11 @@ func checkPorn(up *models.UserProfile, cover *models.UserCoverInfo) {
 				if ocv := up.GetCover(); ocv != nil {
 					cover.CoverPicture.ImageURL = ocv.CoverPicture.ImageURL
 				} else {
-					cover.CoverPicture.ImageURL = defaultAvatar
+					if up.Gender == models.GenderWoman {
+						cover.CoverPicture.ImageURL = defaultGirlsAvatar
+					} else {
+						cover.CoverPicture.ImageURL = defaultBoysAvatar
+					}
 				}
 			}
 			cover.CoverPicture.CloudCheck = true

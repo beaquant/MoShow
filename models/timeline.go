@@ -27,7 +27,7 @@ func (t *TimelineUser) QueryAll(faker bool, gender, skip, limit int) ([]Timeline
 func (t *TimelineUser) QueryRecent(faker bool, timestamp int64, gender, skip, limit int) ([]TimelineUser, error) {
 	var tl []TimelineUser
 
-	q := db.Offset(skip).Limit(limit).Where("create_at > ?", timestamp, gender).Where("gender = ?", gender)
+	q := db.Where("create_at > ?", timestamp).Where("gender = ?", gender)
 	if gender == 1 {
 		q = q.Where("user_type = ?", UserTypeAnchor)
 	}
