@@ -4,8 +4,8 @@ import (
 	"MoShow/models"
 	"MoShow/utils"
 	"strconv"
-	"strings"
 
+	netease "github.com/MrSong0607/netease-im"
 	"github.com/astaxie/beego"
 )
 
@@ -153,47 +153,33 @@ func (c *DialController) GetDialDetail() {
 	dto.Message = "获取成功"
 }
 
-//Del .
-// @Title 删除通话记录
-// @Description 删除通话记录
-// @Param   dialid     	path    int  	true       "通话记录id"
-// @Success 200 {object} utils.ResultDTO
-// @router /:dialid [delete]
-func (c *DialController) Del() {
-	dto, tk := utils.ResultDTO{}, GetToken(c.Ctx)
-	defer dto.JSONResult(&c.Controller)
-
-	ids := strings.TrimSpace(c.Ctx.Input.Param(":dialid"))
-	id, err := strconv.ParseUint(ids, 10, 64)
+//NmCallback .
+// @router /nmcallback [post]
+func (c *DialController) NmCallback() {
+	bd, err := utils.ImClient.GetEventNotification(c.Ctx.Request)
 	if err != nil {
-		beego.Error("参数解析错误:dialid\t", err, c.Ctx.Request.UserAgent(), ids)
-		dto.Message = "参数解析错误:dialid\t" + err.Error()
-		dto.Code = utils.DtoStatusParamError
+		beego.Error("云信抄送异常", err)
+	}
+
+	kv := make(map[string]interface{})
+	if err := utils.JSONUnMarshalFromByte(bd, &kv); err != nil {
+		beego.Error("云信回执解析异常", err)
+	}
+
+	val, ok := kv["eventType"]
+	if !ok {
+		beego.Error("云信回执内容错误", string(bd))
 		return
 	}
 
-	dial := &models.Dial{ID: id}
-	if err := dial.Read(); err != nil {
-		beego.Error("获取通话记录失败", err, c.Ctx.Request.UserAgent(), id)
-		dto.Message = "获取通话记录失败" + err.Error()
-		dto.Code = utils.DtoStatusDatabaseError
+	v, ok := val.(string)
+	if !ok {
 		return
 	}
 
-	if dial.FromUserID != tk.ID {
-		beego.Error("不能删除他人的通话记录")
-		dto.Message = "该通话记录不属于当前用户"
-		dto.Code = utils.DtoStatusParamError
-		return
-	}
+	switch v {
+	case netease.EventTypeMediaDuration:
 
-	if err := dial.Del(); err != nil {
-		beego.Error("删除通话记录失败", err, c.Ctx.Request.UserAgent())
-		dto.Message = "删除通话记录失败" + err.Error()
-		dto.Code = utils.DtoStatusDatabaseError
-		return
+	case netease.EventTypeMediaInfo:
 	}
-
-	dto.Message = "删除成功"
-	dto.Sucess = true
 }

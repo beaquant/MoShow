@@ -64,6 +64,7 @@ func FilterUser(ctx *context.Context) {
 	exclude["/api/auth/.+/login"] = struct{}{}
 	exclude["/api/auth/wechatlogin"] = struct{}{}
 	exclude["/api/order/verify"] = struct{}{}
+	exclude["/api/dial/nmcallback"] = struct{}{}
 
 	for k := range exclude {
 		if ok, _ := regexp.MatchString(k, ctx.Request.RequestURI); ok {

@@ -3,6 +3,7 @@ package models
 import (
 	"database/sql"
 
+	netease "github.com/MrSong0607/netease-im"
 	"github.com/jinzhu/gorm"
 )
 
@@ -29,7 +30,9 @@ type Dial struct {
 
 //DialTag .
 type DialTag struct {
-	ErrorMsg []string
+	ErrorMsg    []string                       `json:"errors"`
+	NmAudioCopy *netease.AudioCopyInfo         `json:"nm_audio_copy"`
+	NmFileCopu  *netease.AudioDownloadCopyInfo `json:"nm_file_copy"`
 }
 
 //ClearingInfo .

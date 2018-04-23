@@ -7,7 +7,7 @@ import (
 var (
 	neteaseAppKey    = "b2c60dbed0ae2d3c48e6c85664836dc9"
 	neteaseAppSecret = "1ed04f7d7085"
-	imClient         = netease.CreateImClient(neteaseAppKey, neteaseAppSecret, "") //http://127.0.0.1:8889
+	ImClient         = netease.CreateImClient(neteaseAppKey, neteaseAppSecret, "") //http://127.0.0.1:8889
 	//ImSysAdminID 系统管理员ID
 	ImSysAdminID = "1"
 )
@@ -23,23 +23,19 @@ type ImSysNotifyMessage struct {
 	Type    int    `json:"type"`
 }
 
-func genImClient() *netease.ImClient {
-	return imClient
-}
-
 //ImCreateUser .
 func ImCreateUser(user *netease.ImUser) (*netease.TokenInfo, error) {
-	return genImClient().CreateImUser(user)
+	return ImClient.CreateImUser(user)
 }
 
 //ImRefreshToken .
 func ImRefreshToken(id string) (*netease.TokenInfo, error) {
-	return genImClient().RefreshToken(id)
+	return ImClient.RefreshToken(id)
 }
 
 //SendP2PMessage .
 func SendP2PMessage(fromID, toID, content string) error {
-	return imClient.SendTextMessage(fromID, toID, &netease.TextMessage{Message: content}, nil)
+	return ImClient.SendTextMessage(fromID, toID, &netease.TextMessage{Message: content}, nil)
 }
 
 //SendP2PSysMessage 发送点对点系统消息
@@ -53,5 +49,5 @@ func SendDIYSysMessage(content *ImSysNotifyMessage, toIds []string) error {
 	if err != nil {
 		return err
 	}
-	return imClient.SendBatchAttachMsg(ImSysAdminID, msgStr, toIds, nil)
+	return ImClient.SendBatchAttachMsg(ImSysAdminID, msgStr, toIds, nil)
 }
