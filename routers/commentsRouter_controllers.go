@@ -121,17 +121,17 @@ func init() {
 
 	beego.GlobalControllerRouter["MoShow/controllers:DialController"] = append(beego.GlobalControllerRouter["MoShow/controllers:DialController"],
 		beego.ControllerComments{
-			Method: "Del",
-			Router: `/:dialid`,
-			AllowHTTPMethods: []string{"delete"},
+			Method: "DialList",
+			Router: `/list`,
+			AllowHTTPMethods: []string{"get"},
 			MethodParams: param.Make(),
 			Params: nil})
 
 	beego.GlobalControllerRouter["MoShow/controllers:DialController"] = append(beego.GlobalControllerRouter["MoShow/controllers:DialController"],
 		beego.ControllerComments{
-			Method: "DialList",
-			Router: `/list`,
-			AllowHTTPMethods: []string{"get"},
+			Method: "NmCallback",
+			Router: `/nmcallback`,
+			AllowHTTPMethods: []string{"post"},
 			MethodParams: param.Make(),
 			Params: nil})
 

@@ -299,7 +299,7 @@ func (c *ChatChannel) genVideoCost() (*VideoCost, error) {
 		return nil, err
 	}
 
-	vc.Balance = up.Balance
+	vc.Balance = up.Balance + up.Income
 	vc.Cost = c.Amount
 	vc.Timelong = c.Timelong
 	return vc, nil
