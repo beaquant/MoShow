@@ -297,7 +297,7 @@ func (c *AuthController) initUser(u *models.User, acctType int) (*models.UserPro
 	up.OnlineStatus = models.OnlineStatusOnline
 	up.Description = "你不主动我们怎么会有故事"
 	up.Location = "北京市"
-	if IsCheckMode(c.Ctx.Request.UserAgent()) {
+	if IsCheckMode4Context(c.Ctx) {
 		up.UserType = models.UserTypeFaker
 	}
 
@@ -408,4 +408,6 @@ func genUserPorfileInfoCommon(upi *UserPorfileInfo, cv *models.UserCoverInfo) {
 		upi.Balance = 0
 		upi.Income = 0
 	}
+
+	upi.Wallet = upi.Balance + upi.Income
 }

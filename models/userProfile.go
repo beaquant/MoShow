@@ -151,6 +151,11 @@ func (u *UserProfile) Read() error {
 	return db.Find(u).Error
 }
 
+//ReadWallet .
+func (u *UserProfile) ReadWallet() error {
+	return db.Select("income, balance").Find(u).Error
+}
+
 //Update .
 func (u *UserProfile) Update(fields map[string]interface{}, trans *gorm.DB) error {
 	fields["update_at"] = time.Now().Unix()

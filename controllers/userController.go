@@ -28,6 +28,7 @@ type UserPorfileInfo struct {
 	models.UserProfile
 	ImTk        string                 `json:"im_token,omitempty"`
 	Alipay      *models.AlipayAcctInfo `json:"tx_acct,omitempty"`
+	Wallet      uint64                 `json:"wlt,omitempty"`
 	Followed    bool                   `json:"followed" description:"是否已关注"`
 	IsFill      bool                   `json:"is_fill" description:"资料是否完善"`
 	AnswerRate  float64                `json:"answer_rate" description:"接通率"`
@@ -983,6 +984,31 @@ func (c *UserController) ReduceAmount() {
 	dto.Message = "扣款成功"
 	dto.Sucess = true
 	dto.Data = chg
+}
+
+//Wallet .
+// @Title 钱包余额
+// @Description 钱包余额
+// @Success 200 {object} utils.ResultDTO
+// @router /wallet [get]
+func (c *UserController) Wallet() {
+	tk, dto := GetToken(c.Ctx), &utils.ResultDTO{}
+	defer dto.JSONResult(&c.Controller)
+
+	up := &models.UserProfile{ID: tk.ID}
+	if err := up.ReadWallet(); err != nil {
+		beego.Error("UserProfile ReadWallet出错", err, c.Ctx.Request.UserAgent())
+		dto.Message = "获取目标用户信息失败\t" + err.Error()
+		dto.Code = utils.DtoStatusDatabaseError
+		return
+	}
+
+	wallet := make(map[string]interface{})
+	wallet["wlt"] = up.Balance + up.Income
+
+	dto.Data = wallet
+	dto.Sucess = true
+	dto.Message = "获取余额成功"
 }
 
 //Withdraw .

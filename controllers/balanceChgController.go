@@ -13,6 +13,12 @@ type BalanceChgController struct {
 	beego.Controller
 }
 
+//BalanceChgInfo .
+type BalanceChgInfo struct {
+	models.BalanceChg
+	FromUserInfo *UserPorfileInfo `json:"from_user_info"`
+}
+
 //GetIncomeList .
 // @Title 获取收益列表
 // @Description 获取收益列表
@@ -111,6 +117,9 @@ func (c *BalanceChgController) GetInviteIncomList() {
 		dto.Code = utils.DtoStatusParamError
 		return
 	}
+	if len > 20 {
+		len = 20
+	}
 
 	skip, err := c.GetInt("skip")
 	if err != nil {
@@ -129,7 +138,20 @@ func (c *BalanceChgController) GetInviteIncomList() {
 		return
 	}
 
-	dto.Data = lst
+	var bcis []BalanceChgInfo
+	for index := range lst {
+		bci := BalanceChgInfo{BalanceChg: lst[index], FromUserInfo: &UserPorfileInfo{UserProfile: models.UserProfile{ID: lst[index].FromUserID}}}
+		if bci.FromUserInfo.ID != 0 {
+			if err := bci.FromUserInfo.Read(); err != nil {
+				beego.Error("获取用户信息出错", err)
+			}
+		}
+
+		genUserPorfileInfoCommon(bci.FromUserInfo, bci.FromUserInfo.GetCover())
+		bcis = append(bcis, bci)
+	}
+
+	dto.Data = bcis
 	dto.Sucess = true
 }
 
