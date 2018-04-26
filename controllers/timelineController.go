@@ -57,7 +57,7 @@ func (c *TimelineController) Users() {
 
 	var gender int
 	var faker bool
-	if up.Gender == models.GenderWoman {
+	if up.Gender == models.GenderWoman && up.UserType == models.UserTypeAnchor {
 		gender = models.GenderMan
 	} else {
 		gender = models.GenderWoman
@@ -79,7 +79,7 @@ func (c *TimelineController) Users() {
 	case "active":
 		ul, err = (&models.TimelineUser{}).QueryAll(faker, gender, skip, limit)
 	case "suggestion":
-		ul, err = (&models.TimelineUser{}).QueryHot(faker, gender, skip, limit)
+		ul, err = (&models.TimelineUser{}).QuerySuggestion(faker, gender, skip, limit)
 	}
 
 	if err != nil {

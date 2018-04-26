@@ -297,6 +297,7 @@ func (c *AuthController) initUser(u *models.User, acctType int) (*models.UserPro
 	up.OnlineStatus = models.OnlineStatusOnline
 	up.Description = "你不主动我们怎么会有故事"
 	up.Location = "北京市"
+	up.Price = 200
 	if IsCheckMode(c.Ctx.Request.UserAgent()) {
 		up.UserType = models.UserTypeFaker
 	}

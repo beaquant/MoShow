@@ -147,18 +147,22 @@ func (c *WebsocketController) Create() {
 
 	up := &models.UserProfile{ID: tk.ID}
 	if err := up.Read(); err != nil {
-		beego.Error(err)
 		ws.Content = "获取用户信息失败\t" + err.Error()
-		beego.Error(ws.Content, tk.ID, c.Ctx.Request.UserAgent())
+		beego.Error("获取用户信息失败", err, tk.ID, c.Ctx.Request.UserAgent())
 		closeConnWithMessage(conn, ws)
 		return
 	}
 
 	pp := &models.UserProfile{ID: parter}
 	if err := pp.Read(); err != nil {
-		beego.Error(err)
 		ws.Content = "获取用户信息失败\t" + err.Error()
-		beego.Error(ws.Content, tk.ID, c.Ctx.Request.UserAgent())
+		beego.Error("获取用户信息失败", err, parter, c.Ctx.Request.UserAgent())
+		closeConnWithMessage(conn, ws)
+		return
+	}
+
+	if pp.UserType != models.UserTypeAnchor {
+		ws.Content = "对方不是主播,不能直播"
 		closeConnWithMessage(conn, ws)
 		return
 	}
@@ -312,7 +316,7 @@ func (c *ChatChannel) Run() {
 	c.ChannelStartTime = time.Now().Unix()
 	//初始化日志模块
 	c.logger = logrus.WithFields(logrus.Fields{"dial_id": c.DialID})
-	file, err := os.OpenFile(path.Join("logs", strconv.FormatUint(c.ID, 10)+"_ws.log"), os.O_CREATE|os.O_WRONLY, 0666)
+	file, err := os.OpenFile(path.Join("logs", strconv.FormatUint(c.ID, 10)+"_ws.log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		c.logger.Error("打开日志文件失败", err)
 	} else {

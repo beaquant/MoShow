@@ -12,23 +12,12 @@ func (TimelineUser) TableName() string {
 	return "time_line"
 }
 
-//QueryAll .
+//QueryAll 活跃专区
 func (t *TimelineUser) QueryAll(faker bool, gender, skip, limit int) ([]TimelineUser, error) {
 	var tl []TimelineUser
 
 	q := db.Where("gender = ?", gender)
-	if faker {
-		q = q.Where("user_type = ?", UserTypeFaker)
-	}
-	return tl, q.Offset(skip).Limit(limit).Find(&tl).Error
-}
-
-//QueryRecent .
-func (t *TimelineUser) QueryRecent(faker bool, timestamp int64, gender, skip, limit int) ([]TimelineUser, error) {
-	var tl []TimelineUser
-
-	q := db.Where("create_at > ?", timestamp).Where("gender = ?", gender)
-	if gender == 1 {
+	if gender == GenderWoman {
 		q = q.Where("user_type = ?", UserTypeAnchor)
 	}
 
@@ -38,11 +27,30 @@ func (t *TimelineUser) QueryRecent(faker bool, timestamp int64, gender, skip, li
 	return tl, q.Offset(skip).Limit(limit).Find(&tl).Error
 }
 
-//QueryHot .
-func (t *TimelineUser) QueryHot(faker bool, gender, skip, limit int) ([]TimelineUser, error) {
+//QueryRecent 新人专区
+func (t *TimelineUser) QueryRecent(faker bool, timestamp int64, gender, skip, limit int) ([]TimelineUser, error) {
+	var tl []TimelineUser
+
+	q := db.Where("create_at > ?", timestamp).Where("gender = ?", gender)
+	if gender == GenderWoman {
+		q = q.Where("user_type = ?", UserTypeAnchor)
+	}
+
+	if faker {
+		q = q.Where("user_type = ?", UserTypeFaker)
+	}
+	return tl, q.Offset(skip).Limit(limit).Find(&tl).Error
+}
+
+//QuerySuggestion 推荐专区
+func (t *TimelineUser) QuerySuggestion(faker bool, gender, skip, limit int) ([]TimelineUser, error) {
 	var tl []TimelineUser
 
 	q := db.Where("user_status = ?", UserStatusHot).Where("gender = ?", gender)
+	if gender == GenderWoman {
+		q = q.Where("user_type = ?", UserTypeAnchor)
+	}
+
 	if faker {
 		q = q.Where("user_type = ?", UserTypeFaker)
 	}
