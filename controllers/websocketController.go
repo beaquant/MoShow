@@ -371,7 +371,7 @@ func (c *ChatChannel) Run() {
 			}
 
 			income, _, _ := computeIncome(c.Amount)
-			ciStr, _ := utils.JSONMarshalToString(&models.ClearingInfo{NIMChannelID: c.NIMChannelID, Cost: c.Amount, Income: uint64(income), Timelong: c.Timelong})
+			ciStr, _ := utils.JSONMarshalToString(&models.ClearingInfo{NIMChannelID: c.NIMChannelID, Cost: c.Amount, Income: uint64(income), Price: c.Price, Timelong: c.Timelong})
 
 			//生成通话记录
 			dl, dt := &models.Dial{ID: c.DialID}, &models.DialTag{}

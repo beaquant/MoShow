@@ -41,6 +41,7 @@ type ClearingInfo struct {
 	Cost         uint64 `json:"cost" description:"用户花费"`
 	Income       uint64 `json:"income,omitempty" description:"主播收益"`
 	Timelong     uint64 `json:"timelong" description:"聊天时长"`
+	Price        uint64 `json:"price" description:"价格"`
 }
 
 //TableName .

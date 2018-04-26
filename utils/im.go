@@ -2,12 +2,12 @@ package utils
 
 import (
 	netease "github.com/MrSong0607/netease-im"
+	"github.com/astaxie/beego"
 )
 
 var (
-	neteaseAppKey    = "b2c60dbed0ae2d3c48e6c85664836dc9"
-	neteaseAppSecret = "1ed04f7d7085"
-	ImClient         = netease.CreateImClient(neteaseAppKey, neteaseAppSecret, "") //http://127.0.0.1:8889
+	//ImClient .
+	ImClient = netease.CreateImClient(beego.AppConfig.String("neteaseAppKey"), beego.AppConfig.String("neteaseAppSecret"), "") //http://127.0.0.1:8889
 	//ImSysAdminID 系统管理员ID
 	ImSysAdminID = "1"
 )

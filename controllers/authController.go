@@ -191,6 +191,7 @@ func (c *AuthController) WechatLogin() {
 
 	AccessToken := c.GetString("AccessToken")
 	OpenID := c.GetString("OpenID")
+	Ivt, _ := strconv.ParseUint(c.GetString("Ivt"), 10, 64)
 
 	o := oauth.NewOauth(nil)
 	info, err := o.GetUserInfo(AccessToken, OpenID)
@@ -200,7 +201,7 @@ func (c *AuthController) WechatLogin() {
 		return
 	}
 
-	u := &models.User{WeChatID: info.OpenID}
+	u := &models.User{WeChatID: info.Unionid}
 	err = u.ReadFromWechatID()
 	if err != nil {
 		dto.Message = err.Error()
@@ -210,6 +211,7 @@ func (c *AuthController) WechatLogin() {
 
 	tk := &Token{}
 	if u.ID == 0 { //执行微信注册
+		u.InvitedBy = Ivt
 		up, err := c.initUser(u, models.AcctTypeWechat)
 		if err != nil {
 			beego.Error("注册用户失败", err, c.Ctx.Request.UserAgent())
@@ -268,6 +270,12 @@ func (c *AuthController) WechatLogin() {
 }
 
 func (c *AuthController) initUser(u *models.User, acctType int) (*models.UserProfile, error) {
+	if u.InvitedBy != 0 {
+		if err := (&models.User{ID: u.InvitedBy}).Read(); err != nil { //检测邀请人是否存在
+			u.InvitedBy = 0
+		}
+	}
+
 	trans := models.TransactionGen()
 
 	u.AcctType = acctType
@@ -298,7 +306,7 @@ func (c *AuthController) initUser(u *models.User, acctType int) (*models.UserPro
 	up.Description = "你不主动我们怎么会有故事"
 	up.Location = "北京市"
 	up.Price = 200
-	if IsCheckMode(c.Ctx.Request.UserAgent()) {
+	if IsCheckMode4Context(c.Ctx) {
 		up.UserType = models.UserTypeFaker
 	}
 
@@ -409,4 +417,6 @@ func genUserPorfileInfoCommon(upi *UserPorfileInfo, cv *models.UserCoverInfo) {
 		upi.Balance = 0
 		upi.Income = 0
 	}
+
+	upi.Wallet = upi.Balance + upi.Income
 }
