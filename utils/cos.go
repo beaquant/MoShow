@@ -22,7 +22,7 @@ var (
 	qcloudAppid                   uint
 	qcloudSID, qcloudSKey, bucket string = beego.AppConfig.String("qcloudSID"), beego.AppConfig.String("qcloudSKey"), beego.AppConfig.String("qcloudBucket")
 	cloud                         *qCloud.PicCloud
-	qcToken                       *QCloedToken
+	qcToken                       *QCloudToken
 )
 
 //QCloudTokenResult .
@@ -30,10 +30,11 @@ type QCloudTokenResult struct {
 	Code     int         `json:"code"`
 	Message  string      `json:"message"`
 	CodeDesc string      `json:"codeDesc"`
-	Data     QCloedToken `json:"data"`
+	Data     QCloudToken `json:"data"`
 }
 
-type QCloedToken struct {
+//QCloudToken .
+type QCloudToken struct {
 	ExpiredTime int64             `json:"expiredTime"`
 	Credentials qCloudCredentials `json:"credentials"`
 }
@@ -55,7 +56,7 @@ func init() {
 }
 
 //GetTecentImgSignV5 .
-func GetTecentImgSignV5() (*QCloedToken, error) {
+func GetTecentImgSignV5() (*QCloudToken, error) {
 	if qcToken == nil || qcToken.ExpiredTime <= time.Now().Unix() {
 		tk, err := AppTempSession(qcloudSID, qcloudSKey)
 		qcToken = &tk.Data
