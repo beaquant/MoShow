@@ -218,18 +218,18 @@ func (u *UserProfile) AddDialDuration(duration uint64, trans *gorm.DB) error {
 		return nil
 	}
 
-	if trans != nil {
-		return trans.Model(u).Updates(map[string]interface{}{"dial_duration": gorm.Expr("dial_duration + ?", duration), "dial_accept + ?": 1}).Error
+	if trans == nil {
+		trans = db
 	}
-	return db.Model(u).Updates(map[string]interface{}{"dial_duration": gorm.Expr("dial_duration + ?", duration), "dial_accept + ?": 1}).Error
+	return trans.Model(u).Updates(map[string]interface{}{"dial_duration": gorm.Expr("dial_duration + ?", duration), "dial_accept": gorm.Expr("dial_accept + ?", 1)}).Error
 }
 
 //AddDialReject .
 func (u *UserProfile) AddDialReject(trans *gorm.DB) error {
-	if trans != nil {
-		return trans.Model(u).Update("dial_deny", gorm.Expr("dial_deny + ?", 1)).Error
+	if trans == nil {
+		trans = db
 	}
-	return db.Model(u).Update("dial_deny", gorm.Expr("dial_deny + ?", 1)).Error
+	return trans.Model(u).Update("dial_deny", gorm.Expr("dial_deny + ?", 1)).Error
 }
 
 //AddBalance .
