@@ -195,7 +195,7 @@ func (c *UserController) Update() {
 	if up.Gender == models.GenderDefault {
 		if genderStr := c.GetString("gender"); len(genderStr) > 0 {
 			gender, err := strconv.Atoi(genderStr)
-			if err != nil || (gender != 1 && gender != 2) {
+			if err != nil {
 				beego.Error("参数解析错误:"+genderStr, err, c.Ctx.Request.UserAgent())
 				dto.Message = err.Error()
 				dto.Code = utils.DtoStatusParamError
@@ -208,6 +208,11 @@ func (c *UserController) Update() {
 			} else if gender == 2 {
 				param["gender"] = models.GenderWoman
 				up.Gender = models.GenderWoman
+			} else {
+				beego.Error("性别参数设置错误:", genderStr, c.Ctx.Request.UserAgent())
+				dto.Message = err.Error()
+				dto.Code = utils.DtoStatusParamError
+				return
 			}
 		}
 	}
@@ -895,6 +900,12 @@ func (c *UserController) ReduceAmount() {
 		return
 	}
 
+	if tid == tk.ID {
+		dto.Message = "无需扣费"
+		dto.Sucess = true
+		return
+	}
+
 	uri := c.GetString("url")
 	if dType == 1 && len(uri) == 0 {
 		dto.Message = "扣款类型为视频付费时，必须指定视频地址"
@@ -940,7 +951,7 @@ func (c *UserController) ReduceAmount() {
 	mc := &models.MessageOrVideoChgInfo{TargetID: tid, URL: uri}
 	mcstr, _ := utils.JSONMarshalToString(mc)
 
-	chg := &models.BalanceChg{UserID: tk.ID, Amount: -amount, ChgInfo: mcstr}
+	chg := &models.BalanceChg{UserID: tk.ID, FromUserID: tid, Amount: -amount, ChgInfo: mcstr}
 	if dType == 0 {
 		chg.ChgType = models.BalanceChgTypeMessage
 	} else if dType == 1 {

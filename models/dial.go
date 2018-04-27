@@ -1,6 +1,7 @@
 package models
 
 import (
+	"MoShow/utils"
 	"database/sql"
 
 	netease "github.com/MrSong0607/netease-im"
@@ -32,7 +33,8 @@ type Dial struct {
 type DialTag struct {
 	ErrorMsg    []string                       `json:"errors"`
 	NmAudioCopy *netease.AudioCopyInfo         `json:"nm_audio_copy"`
-	NmFileCopu  *netease.AudioDownloadCopyInfo `json:"nm_file_copy"`
+	NmFileCopy  *netease.AudioDownloadCopyInfo `json:"nm_file_copy"`
+	NmFileInfo  []netease.FileDownloadInfo     `json:"nm_file_info"`
 }
 
 //ClearingInfo .
@@ -71,9 +73,39 @@ func (d *Dial) Update(fields map[string]interface{}, trans *gorm.DB) error {
 	return trans.Model(d).Updates(fields).Error
 }
 
+//UpdateNmAudioCopy .
+func (d *Dial) UpdateNmAudioCopy(aci *netease.AudioCopyInfo) error {
+	str, err := utils.JSONMarshalToString(aci)
+	if err != nil {
+		return err
+	}
+
+	return db.Model(d).Update("tag", gorm.Expr(`JSON_SET(if(tag = cast('null' as json),"{}",tag),'$.nm_audio_copy',cast(? as json))`, str)).Error
+}
+
+//UpdateNmAudioDlCopy .
+func (d *Dial) UpdateNmAudioDlCopy(adci *netease.AudioDownloadCopyInfo, fi []netease.FileDownloadInfo) error {
+	str, err := utils.JSONMarshalToString(adci)
+	if err != nil {
+		return err
+	}
+
+	fiStr, err := utils.JSONMarshalToString(fi)
+	if err != nil {
+		return err
+	}
+
+	return db.Model(d).Update("tag", gorm.Expr(`JSON_SET(if(tag = cast('null' as json),"{}",tag),'$.nm_file_copy',cast(? as json),'$.',cast(? as json))`, str, fiStr)).Error
+}
+
 //Read .
 func (d *Dial) Read() error {
 	return db.Where("id = ?", d.ID).Find(d).Error
+}
+
+//ReadFromNimID .
+func (d *Dial) ReadFromNimID(nimID string) error {
+	return db.Where(`clearing ->>'$.NIMChannelID' = ?`, nimID).Find(d).Error
 }
 
 //GetDialList .

@@ -3,6 +3,7 @@ package controllers
 import (
 	"MoShow/models"
 	"MoShow/utils"
+	"net/http"
 	"strconv"
 
 	netease "github.com/MrSong0607/netease-im"
@@ -159,27 +160,81 @@ func (c *DialController) NmCallback() {
 	bd, err := utils.ImClient.GetEventNotification(c.Ctx.Request)
 	if err != nil {
 		beego.Error("云信抄送异常", err)
+		c.Abort(strconv.Itoa(http.StatusBadRequest))
+		return
 	}
 
 	kv := make(map[string]interface{})
 	if err := utils.JSONUnMarshalFromByte(bd, &kv); err != nil {
-		beego.Error("云信回执解析异常", err)
+		beego.Error("云信回执解析异常", err, "body", string(bd))
+		c.Abort(strconv.Itoa(http.StatusBadRequest))
+		return
 	}
 
 	val, ok := kv["eventType"]
 	if !ok {
 		beego.Error("云信回执内容错误", string(bd))
+		c.Ctx.Output.Body([]byte("success"))
 		return
 	}
 
 	v, ok := val.(string)
 	if !ok {
+		c.Abort(strconv.Itoa(http.StatusBadRequest))
 		return
 	}
 
 	switch v {
 	case netease.EventTypeMediaDuration:
+		ci := &netease.AudioCopyInfo{}
+		if err := utils.JSONUnMarshalFromByte(bd, ci); err != nil {
+			beego.Error("云信回执解析错误", err, "body", string(bd))
+			c.Abort(strconv.Itoa(http.StatusBadRequest))
+			return
+		}
 
+		dl := &models.Dial{}
+		if err := dl.ReadFromNimID(ci.ChannelID); err != nil { //找不到通话记录，丢弃该回执
+			beego.Error("云信回执找不到指定的聊天通道相关的通话记录", err, "body", string(bd))
+			break
+		}
+
+		if err := dl.UpdateNmAudioCopy(ci); err != nil {
+			beego.Error("更新云信通话时长信息回执失败", err)
+			c.Abort(strconv.Itoa(http.StatusBadRequest))
+			return
+		}
 	case netease.EventTypeMediaInfo:
+		dci := &netease.AudioDownloadCopyInfo{}
+		if err := utils.JSONUnMarshalFromByte(bd, dci); err != nil {
+			beego.Error("云信回执解析错误", err, "body", string(bd))
+			c.Abort(strconv.Itoa(http.StatusBadRequest))
+			return
+		}
+
+		var fi []netease.FileDownloadInfo
+		if err := utils.JSONUnMarshal(dci.FileInfo, &fi); err != nil {
+			beego.Error("云信回执解析错误", err, "body", string(bd))
+			c.Abort(strconv.Itoa(http.StatusBadRequest))
+			return
+		}
+
+		if fi == nil || len(fi) == 0 { //文件下载信息为空，丢弃该回执
+			break
+		}
+
+		dl := &models.Dial{}
+		if err := dl.ReadFromNimID(fi[0].ChannelID); err != nil { //找不到通话记录，丢弃该回执
+			beego.Error("云信回执找不到指定的聊天通道相关的通话记录", err, "body", string(bd))
+			break
+		}
+
+		if err := dl.UpdateNmAudioDlCopy(dci, fi); err != nil {
+			beego.Error("更新云信通话时长信息回执失败", err)
+			c.Abort(strconv.Itoa(http.StatusBadRequest))
+			return
+		}
 	}
+
+	c.Ctx.Output.Body([]byte("success"))
 }

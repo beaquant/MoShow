@@ -57,7 +57,7 @@ func (c *TimelineController) Users() {
 
 	var gender int
 	var faker bool
-	if up.Gender == models.GenderWoman && up.UserType == models.UserTypeAnchor {
+	if up.UserType == models.UserTypeAnchor {
 		gender = models.GenderMan
 	} else {
 		gender = models.GenderWoman
