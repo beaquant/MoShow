@@ -281,7 +281,7 @@ func (c *UserController) Update() {
 	}
 
 	if imgChg {
-		param["cover_pic"] = cv.ToString()
+		param["cover"] = cv.ToString()
 	}
 
 	trans := models.TransactionGen()
