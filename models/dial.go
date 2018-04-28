@@ -3,6 +3,9 @@ package models
 import (
 	"MoShow/utils"
 	"database/sql"
+	"math"
+	"strconv"
+	"time"
 
 	netease "github.com/MrSong0607/netease-im"
 	"github.com/jinzhu/gorm"
@@ -61,6 +64,10 @@ func (d *Dial) Add() error {
 		d.Clearing = "null"
 	}
 
+	if d.CreateAt == 0 {
+		d.CreateAt = time.Now().Unix()
+	}
+
 	return db.Model(d).Create(d).Error
 }
 
@@ -80,7 +87,19 @@ func (d *Dial) UpdateNmAudioCopy(aci *netease.AudioCopyInfo) error {
 		return err
 	}
 
-	return db.Model(d).Update("tag", gorm.Expr(`JSON_SET(if(tag = cast('null' as json),"{}",tag),'$.nm_audio_copy',cast(? as json))`, str)).Error
+	fields := make(map[string]interface{})
+	fields["tag"] = gorm.Expr(`JSON_SET(if(tag = cast('null' as json),"{}",tag),'$.nm_audio_copy',cast(? as json))`, str)
+	if d.Duration != 0 {
+		nimDuration, err := strconv.ParseUint(aci.Duration, 10, 64)
+		if err != nil {
+			return err
+		}
+		if math.Abs(float64(d.Duration-nimDuration)) > 10 {
+			fields["status"] = DialStatusException
+		}
+	}
+
+	return db.Model(d).Updates(fields).Error
 }
 
 //UpdateNmAudioDlCopy .

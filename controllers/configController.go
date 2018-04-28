@@ -20,7 +20,7 @@ type ConfigController struct {
 //GetCommonConfig .
 // @Title 获取通用配置
 // @Description 获取通用配置
-// @Success 200 {object} utils.ResultDTO
+// @Success 200 {object} models.CommonConfig
 // @router /common [get]
 func (c *ConfigController) GetCommonConfig() {
 	tk, dto := GetToken(c.Ctx), &utils.ResultDTO{}

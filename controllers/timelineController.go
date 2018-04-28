@@ -21,7 +21,7 @@ type TimelineInfo struct {
 
 //TimelineUserInfo .
 type TimelineUserInfo struct {
-	UserPorfileInfo
+	UserProfileInfo
 	CreatedAt int64  `json:"create_at" gorm:"column:create_at"`
 	Duration  uint64 `json:"recent_duration" gorm:"column:recent_duration"`
 }
@@ -90,9 +90,9 @@ func (c *TimelineController) Users() {
 
 	var ti []TimelineUserInfo
 	for index := range ul {
-		upi := &UserPorfileInfo{UserProfile: ul[index].UserProfile}
+		upi := &UserProfileInfo{UserProfile: ul[index].UserProfile}
 		genUserPorfileInfoCommon(upi, upi.GetCover())
-		ti = append(ti, TimelineUserInfo{UserPorfileInfo: *upi, CreatedAt: ul[index].CreatedAt, Duration: ul[index].Duration})
+		ti = append(ti, TimelineUserInfo{UserProfileInfo: *upi, CreatedAt: ul[index].CreatedAt, Duration: ul[index].Duration})
 	}
 
 	tli := TimelineInfo{Users: ti}

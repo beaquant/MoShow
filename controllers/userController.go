@@ -23,8 +23,8 @@ type UserController struct {
 	beego.Controller
 }
 
-//UserPorfileInfo 用户信息
-type UserPorfileInfo struct {
+//UserProfileInfo 用户信息
+type UserProfileInfo struct {
 	models.UserProfile
 	ImTk        string                 `json:"im_token,omitempty"`
 	Alipay      *models.AlipayAcctInfo `json:"tx_acct,omitempty"`
@@ -42,7 +42,7 @@ type UserPorfileInfo struct {
 
 //UserOperateInfo .
 type UserOperateInfo struct {
-	User   *UserPorfileInfo `json:"user"`
+	User   *UserProfileInfo `json:"user"`
 	OpTime int64            `json:"time"`
 	Award  uint64           `json:"awd"`
 }
@@ -80,7 +80,7 @@ func (c *UserController) Read() {
 		return
 	}
 
-	upi := &UserPorfileInfo{UserProfile: *up}
+	upi := &UserProfileInfo{UserProfile: *up}
 	if uid == tk.ID {
 		if upi, err = genSelfUserPorfileInfo(up, nil); err != nil {
 			beego.Error("获取用户资料失败", err, c.Ctx.Request.UserAgent())
@@ -505,7 +505,7 @@ func (c *UserController) GetFollowingLst() {
 			break
 		}
 
-		upi := &UserPorfileInfo{UserProfile: models.UserProfile{ID: k}}
+		upi := &UserProfileInfo{UserProfile: models.UserProfile{ID: k}}
 		if err := upi.Read(); err != nil {
 			beego.Error("获取用户信息失败", err, c.Ctx.Request.UserAgent())
 			dto.Message = "获取用户信息失败" + err.Error()
@@ -579,7 +579,7 @@ func (c *UserController) GetFollowedLst() {
 			break
 		}
 
-		upi := &UserPorfileInfo{UserProfile: models.UserProfile{ID: k}}
+		upi := &UserProfileInfo{UserProfile: models.UserProfile{ID: k}}
 		if err := upi.Read(); err != nil {
 			beego.Error("获取用户信息失败", err, c.Ctx.Request.UserAgent())
 			dto.Message = "获取用户信息失败" + err.Error()
@@ -679,7 +679,7 @@ func (c *UserController) InviteList() {
 			return
 		}
 
-		upi := &UserPorfileInfo{UserProfile: lst[index]}
+		upi := &UserProfileInfo{UserProfile: lst[index]}
 
 		genUserPorfileInfoCommon(upi, upi.GetCover())
 		uoi = append(uoi, UserOperateInfo{User: upi, OpTime: u.CreatedAt, Award: u.InvitedAward})
@@ -859,7 +859,7 @@ func (c *UserController) GuestList() {
 
 	var ups []UserOperateInfo
 	for index := range lst {
-		flu := &UserPorfileInfo{UserProfile: models.UserProfile{ID: lst[index].GuestID}}
+		flu := &UserProfileInfo{UserProfile: models.UserProfile{ID: lst[index].GuestID}}
 		flu.Read()
 		genUserPorfileInfoCommon(flu, flu.GetCover())
 		ups = append(ups, UserOperateInfo{User: flu, OpTime: lst[index].Time})

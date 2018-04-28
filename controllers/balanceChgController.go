@@ -16,7 +16,7 @@ type BalanceChgController struct {
 //BalanceChgInfo .
 type BalanceChgInfo struct {
 	models.BalanceChg
-	FromUserInfo *UserPorfileInfo `json:"from_user_info"`
+	FromUserInfo *UserProfileInfo `json:"from_user_info"`
 }
 
 //GetIncomeList .
@@ -140,7 +140,7 @@ func (c *BalanceChgController) GetInviteIncomList() {
 
 	var bcis []BalanceChgInfo
 	for index := range lst {
-		bci := BalanceChgInfo{BalanceChg: lst[index], FromUserInfo: &UserPorfileInfo{UserProfile: models.UserProfile{ID: lst[index].FromUserID}}}
+		bci := BalanceChgInfo{BalanceChg: lst[index], FromUserInfo: &UserProfileInfo{UserProfile: models.UserProfile{ID: lst[index].FromUserID}}}
 		if bci.FromUserInfo.ID != 0 {
 			if err := bci.FromUserInfo.Read(); err != nil {
 				beego.Error("获取用户信息出错", err)

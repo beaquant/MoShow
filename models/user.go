@@ -18,9 +18,7 @@ const (
 const (
 	//AcctStatusNormal 正常账号
 	AcctStatusNormal = iota
-	//AcctStatusDeleted 注销账号
-	AcctStatusDeleted
-	//AcctStatusShield 屏蔽账号
+	//AcctStatusShield 封禁账号
 	AcctStatusShield
 )
 

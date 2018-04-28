@@ -24,16 +24,16 @@ type DialDetail struct {
 //DialInfo .
 type DialInfo struct {
 	Dial   models.Dial
-	Parter UserPorfileInfo
+	Parter UserProfileInfo
 }
 
 func genDialInfo(self uint64, dials []models.Dial) []DialInfo {
 	var dis []DialInfo
-	upkv := make(map[uint64]*UserPorfileInfo)
+	upkv := make(map[uint64]*UserProfileInfo)
 
 	for index := range dials {
 		di := DialInfo{Dial: dials[index]}
-		u := &UserPorfileInfo{}
+		u := &UserProfileInfo{}
 		if dials[index].FromUserID == self {
 			u.ID = dials[index].ToUserID
 		} else {

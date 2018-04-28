@@ -158,8 +158,8 @@ func GetToken(ctx *context.Context) *Token {
 		return nil
 	}
 
-	if tk.AcctStatus == models.AcctStatusDeleted {
-		dto.Message = "您的账号已被注销,请联系客服"
+	if tk.AcctStatus == models.AcctStatusShield {
+		dto.Message = "您因涉及违规，已被封号。可联系平台运营"
 		ctx.Output.JSON(dto, false, false)
 		return nil
 	}

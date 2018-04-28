@@ -17,6 +17,8 @@ const (
 	DtoStatusDatabaseError
 	//DtoStatusParamError 请求参数错误
 	DtoStatusParamError
+	//DtoStatusAccountDisable 账号不可用
+	DtoStatusAccountDisable
 )
 
 //ResultDTO .

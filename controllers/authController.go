@@ -137,10 +137,10 @@ func (c *AuthController) Login() {
 		}
 
 		dto.Message = "注册成功"
-		dto.Data = &UserPorfileInfo{UserProfile: *up, ImTk: up.ImToken}
+		dto.Data = &UserProfileInfo{UserProfile: *up, ImTk: up.ImToken}
 		dto.Sucess = true
 	} else {
-		if u.AcctStatus != models.AcctStatusDeleted {
+		if u.AcctStatus != models.AcctStatusShield {
 			if err := (&models.UserProfile{ID: u.ID}).UpdateOnlineStatus(models.OnlineStatusOnline); err != nil {
 				beego.Error("更新在线状态失败", err, c.Ctx.Request.UserAgent())
 				dto.Message = "更新在线状态失败\t" + err.Error()
@@ -173,7 +173,8 @@ func (c *AuthController) Login() {
 			dto.Sucess = true
 			dto.Message = "登陆成功"
 		} else {
-			dto.Message = "该账号已被注销"
+			dto.Message = "您因涉及违规，已被封号。可联系平台运营"
+			dto.Code = utils.DtoStatusAccountDisable
 		}
 	}
 }
@@ -229,10 +230,10 @@ func (c *AuthController) WechatLogin() {
 		}
 
 		dto.Message = "注册成功"
-		dto.Data = &UserPorfileInfo{UserProfile: *up, ImTk: up.ImToken}
+		dto.Data = &UserProfileInfo{UserProfile: *up, ImTk: up.ImToken}
 		dto.Sucess = true
 	} else {
-		if u.AcctStatus != models.AcctStatusDeleted {
+		if u.AcctStatus != models.AcctStatusShield {
 			if err := (&models.UserProfile{ID: u.ID}).UpdateOnlineStatus(models.OnlineStatusOnline); err != nil {
 				beego.Error("更新在线状态失败", err, c.Ctx.Request.UserAgent())
 				dto.Message = "更新在线状态失败\t" + err.Error()
@@ -264,7 +265,8 @@ func (c *AuthController) WechatLogin() {
 			dto.Sucess = true
 			dto.Message = "登陆成功"
 		} else {
-			dto.Message = "该账号已被注销"
+			dto.Message = "您因涉及违规，已被封号。可联系平台运营"
+			dto.Code = utils.DtoStatusAccountDisable
 		}
 	}
 }
@@ -353,8 +355,8 @@ func (c *AuthController) Logout() {
 	dto.Sucess = true
 }
 
-func genSelfUserPorfileInfo(up *models.UserProfile, pc *models.ProfileChg) (*UserPorfileInfo, error) { //获取用户自己信息时,给出审核状态，已经在审核状态的图片等信息
-	upi := &UserPorfileInfo{UserProfile: *up, ImTk: up.ImToken}
+func genSelfUserPorfileInfo(up *models.UserProfile, pc *models.ProfileChg) (*UserProfileInfo, error) { //获取用户自己信息时,给出审核状态，已经在审核状态的图片等信息
+	upi := &UserProfileInfo{UserProfile: *up, ImTk: up.ImToken}
 
 	upi.Alipay = &models.AlipayAcctInfo{}
 	utils.JSONUnMarshal(upi.AlipayAcct, upi.Alipay) //忽略json解析错误
@@ -390,7 +392,7 @@ func genSelfUserPorfileInfo(up *models.UserProfile, pc *models.ProfileChg) (*Use
 	return upi, nil
 }
 
-func genUserPorfileInfoCommon(upi *UserPorfileInfo, cv *models.UserCoverInfo) {
+func genUserPorfileInfoCommon(upi *UserProfileInfo, cv *models.UserCoverInfo) {
 	if cv != nil {
 		if cv.CoverPicture != nil {
 			upi.Avatar = utils.TransCosToCDN(cv.CoverPicture.ImageURL)
@@ -410,7 +412,7 @@ func genUserPorfileInfoCommon(upi *UserPorfileInfo, cv *models.UserCoverInfo) {
 	}
 
 	if upi.DialAccept+upi.DialDeny > 0 {
-		upi.AnswerRate = float64(upi.DialAccept) / float64((upi.DialAccept + upi.DialDeny)) //计算接通率
+		upi.AnswerRate = float64(upi.DialAccept*100) / float64((upi.DialAccept + upi.DialDeny)) //计算接通率
 	}
 
 	if upi.UserType == models.UserTypeFaker { //马甲号隐藏掉金额相关字段

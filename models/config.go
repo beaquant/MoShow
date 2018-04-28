@@ -15,6 +15,21 @@ const (
 	configTypeCkModeRegs = "checkMode_regs"
 )
 
+const (
+	//BannerTypeImg 纯图片banner
+	BannerTypeImg = iota
+	//BannerTypeLink 内链
+	BannerTypeLink
+	//BannerTypeUserDetail 用户详情
+	BannerTypeUserDetail
+	//BannerTypeInvite 邀请用户
+	BannerTypeInvite
+	//BannerTypeRecharge 充值
+	BannerTypeRecharge
+	//BannerTypeHTTPLink 外链
+	BannerTypeHTTPLink
+)
+
 var (
 	giftList      []Gift
 	productList   []Product
@@ -33,34 +48,34 @@ type Config struct {
 
 //CommonConfig 通用配置
 type CommonConfig struct {
-	AnchorVideoRecord     bool             `json:"ac_video_record"`
-	UserVideoRecordbool   bool             `json:"user_video_record"`
-	UserProtocol          string           `json:"user_protocal"`
-	ForceUpdate           *ForceUpdateInfo `json:"force_update,omitempty"`
-	Share                 ShareInfo        `json:"share"`
-	CustomerServiceWechat string           `json:"customer_service_wechat"`
-	CheckStaffWechat      string           `json:"check_staff_wechat"`
-	WithdrawCopywriting   string           `json:"wd_copywriting"`
-	RechargeCopywriting   string           `json:"rcg_copywriting"`
-	Banners               []Banner         `json:"banners"`
-	VideoPrice            uint64           `json:"vod_value"`
-	MessagePrice          uint64           `json:"msg_value"`
+	AnchorVideoRecord     bool             `json:"ac_video_record" description:"是否开启主播录制视频"`     //是否开启主播录制视频
+	UserVideoRecordbool   bool             `json:"user_video_record" description:"是否开启用户录制视频"`   //是否开启用户录制视频
+	UserProtocol          string           `json:"user_protocal" description:"用户协议"`             //用户协议
+	ForceUpdate           *ForceUpdateInfo `json:"force_update,omitempty" description:"强制更新"`    //强制更新
+	Share                 ShareInfo        `json:"share" description:"邀请"`                       //邀请
+	CustomerServiceWechat string           `json:"customer_service_wechat" description:"客服人员微信"` //客服人员微信
+	CheckStaffWechat      string           `json:"check_staff_wechat" description:"审核人员微信"`      //审核人员微信
+	WithdrawCopywriting   string           `json:"wd_copywriting" description:"提现文案"`            //提现文案
+	RechargeCopywriting   string           `json:"rcg_copywriting" description:"充值文案"`           //充值文案
+	Banners               []Banner         `json:"banners" description:"轮播图"`                    //轮播图
+	VideoPrice            uint64           `json:"vod_value" description:"形象视频扣费价格"`             //形象视频扣费价格
+	MessagePrice          uint64           `json:"msg_value" description:"私聊扣费价格"`               //私聊扣费价格
 }
 
 //ForceUpdateInfo .
 type ForceUpdateInfo struct {
-	ForceUpdate bool   `json:"is_force_update"`
-	NoticeCount uint64 `json:"notice_count"`
-	URL         string `json:"url"`
-	Version     string `json:"version"`
-	Copywriting string `json:"copywriting"`
+	ForceUpdate bool   `json:"is_force_update" description:"是否强制更新"`
+	NoticeCount uint64 `json:"notice_count" description:"强制更新提醒次数"`
+	URL         string `json:"url" description:"下载地址"`
+	Version     string `json:"version" description:"版本号"`
+	Copywriting string `json:"copywriting" description:"文案"`
 }
 
 //ShareInfo .
 type ShareInfo struct {
-	Rule             string   `json:"rule"`
-	URL              string   `json:"url"`
-	AwardCopyWriting []string `json:"award_copywriting"`
+	Rule string `json:"rule" description:"奖励规则"`
+	// URL              string   `json:"url" description:"链接"`
+	AwardCopyWriting []string `json:"award_copywriting" description:"奖励文案"`
 }
 
 //Gift .
@@ -87,22 +102,10 @@ type IncomeRate struct {
 	IncomeFee          float64 `json:"income_fee"`           //收益手续费
 }
 
-const (
-	//BannerTypeImg 纯图片banner
-	BannerTypeImg = iota
-	//BannerTypeLink 链接跳转banner
-	BannerTypeLink
-	//BannerTypeUserDetail 用户详情
-	BannerTypeUserDetail
-	//BannerTypeInvite 邀请用户
-	BannerTypeInvite
-	//BannerTypeRecharge 充值
-	BannerTypeRecharge
-)
-
 //Banner 首页banner
 type Banner struct {
 	Image      string `json:"img"`
+	UserID     uint64 `json:"user_id,omitempty"`
 	URL        string `json:"url"`
 	BannerType int    `json:"banner_type"`
 }

@@ -97,7 +97,7 @@ func (u *UserExtra) AddVideoViewed(videoURL string, amout uint64, trans *gorm.DB
 		return err
 	}
 
-	return trans.Model(u).Update("video_view_pay", gorm.Expr(`JSON_SET(COALESCE(gift_his,"{}"),'$."`+videoURL+`"',cast(? as json))`, vvstr)).Error
+	return trans.Model(u).Update("video_view_pay", gorm.Expr(`JSON_SET(COALESCE(video_view_pay,"{}"),'$."`+videoURL+`"',cast(? as json))`, vvstr)).Error
 }
 
 //IsVideoPayed .
