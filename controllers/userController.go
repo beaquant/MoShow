@@ -5,9 +5,12 @@ import (
 	"MoShow/utils"
 	"errors"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/jinzhu/gorm"
 
 	"github.com/astaxie/beego"
 )
@@ -75,8 +78,13 @@ func (c *UserController) Read() {
 	up := &models.UserProfile{ID: uid}
 	err = up.Read()
 	if err != nil {
-		beego.Error(err)
-		dto.Message = err.Error()
+		beego.Error("uid:", uidStr, err, c.Ctx.Request.UserAgent())
+		if err == gorm.ErrRecordNotFound {
+			dto.Message = "很抱歉,未能搜索到"
+		} else {
+			dto.Message = err.Error()
+		}
+
 		return
 	}
 
@@ -221,12 +229,23 @@ func (c *UserController) Update() {
 		if up.Gender == models.GenderWoman {
 			pcParam["cover_pic"] = coverPic                        //用户头像信息变动
 			pcParam["cover_pic_check"] = models.CheckStatusUncheck //用户头像信息变动状态
+
+			if cv.CoverPicture != nil && cv.CoverPicture.ImageURL == defaultBoysAvatar {
+				cv.CoverPicture.ImageURL, imgChg = defaultGirlsAvatar, true
+			}
 		} else {
 			cv.CoverPicture, imgChg = &models.Picture{ImageURL: coverPic}, true
 		}
 	}
 
-	if gallery := c.GetStrings("gallery"); gallery != nil && len(gallery) > 0 {
+	if glrJSON := c.GetString("gallery"); len(glrJSON) > 0 {
+		var gallery []string
+		if err := utils.JSONUnMarshal(glrJSON, &gallery); err != nil {
+			beego.Error("gallery格式解析错误", glrJSON, err, c.Ctx.Request.UserAgent())
+			dto.Message = "gallery格式解析错误" + err.Error()
+			return
+		}
+
 		var glr []models.Picture
 		glr, imgChg = []models.Picture{}, true
 		for index := range gallery {
@@ -1178,7 +1197,30 @@ func (c *UserController) GiftHistory() {
 		return
 	}
 
-	dto.Data = lst
+	gifts, err := (&models.Config{}).GetCommonGiftInfo()
+	if err != nil {
+		beego.Error("获取礼物列表失败", err, c.Ctx.Request.UserAgent())
+		dto.Message = "获取礼物列表失败\t" + err.Error()
+		dto.Code = utils.DtoStatusDatabaseError
+		return
+	}
+
+	rcGft := make(map[uint64]models.GiftHisInfo)
+	for index := range lst {
+		rcGft[lst[index].GiftInfo.ID] = lst[index]
+	}
+
+	var res []models.GiftHisInfo
+	for index := range gifts {
+		ghi := models.GiftHisInfo{GiftInfo: gifts[index]}
+		if val, ok := rcGft[gifts[index].ID]; ok {
+			ghi.Count = val.Count
+		}
+		res = append(res, ghi)
+	}
+
+	sort.Sort(models.GiftHisInfoList(res))
+	dto.Data = res
 	dto.Sucess = true
 	dto.Message = "查询成功"
 }

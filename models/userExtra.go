@@ -3,7 +3,6 @@ package models
 import (
 	"MoShow/utils"
 	"errors"
-	"sort"
 	"strconv"
 	"time"
 
@@ -133,7 +132,7 @@ func (u *UserExtra) GetGiftHis() ([]GiftHisInfo, error) {
 		gfts = append(gfts, v)
 	}
 
-	sort.Sort(GiftHisInfoList(gfts))
+	// sort.Sort(GiftHisInfoList(gfts))
 	return gfts, nil
 }
 
