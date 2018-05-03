@@ -24,7 +24,7 @@ func (t *TimelineUser) QueryAll(faker bool, gender, skip, limit int) ([]Timeline
 	if faker {
 		q = q.Where("user_type = ?", UserTypeFaker)
 	}
-	return tl, q.Offset(skip).Limit(limit).Find(&tl).Error
+	return tl, q.Order("recent_duration desc").Offset(skip).Limit(limit).Find(&tl).Error
 }
 
 //QueryRecent 新人专区
@@ -39,7 +39,7 @@ func (t *TimelineUser) QueryRecent(faker bool, timestamp int64, gender, skip, li
 	if faker {
 		q = q.Where("user_type = ?", UserTypeFaker)
 	}
-	return tl, q.Offset(skip).Limit(limit).Find(&tl).Error
+	return tl, q.Order("create_at desc").Offset(skip).Limit(limit).Find(&tl).Error
 }
 
 //QuerySuggestion 推荐专区
