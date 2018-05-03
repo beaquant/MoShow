@@ -34,7 +34,7 @@ type UserProfileInfo struct {
 	Wallet      uint64                 `json:"wlt,omitempty"`
 	Followed    bool                   `json:"followed" description:"是否已关注"`
 	IsFill      bool                   `json:"is_fill" description:"资料是否完善"`
-	AnswerRate  float64                `json:"answer_rate" description:"接通率"`
+	AnswerRate  uint64                 `json:"answer_rate" description:"接通率"`
 	CheckStatus *models.ProfileChg     `json:"check_status" description:"审核状态"`
 	Avatar      string                 `json:"avatar"`
 	Gallery     []string               `json:"gallery"`
