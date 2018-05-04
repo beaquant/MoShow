@@ -192,7 +192,7 @@ func (c *AuthController) WechatLogin() {
 
 	AccessToken := c.GetString("AccessToken")
 	OpenID := c.GetString("OpenID")
-	Ivt, _ := strconv.ParseUint(c.GetString("Ivt"), 10, 64)
+	Ivt, _ := strconv.ParseUint(c.GetString("Ivt"), 10, 64) //邀请人信息
 
 	o := oauth.NewOauth(nil)
 	info, err := o.GetUserInfo(AccessToken, OpenID)
@@ -283,7 +283,7 @@ func (c *AuthController) initUser(u *models.User, acctType int) (*models.UserPro
 	u.AcctType = acctType
 	u.AcctStatus = models.AcctStatusNormal
 	u.CreatedAt = time.Now().Unix()
-	uli := &models.UserLoginInfo{UserAgent: c.Ctx.Request.UserAgent(), IPAddress: c.Ctx.Input.IP()}
+	uli := &models.UserLoginInfo{UserAgent: c.Ctx.Request.UserAgent(), IPAddress: c.Ctx.Input.IP(), Time: time.Now().Unix()}
 	u.LastLoginInfo, _ = utils.JSONMarshalToString(uli)
 
 	if err := u.Add(trans); err != nil {
@@ -412,7 +412,7 @@ func genUserPorfileInfoCommon(upi *UserProfileInfo, cv *models.UserCoverInfo) {
 	}
 
 	if upi.DialAccept+upi.DialDeny > 0 {
-		upi.AnswerRate = float64(upi.DialAccept*100) / float64((upi.DialAccept + upi.DialDeny)) //计算接通率
+		upi.AnswerRate = upi.DialAccept * 100 / (upi.DialAccept + upi.DialDeny) //计算接通率
 	}
 
 	if upi.UserType == models.UserTypeFaker { //马甲号隐藏掉金额相关字段

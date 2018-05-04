@@ -75,8 +75,8 @@ type UserProfile struct {
 	UserStatus       int    `json:"user_status" gorm:"column:user_status" description:"用户状态"`
 	OnlineStatus     int    `json:"online_status" gorm:"column:online_status" description:"在线状态"`
 	AnchorAuthStatus int    `json:"anchor_auth_status" gorm:"column:anchor_auth_status" description:"主播认证状态"`
-	DialAccept       int    `json:"-" gorm:"column:dial_accept" description:"视频接通数"`
-	DialDeny         int    `json:"-" gorm:"column:dial_deny" description:"视频拒接数"`
+	DialAccept       uint64 `json:"-" gorm:"column:dial_accept" description:"视频接通数"`
+	DialDeny         uint64 `json:"-" gorm:"column:dial_deny" description:"视频拒接数"`
 	UpdateAt         int64  `json:"update_at" gorm:"column:update_at" description:"更新时间"`
 	DialDuration     uint64 `json:"dial_duration" gorm:"column:dial_duration" description:"通话时间"`
 	AlipayAcct       string `json:"-" gorm:"column:alipay_acct" description:"支付宝账号"`

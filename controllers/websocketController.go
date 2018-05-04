@@ -455,6 +455,11 @@ func (c *ChatChannel) wsMsgDeal(msg *WsMessage) {
 				}
 			}
 
+			if c.NIMChannelID != 0 {
+				ciStr, _ := utils.JSONMarshalToString(&models.ClearingInfo{NIMChannelID: c.NIMChannelID, Cost: c.Amount})
+				(&models.Dial{ID: c.DialID}).Update(map[string]interface{}{"clearing": ciStr}, nil)
+			}
+
 			go c.ticktokPay()
 		}
 

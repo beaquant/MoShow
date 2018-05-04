@@ -19,6 +19,8 @@ var (
 	defaultBoysAvatar  = "https://moshow-1255921343.file.myqcloud.com/sys/default_boys.jpg"
 	defaultGirlsAvatar = "https://moshow-1255921343.file.myqcloud.com/sys/default_girl.jpg"
 	randomName         = []string{"方块", "守护", "阿夜", "奇迹", "嘻嘻", "皮皮", "大地", "节奏", "武藏", "依流", "慧流", "娜娜", "配角", "二堂", "复社", "日奈", "森亚建", "露露", "尤里佳", "黑执事", "夏尔", "米卡", "亚洛斯", "伊丽", "克洛德", "索玛", "阿格尼", "梅林", "巴德尔", "葬依屋", "雷格尔", "刘时", "蓝猫", "汉娜", "田中先生", "菲尼安", "骑士", "玖兰枢", "玖兰", "锥生零", "黑主灰阎", "一条", "矢野", "锥生", "绯樱闲", "早园", "架园晓", "蓝堂荌", "玖兰李士", "夜刈", "琉星", "支葵", "凡多", "姆海威", "艾利斯", "弗斯塔斯", "琉佳", "千里", "十牙", "莎白", "米多", "福特", "优姬", "托兰西", "拓麻", "莉磨", "天天", "冷冷", "拜拜", "白白", "陌陌", "默默", "可可", "拉拉", "东东", "栋栋", "奇奇", "于鏊", "魔能", "嘿嘿", "哒哒", "呵呵", "大佬", "大爷"}
+	registWordMan      = "欢迎帅气的小哥哥，你想要的这里都有，赶紧找个TA开始一对一畅聊吧。"
+	registWordWoman    = "欢迎漂亮的小姐姐，赶紧去认证形象视频吧，认证通过就可跟帅气的小哥哥畅聊了。审核通过后会有系统消息提示，快速审核通道添加运营小哥哥微信:"
 )
 
 //UserController 用户信息查询，更新等接口
@@ -34,7 +36,7 @@ type UserProfileInfo struct {
 	Wallet      uint64                 `json:"wlt,omitempty"`
 	Followed    bool                   `json:"followed" description:"是否已关注"`
 	IsFill      bool                   `json:"is_fill" description:"资料是否完善"`
-	AnswerRate  float64                `json:"answer_rate" description:"接通率"`
+	AnswerRate  uint64                 `json:"answer_rate" description:"接通率"`
 	CheckStatus *models.ProfileChg     `json:"check_status" description:"审核状态"`
 	Avatar      string                 `json:"avatar"`
 	Gallery     []string               `json:"gallery"`
@@ -48,6 +50,12 @@ type UserOperateInfo struct {
 	User   *UserProfileInfo `json:"user"`
 	OpTime int64            `json:"time"`
 	Award  uint64           `json:"awd"`
+}
+
+func init() {
+	if cfg, err := (&models.Config{}).GetCommonConfig(); err == nil {
+		registWordWoman += cfg.CheckStaffWechat
+	}
 }
 
 //Read .
@@ -213,9 +221,19 @@ func (c *UserController) Update() {
 			if gender == 1 {
 				param["gender"] = models.GenderMan
 				up.Gender = models.GenderMan
+				defer func() {
+					if dto.Sucess {
+						utils.SendP2PSysMessage(registWordMan, strconv.FormatUint(tk.ID, 10))
+					}
+				}()
 			} else if gender == 2 {
 				param["gender"] = models.GenderWoman
 				up.Gender = models.GenderWoman
+				defer func() {
+					if dto.Sucess {
+						utils.SendP2PSysMessage(registWordWoman, strconv.FormatUint(tk.ID, 10))
+					}
+				}()
 			} else {
 				beego.Error("性别参数设置错误:", genderStr, c.Ctx.Request.UserAgent())
 				dto.Message = err.Error()
