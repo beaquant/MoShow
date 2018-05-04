@@ -39,6 +39,7 @@ type User struct {
 type UserLoginInfo struct {
 	UserAgent string `json:"user_agent"`
 	IPAddress string `json:"ip_address"`
+	Time      int64  `json:"time"`
 }
 
 //TableName .

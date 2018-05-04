@@ -283,7 +283,7 @@ func (c *AuthController) initUser(u *models.User, acctType int) (*models.UserPro
 	u.AcctType = acctType
 	u.AcctStatus = models.AcctStatusNormal
 	u.CreatedAt = time.Now().Unix()
-	uli := &models.UserLoginInfo{UserAgent: c.Ctx.Request.UserAgent(), IPAddress: c.Ctx.Input.IP()}
+	uli := &models.UserLoginInfo{UserAgent: c.Ctx.Request.UserAgent(), IPAddress: c.Ctx.Input.IP(), Time: time.Now().Unix()}
 	u.LastLoginInfo, _ = utils.JSONMarshalToString(uli)
 
 	if err := u.Add(trans); err != nil {
