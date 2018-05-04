@@ -192,7 +192,7 @@ func (c *AuthController) WechatLogin() {
 
 	AccessToken := c.GetString("AccessToken")
 	OpenID := c.GetString("OpenID")
-	Ivt, _ := strconv.ParseUint(c.GetString("Ivt"), 10, 64)
+	Ivt, _ := strconv.ParseUint(c.GetString("Ivt"), 10, 64) //邀请人信息
 
 	o := oauth.NewOauth(nil)
 	info, err := o.GetUserInfo(AccessToken, OpenID)

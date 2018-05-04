@@ -94,7 +94,7 @@ func (d *Dial) UpdateNmAudioCopy(aci *netease.AudioCopyInfo) error {
 		if err != nil {
 			return err
 		}
-		if math.Abs(float64(d.Duration-nimDuration)) > 10 {
+		if math.Abs(float64(d.Duration-(nimDuration/2))) > 10 {
 			fields["status"] = DialStatusException
 		}
 	}
@@ -134,7 +134,7 @@ func (d *Dial) GetDialList(uid uint64, limit, skip int) ([]Dial, error) {
 	}
 
 	var lst []Dial
-	return lst, db.Where("from_user_id = ?", uid).Order("create_at desc").Limit(limit).Offset(skip).Find(&lst).Error
+	return lst, db.Where("from_user_id = ?", uid).Or("to_user_id = ?", uid).Order("create_at desc").Limit(limit).Offset(skip).Find(&lst).Error
 }
 
 //Del .
@@ -142,8 +142,8 @@ func (d *Dial) Del() error {
 	return db.Delete(d).Error
 }
 
-//GetToalDuration .
-func (d *Dial) GetToalDuration(uid uint64) (int64, error) {
+//GetTotalDuration .
+func (d *Dial) GetTotalDuration(uid uint64) (int64, error) {
 	row := db.Table(d.TableName()).Where("status = ? ", DialStatusSuccess).Where("from_user_id = ? or to_user_id = ?", uid, uid).Select("sum(duration) as duration").Row()
 	var duration sql.NullInt64
 	if err := row.Scan(&duration); err != nil {
