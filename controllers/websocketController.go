@@ -406,7 +406,9 @@ func (c *ChatChannel) Run() {
 
 			models.TransactionCommit(trans)
 			ms := &WsMessage{MessageType: wsMessageTypeChannelEnd, DialID: c.DialID}
-			ms.Content, _ = utils.JSONMarshalToString(&VideoCost{Cost: c.Amount, Income: uint64(income), Timelong: c.Timelong, NIMChannelID: c.NIMChannelID})
+			vc, _ := c.genVideoCost()
+			vc.Income, vc.NIMChannelID = uint64(income), c.NIMChannelID
+			ms.Content, _ = utils.JSONMarshalToString(vc)
 			c.Src.Send <- ms
 			c.Dst.Send <- ms
 			c.logger.Info("房间结算成功")
