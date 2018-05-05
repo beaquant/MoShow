@@ -190,6 +190,11 @@ func (u *UserProfile) UpdateOnlineStatus(status int) error {
 	return db.Model(u).Update("online_status", status).Error
 }
 
+//ResetOnlineStatus .
+func (u *UserProfile) ResetOnlineStatus() error {
+	return db.Model(u).Where("online_status  = ?", OnlineStatusChating).Update("online_status", OnlineStatusOnline).Error
+}
+
 //GetCover .
 func (u *UserProfile) GetCover() *UserCoverInfo {
 	if len(u.CoverPic) > 0 {

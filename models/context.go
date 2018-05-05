@@ -22,7 +22,10 @@ func init() {
 
 	if beego.BConfig.RunMode == "dev" {
 		db = db.Debug()
+	} else {
+		(&UserProfile{}).ResetOnlineStatus() //线上环境重启api时，重置用户在线状态
 	}
+
 }
 
 //TransactionGen .

@@ -168,7 +168,7 @@ func (c *WebsocketController) Create() {
 	}
 
 	if up.Balance+up.Income < pp.Price {
-		ws.Content = "余额不足本次通话"
+		ws.Content = "您的余额不足，请先充值。"
 		beego.Error(ws.Content, tk.ID, c.Ctx.Request.UserAgent())
 		closeConnWithMessage(conn, ws)
 		return

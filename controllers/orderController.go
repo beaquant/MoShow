@@ -171,6 +171,7 @@ func (c *OrderController) AlipayConfirm() {
 
 	models.TransactionCommit(trans)
 	c.Ctx.Output.Body([]byte("success"))
+	utils.SendP2PSysMessage("您有一笔订单已充值成功，可在消费明细中查看", strconv.FormatUint(order.UserID, 10))
 }
 
 func getProdFromID(pid uint64) (*models.Product, error) {

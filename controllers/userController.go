@@ -1077,6 +1077,13 @@ func (c *UserController) Withdraw() {
 		return
 	}
 
+	if amount%5000 != 0 {
+		beego.Error("提现金额必须是5000的整数倍,金额:", amount, c.Ctx.Request.UserAgent())
+		dto.Message = "提现金额必须是5000的整数倍"
+		dto.Code = utils.DtoStatusParamError
+		return
+	}
+
 	up := &models.UserProfile{ID: tk.ID}
 	if err := up.Read(); err != nil {
 		beego.Error(err, c.Ctx.Request.UserAgent())
@@ -1086,8 +1093,8 @@ func (c *UserController) Withdraw() {
 	}
 
 	if up.Income < amount {
-		beego.Error("账户余额不足以提现:"+strconv.FormatUint(up.Income, 10)+strconv.FormatUint(amount, 10), c.Ctx.Request.UserAgent())
-		dto.Message = "账户余额不足以提现"
+		beego.Error("账户收益不足以提现:"+strconv.FormatUint(up.Income, 10)+strconv.FormatUint(amount, 10), c.Ctx.Request.UserAgent())
+		dto.Message = "账户收益不足以提现"
 		dto.Code = utils.DtoStatusParamError
 		return
 	}
@@ -1135,7 +1142,9 @@ func (c *UserController) Withdraw() {
 	up.Income -= amount
 	dto.Data = up
 	dto.Sucess = true
-	dto.Message = "提现申请已提交"
+	dto.Message = "提现已提交审核，将在24小时之内处理，节假日可能延后，请耐心等待！"
+
+	utils.SendP2PSysMessage("您有一笔提现记录已提交审核，请耐心等待", strconv.FormatUint(tk.ID, 10))
 }
 
 //WithdrawHis .
