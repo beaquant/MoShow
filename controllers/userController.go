@@ -746,8 +746,10 @@ func (c *UserController) SetBusyStatus() {
 
 	if status == 0 {
 		status = models.OnlineStatusBusy
+		dto.Message = "已设置为勿扰"
 	} else if status == 1 {
 		status = models.OnlineStatusOnline
+		dto.Message = "已设置为空闲"
 	}
 
 	if err := (&models.UserProfile{ID: tk.ID}).UpdateOnlineStatus(status); err != nil {
@@ -757,7 +759,6 @@ func (c *UserController) SetBusyStatus() {
 	}
 
 	dto.Sucess = true
-	dto.Message = "设置成功"
 }
 
 //BindPayAcct .
@@ -1029,7 +1030,7 @@ func (c *UserController) ReduceAmount() {
 
 	models.TransactionCommit(trans)
 
-	dto.Message = "扣款成功"
+	dto.Message = "解锁成功"
 	dto.Sucess = true
 	dto.Data = chg
 }
