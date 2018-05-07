@@ -48,8 +48,9 @@ type Config struct {
 
 //CommonConfig 通用配置
 type CommonConfig struct {
-	AnchorVideoRecord     bool             `json:"ac_video_record" description:"是否开启主播录制视频"`     //是否开启主播录制视频
-	UserVideoRecordbool   bool             `json:"user_video_record" description:"是否开启用户录制视频"`   //是否开启用户录制视频
+	AnchorVideoRecord     bool             `json:"ac_video_record" description:"是否开启主播录制视频"`   //是否开启主播录制视频
+	UserVideoRecordbool   bool             `json:"user_video_record" description:"是否开启用户录制视频"` //是否开启用户录制视频
+	VideoUploadMode       int              `json:"video_upload_mode" description:"形象视频上传模式,0:选择,拍摄;1:选择;2:拍摄"`
 	UserProtocol          string           `json:"user_protocal" description:"用户协议"`             //用户协议
 	ForceUpdate           *ForceUpdateInfo `json:"force_update,omitempty" description:"强制更新"`    //强制更新
 	Share                 ShareInfo        `json:"share" description:"邀请"`                       //邀请
