@@ -378,6 +378,12 @@ func (c *UserController) SendGift() {
 		return
 	}
 
+	if giftCount == 0 {
+		dto.Message = "礼物数量解析失败,礼物数量不能为0"
+		dto.Code = utils.DtoStatusParamError
+		return
+	}
+
 	toID, err := strconv.ParseUint(uidStr, 10, 64)
 	if err != nil {
 		beego.Error(err)
@@ -414,7 +420,7 @@ func (c *UserController) SendGift() {
 		return
 	}
 
-	giftChg := &models.GiftChgInfo{Count: giftCount, GiftInfo: *gift}
+	giftChg := &models.GiftHisInfo{Count: giftCount, GiftInfo: *gift}
 	if giftCount*gift.Price > fromUserProfile.Balance+fromUserProfile.Income {
 		dto.Message = "余额不足"
 		beego.Error("赠送礼物余额不足,用户ID:", fromUserProfile.ID, "礼物总价:", giftCount*gift.Price, "用户余额:", fromUserProfile.Balance, "用户收益:", fromUserProfile.Income)
@@ -425,6 +431,10 @@ func (c *UserController) SendGift() {
 		beego.Error(err)
 		dto.Message = "支付过程出现异常\t" + err.Error()
 		return
+	}
+
+	if cn, ok := chatChannels[tk.ID]; ok { //如果用户在视频中赠送礼物，将金额加到主播显示的收益中
+		cn.GiftAmount += giftCount * gift.Price
 	}
 
 	dto.Data = fromUserProfile
@@ -1255,7 +1265,7 @@ func (c *UserController) GiftHistory() {
 
 //赠送礼物,流程包括 源用户扣款，目标用户增加余额，邀请人分成，以及分别添加余额变动记录,过程中任何一部出错，事务回滚并返回失败
 //赠送礼物不参与分成
-func sendGift(from, to *models.UserProfile, gift *models.GiftChgInfo) error {
+func sendGift(from, to *models.UserProfile, gift *models.GiftHisInfo) error {
 	u := &models.User{ID: to.ID}
 	if err := u.Read(); err != nil {
 		return errors.New("获取目标用户信息失败,id:" + strconv.FormatUint(to.ID, 10) + "\t" + err.Error())

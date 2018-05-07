@@ -37,12 +37,6 @@ type BalanceChg struct {
 	Time       int64  `json:"time" gorm:"column:time"`
 }
 
-//GiftChgInfo .
-type GiftChgInfo struct {
-	Count    uint64 `json:"count"`
-	GiftInfo Gift   `json:"gift_info"`
-}
-
 //VideoChgInfo .
 type VideoChgInfo struct {
 	DialID   uint64 `json:"dial_id"`

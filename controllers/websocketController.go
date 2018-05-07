@@ -67,6 +67,7 @@ type ChatChannel struct {
 	StopTime         int64
 	Price            uint64
 	Amount           uint64
+	GiftAmount       uint64
 	logger           *logrus.Entry
 	Src              *ChatClient
 	Dst              *ChatClient
@@ -363,15 +364,19 @@ func (c *ChatChannel) Run() {
 			}
 
 			c.logger.Info("开始结算,房间ID:", c.ID, "主播ID:", c.DstID)
+			income, _, err := computeIncome(c.Amount)
+			if err != nil {
+				c.logger.Error("计算分成失败", err)
+				exp = append(exp, err)
+			}
+			ciStr, _ := utils.JSONMarshalToString(&models.ClearingInfo{NIMChannelID: c.NIMChannelID, Cost: c.Amount, Income: uint64(income), Price: c.Price, Timelong: c.Timelong})
+
 			if exp == nil || len(exp) == 0 { //没有异常的情况下再给主播结费，否则只生成异常通话记录
 				if err := videoDone(c.Src.User, c.Dst.User, &models.VideoChgInfo{TimeLong: c.Timelong, Price: c.Price, DialID: c.DialID}, c.Amount); err != nil {
 					c.logger.Error("[websocket结算异常]视频结费错误", err, "发起人:", c.ID, "接受人:", c.DstID, "金额:", c.Amount, "通话时长:", c.Timelong)
 					exp = append(exp, errors.New("[websocket结算异常]视频结费错误:"+err.Error()))
 				}
 			}
-
-			income, _, _ := computeIncome(c.Amount)
-			ciStr, _ := utils.JSONMarshalToString(&models.ClearingInfo{NIMChannelID: c.NIMChannelID, Cost: c.Amount, Income: uint64(income), Price: c.Price, Timelong: c.Timelong})
 
 			//生成通话记录
 			dl, dt := &models.Dial{ID: c.DialID}, &models.DialTag{}
@@ -407,7 +412,8 @@ func (c *ChatChannel) Run() {
 			models.TransactionCommit(trans)
 			ms := &WsMessage{MessageType: wsMessageTypeChannelEnd, DialID: c.DialID}
 			vc, _ := c.genVideoCost()
-			vc.Income, vc.NIMChannelID = uint64(income), c.NIMChannelID
+			gincome, _, _ := computeIncome(c.GiftAmount)
+			vc.Income, vc.NIMChannelID = uint64(income+gincome), c.NIMChannelID
 			ms.Content, _ = utils.JSONMarshalToString(vc)
 			c.Src.Send <- ms
 			c.Dst.Send <- ms
