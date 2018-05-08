@@ -1015,7 +1015,7 @@ func (c *UserController) ReduceAmount() {
 	if err := up.DeFund(uint64(amount), trans); err != nil {
 		models.TransactionRollback(trans)
 		beego.Error("扣款失败", err, c.Ctx.Request.UserAgent())
-		dto.Message = "扣款失败\t" + err.Error()
+		dto.Message = "余额不足，请充值"
 		dto.Code = utils.DtoStatusDatabaseError
 		return
 	}
@@ -1040,7 +1040,7 @@ func (c *UserController) ReduceAmount() {
 
 	models.TransactionCommit(trans)
 
-	dto.Message = "解锁成功"
+	dto.Message = "扣费成功"
 	dto.Sucess = true
 	dto.Data = chg
 }
