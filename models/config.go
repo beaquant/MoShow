@@ -48,19 +48,19 @@ type Config struct {
 
 //CommonConfig 通用配置
 type CommonConfig struct {
-	AnchorVideoRecord     bool             `json:"ac_video_record" description:"是否开启主播录制视频"`   //是否开启主播录制视频
-	UserVideoRecordbool   bool             `json:"user_video_record" description:"是否开启用户录制视频"` //是否开启用户录制视频
-	VideoUploadMode       int              `json:"video_upload_mode" description:"形象视频上传模式,0:选择,拍摄;1:选择;2:拍摄"`
-	UserProtocol          string           `json:"user_protocal" description:"用户协议"`             //用户协议
-	ForceUpdate           *ForceUpdateInfo `json:"force_update,omitempty" description:"强制更新"`    //强制更新
-	Share                 ShareInfo        `json:"share" description:"邀请"`                       //邀请
-	CustomerServiceWechat string           `json:"customer_service_wechat" description:"客服人员微信"` //客服人员微信
-	CheckStaffWechat      string           `json:"check_staff_wechat" description:"审核人员微信"`      //审核人员微信
-	WithdrawCopywriting   string           `json:"wd_copywriting" description:"提现文案"`            //提现文案
-	RechargeCopywriting   string           `json:"rcg_copywriting" description:"充值文案"`           //充值文案
-	Banners               []Banner         `json:"banners" description:"轮播图"`                    //轮播图
-	VideoPrice            uint64           `json:"vod_value" description:"形象视频扣费价格"`             //形象视频扣费价格
-	MessagePrice          uint64           `json:"msg_value" description:"私聊扣费价格"`               //私聊扣费价格
+	AnchorVideoRecord     bool             `json:"ac_video_record" description:"是否开启主播录制视频"`                   //是否开启主播录制视频
+	UserVideoRecordbool   bool             `json:"user_video_record" description:"是否开启用户录制视频"`                 //是否开启用户录制视频
+	VideoUploadMode       int              `json:"video_upload_mode" description:"形象视频上传模式,0:选择,拍摄;1:选择;2:拍摄"` //形象视频上传模式,0:选择,拍摄;1:选择;2:拍摄
+	UserProtocol          string           `json:"user_protocal" description:"用户协议"`                           //用户协议
+	ForceUpdate           *ForceUpdateInfo `json:"force_update,omitempty" description:"强制更新"`                  //强制更新
+	Share                 ShareInfo        `json:"share" description:"邀请"`                                     //邀请
+	CustomerServiceWechat string           `json:"customer_service_wechat" description:"客服人员微信"`               //客服人员微信
+	CheckStaffWechat      string           `json:"check_staff_wechat" description:"审核人员微信"`                    //审核人员微信
+	WithdrawCopywriting   string           `json:"wd_copywriting" description:"提现文案"`                          //提现文案
+	RechargeCopywriting   string           `json:"rcg_copywriting" description:"充值文案"`                         //充值文案
+	Banners               []Banner         `json:"banners" description:"轮播图"`                                  //轮播图
+	VideoPrice            uint64           `json:"vod_value" description:"形象视频扣费价格"`                           //形象视频扣费价格
+	MessagePrice          uint64           `json:"msg_value" description:"私聊扣费价格"`                             //私聊扣费价格
 }
 
 //ForceUpdateInfo .

@@ -413,6 +413,8 @@ func genUserPorfileInfoCommon(upi *UserProfileInfo, cv *models.UserCoverInfo) {
 
 	if upi.DialAccept+upi.DialDeny > 0 {
 		upi.AnswerRate = upi.DialAccept * 100 / (upi.DialAccept + upi.DialDeny) //计算接通率
+	} else {
+		upi.AnswerRate = 100
 	}
 
 	if upi.UserType == models.UserTypeFaker { //马甲号隐藏掉金额相关字段

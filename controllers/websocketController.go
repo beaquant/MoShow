@@ -4,7 +4,6 @@ import (
 	"MoShow/models"
 	"MoShow/utils"
 	"errors"
-	"fmt"
 	"net/http"
 	"os"
 	"path"
@@ -22,10 +21,10 @@ const (
 	writeWait = 30 * time.Second
 
 	// Time allowed to read the next pong message from the peer.
-	pongWait = 45 * time.Second
+	pongWait = 65 * time.Second
 
 	// Send pings to peer with this period. Must be less than pongWait.
-	pingPeriod = 15 * time.Second
+	pingPeriod = 10 * time.Second
 
 	// Maximum message size allowed from peer.
 	maxMessageSize = 512
@@ -74,6 +73,7 @@ type ChatChannel struct {
 	Send             chan *WsMessage
 	Join             chan *ChatClient
 	Exit             chan []error
+	Gift             chan *models.GiftHisInfo
 }
 
 //ChatClient .
@@ -184,7 +184,7 @@ func (c *WebsocketController) Create() {
 	}
 
 	//Exit通道要设置缓冲区，不然会在写Exit的时候死锁导致无法读Exit
-	channel := &ChatChannel{Join: make(chan *ChatClient), Send: make(chan *WsMessage), Exit: make(chan []error, 1), ID: tk.ID, DstID: parter, DialID: dl.ID}
+	channel := &ChatChannel{Join: make(chan *ChatClient), Send: make(chan *WsMessage), Exit: make(chan []error, 1), Gift: make(chan *models.GiftHisInfo), ID: tk.ID, DstID: parter, DialID: dl.ID}
 	go channel.Run()
 
 	client := &ChatClient{User: up, Conn: conn, Send: make(chan *WsMessage), Request: c.Ctx.Request}
@@ -335,9 +335,25 @@ func (c *ChatChannel) Run() {
 			}
 
 			client.Send <- &WsMessage{MessageType: wsMessageTypeJoinSuccess, Content: "加入房间成功"}
-			c.logger.Info("[uid:", client.User.ID, "]用户加入房间")
+			c.logger.Infof("[dial:%d,uid:%d]%s", c.DialID, client.User.ID, "用户加入房间")
 		case msg := <-c.Send:
 			go c.wsMsgDeal(msg)
+		case gift := <-c.Gift:
+			if !c.Stoped {
+				c.GiftAmount += gift.Count * gift.GiftInfo.Price
+
+				vc, err := c.genVideoCost()
+				m := &WsMessage{MessageType: wsMessageTypeAllocateFund}
+				if err != nil {
+					c.logger.Error("生成消费信息失败", err)
+					m.Content, m.MessageType = "生成消费信息失败\t"+err.Error(), wsMessageTypeSystem
+				} else {
+					m.Content, _ = utils.JSONMarshalToString(vc)
+				}
+
+				c.Src.Send <- m
+				c.Dst.Send <- m
+			}
 		case exp := <-c.Exit:
 			c.Stoped = true
 
@@ -363,7 +379,7 @@ func (c *ChatChannel) Run() {
 				}
 			}
 
-			c.logger.Info("开始结算,房间ID:", c.ID, "主播ID:", c.DstID)
+			c.logger.Infof("[dial:%d,uid:%d,aid:%d]%s", c.DialID, c.ID, c.DstID, "开始结算")
 			income, _, err := computeIncome(c.Amount)
 			if err != nil {
 				c.logger.Error("计算分成失败", err)
@@ -417,7 +433,7 @@ func (c *ChatChannel) Run() {
 			ms.Content, _ = utils.JSONMarshalToString(vc)
 			c.Src.Send <- ms
 			c.Dst.Send <- ms
-			c.logger.Info("房间结算成功")
+			c.logger.Infof("[dial:%d]%s", c.DialID, "房间结算成功")
 			return
 		}
 	}
@@ -470,15 +486,14 @@ func (c *ChatChannel) wsMsgDeal(msg *WsMessage) {
 		}
 
 		vc, err := c.genVideoCost()
+		m := &WsMessage{MessageType: wsMessageTypeChannelStart}
 		if err != nil {
 			c.logger.Error("生成消费信息失败", err)
-			if !c.Stoped {
-				c.Exit <- nil
-			}
+			m.Content, m.MessageType = "生成消费信息失败\t"+err.Error(), wsMessageTypeSystem
+		} else {
+			m.Content, _ = utils.JSONMarshalToString(vc)
 		}
 
-		m := &WsMessage{MessageType: wsMessageTypeChannelStart}
-		m.Content, _ = utils.JSONMarshalToString(vc)
 		c.Src.Send <- m
 		c.Dst.Send <- m
 	case wsMessageTypeChannelEnd:
@@ -545,20 +560,18 @@ func (c *ChatChannel) ticktokPay() {
 				c.Amount += c.Price
 
 				vc, err := c.genVideoCost()
+				m := &WsMessage{MessageType: wsMessageTypeAllocateFund}
 				if err != nil {
 					c.logger.Error("生成消费信息失败", err)
-					if !c.Stoped {
-						c.Exit <- nil
-					}
-					return
+					m.Content, m.MessageType = "生成消费信息失败\t"+err.Error(), wsMessageTypeSystem
+				} else {
+					m.Content, _ = utils.JSONMarshalToString(vc)
 				}
 
-				m := &WsMessage{MessageType: wsMessageTypeAllocateFund}
-				m.Content, _ = utils.JSONMarshalToString(vc)
 				c.Src.Send <- m
 				c.Dst.Send <- m
 			} else {
-				break
+				return
 			}
 		}
 	}
@@ -574,6 +587,7 @@ func (c *ChatChannel) CloseChannel() {
 	close(c.Send)
 	close(c.Exit)
 	close(c.Join)
+	close(c.Gift)
 	delete(chatChannels, c.ID)
 	delete(chattingUser, c.ID)
 	delete(chattingUser, c.DstID)
@@ -596,16 +610,15 @@ func (c *ChatClient) Read() {
 			debug.PrintStack()
 		}
 
+		curConnection.Close()
 		if c.Channel.StopTime == 0 { //聊天通道未结束
-			// time.Sleep(30 * time.Second) //等待30秒,如过连接没有恢复,执行退出
-
 			if curConnection != c.Conn { //重连成功
 				c.Channel.logger.Info("重连成功,房间继续保留,房间ID:", c.Channel.ID)
 				return
 			}
 		}
 
-		c.Channel.logger.Info(fmt.Sprintf("[ws:%p]", c.Conn), "用户主动挂断或等待重连超时,执行退出流程")
+		c.Channel.logger.Infof("[ws:%p]:%s", c.Conn, "用户主动挂断或等待重连超时,执行退出流程")
 		if !c.Channel.Stoped { //未结算
 			c.Channel.Exit <- nil //发送退出信号,关闭通道后write方法会立即退出
 		}
@@ -613,7 +626,7 @@ func (c *ChatClient) Read() {
 	curConnection.SetReadLimit(maxMessageSize)
 	curConnection.SetReadDeadline(time.Now().Add(pongWait))
 	curConnection.SetPongHandler(func(pong string) error {
-		c.Channel.logger.Info("[uid:", c.User.ID, "]收到pong消息,刷新deadline")
+		c.Channel.logger.Infof("[dial:%d,uid:%d]%s", c.Channel.DialID, c.User.ID, "收到pong消息,刷新deadline")
 
 		if _, ok := chatChannels[c.Channel.ID]; ok {
 			curConnection.SetReadDeadline(time.Now().Add(pongWait))
@@ -627,12 +640,12 @@ func (c *ChatClient) Read() {
 		if err != nil {
 			if _, ok := err.(*websocket.CloseError); ok {
 				if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-					c.Channel.logger.Error("客户端异常挂断", err, "用户ID:", c.User.ID, "Agent:", c.Request.UserAgent())
+					c.Channel.logger.Error("链接异常挂断", err, "用户ID:", c.User.ID, "Agent:", c.Request.UserAgent())
 				} else {
-					c.Channel.logger.Info("客户端主动挂断", err, "用户ID:", c.User.ID, "Agent:", c.Request.UserAgent())
+					c.Channel.logger.Info("链接主动挂断", err, "用户ID:", c.User.ID, "Agent:", c.Request.UserAgent())
 				}
 			} else {
-				// time.Sleep(pongWait - pingPeriod) //等待重连
+				c.Channel.logger.Error("[ws(读取消息错误)]:", err, "用户ID:", c.User.ID, "Agent:", c.Request.UserAgent())
 			}
 
 			break
@@ -641,7 +654,7 @@ func (c *ChatClient) Read() {
 		err = utils.JSONUnMarshalFromByte(message, m)
 		if err == nil {
 			if c.Channel.StopTime == 0 {
-				c.Channel.logger.Info("收到客户端消息:", string(message))
+				c.Channel.logger.Infof("[dial:%d]收到客户端消息:%s", c.Channel.DialID, string(message))
 				c.Channel.Send <- m
 			}
 		} else {
@@ -651,9 +664,7 @@ func (c *ChatClient) Read() {
 }
 
 func (c *ChatClient) Write() {
-	ticker := time.NewTicker(pingPeriod)
-	curConnection := c.Conn
-	di := c.Channel.DialID
+	ticker, curConnection := time.NewTicker(pingPeriod), c.Conn
 
 	defer func() {
 		if err := recover(); err != nil {
@@ -662,40 +673,31 @@ func (c *ChatClient) Write() {
 		}
 
 		ticker.Stop()
-
-		if c.Channel.StopTime == 0 { //聊天通道未结束
-			// time.Sleep(pongWait - pingPeriod) //等待重连
-		}
-
-		c.Channel.logger.Warn(fmt.Sprintf("[ws:%p]", c.Conn), "写入超时,尝试挂断,用户ID:", c.User.ID)
-		curConnection.Close()
 	}()
 	for {
 		select {
 		case message, ok := <-c.Send:
+			if !ok {
+				break
+			}
 			if message != nil {
-				message.DialID = di
+				message.DialID = c.Channel.DialID
 			}
 
 			curConnection.SetWriteDeadline(time.Now().Add(writeWait))
-			if !ok {
-				return
-			}
 
 			ms, _ := utils.JSONMarshalToString(message)
-			c.Channel.logger.Info("发送消息", ms)
+			c.Channel.logger.Infof("[dial:%d,uid:%d]发送消息:%s", c.Channel.DialID, c.User.ID, ms)
 
-			err := curConnection.WriteJSON(message)
-			if err != nil {
-				return
+			if err := curConnection.WriteJSON(message); err != nil {
+				c.Channel.logger.Error("[ws(发送消息出错)]:", err, "消息内容", ms)
 			}
 		case <-ticker.C:
 			curConnection.SetWriteDeadline(time.Now().Add(writeWait))
 
-			c.Channel.logger.Info("[uid:", c.User.ID, "]执行ping操作")
 			if err := curConnection.WriteMessage(websocket.PingMessage, nil); err != nil {
-				c.Channel.logger.Error("[uid:", c.User.ID, "]执行ping操作错误")
-				return
+				c.Channel.logger.Warningf("[dial:%d,uid:%d]%s", c.Channel.DialID, c.User.ID, "ping操作错误,进入等待重连状态")
+				return //ping失败，网络中断,退出循环
 			}
 		}
 	}

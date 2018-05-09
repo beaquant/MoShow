@@ -230,7 +230,7 @@ func (c *DialController) NmCallback() {
 		}
 
 		if err := dl.UpdateNmAudioDlCopy(dci, fi); err != nil {
-			beego.Error("更新云信通话时长信息回执失败", err)
+			beego.Error("更新云信视频录制地址信息失败", err)
 			c.Abort(strconv.Itoa(http.StatusBadRequest))
 			return
 		}

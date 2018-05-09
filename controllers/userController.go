@@ -346,7 +346,7 @@ func (c *UserController) Update() {
 
 	models.TransactionCommit(trans)
 
-	dto.Message = "更新成功"
+	dto.Message = "提交成功"
 	dto.Data = upi
 	dto.Sucess = true
 
@@ -433,8 +433,8 @@ func (c *UserController) SendGift() {
 		return
 	}
 
-	if cn, ok := chatChannels[tk.ID]; ok { //如果用户在视频中赠送礼物，将金额加到主播显示的收益中
-		cn.GiftAmount += giftCount * gift.Price
+	if cn, ok := chatChannels[tk.ID]; ok && !cn.Stoped { //如果用户在视频中赠送礼物，将金额加到主播显示的收益中
+		cn.Gift <- giftChg
 	}
 
 	dto.Data = fromUserProfile
