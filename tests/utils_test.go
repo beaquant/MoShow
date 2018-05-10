@@ -14,6 +14,7 @@ import (
 
 	sign "github.com/MrSong0607/image-go-sdk/sign"
 	"github.com/silenceper/wechat/oauth"
+	"github.com/sirupsen/logrus"
 )
 
 func TestMsgSend(t *testing.T) {
@@ -172,4 +173,27 @@ func TestGetIP(t *testing.T) {
 	} else {
 		t.Log(utils.JSONMarshalToString(i))
 	}
+}
+
+func TestLogrus(t *testing.T) {
+	log := logrus.WithFields(logrus.Fields{"dial_id": 123, "ext": "asdad"})
+	logrus.SetFormatter(TextFormatter{})
+	log.Error("test")
+	log.Warn("test2")
+	log.Info("ss")
+}
+
+type TextFormatter struct {
+}
+
+func (TextFormatter) Format(e *logrus.Entry) ([]byte, error) {
+	str := fmt.Sprintf("%s[%s] [%d] %s", e.Time.Format("06/01/02 15:04:05"), strings.ToUpper(string(e.Level.String()[0])), e.Data["dial_id"], e.Message)
+	for k, v := range e.Data {
+		if k != "dial_id" {
+			str = fmt.Sprintf("%s %s:%s", str, k, v)
+		}
+	}
+	str += `
+`
+	return []byte(str), nil
 }
