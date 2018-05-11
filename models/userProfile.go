@@ -190,6 +190,11 @@ func (u *UserProfile) UpdateOnlineStatus(status int) error {
 	return db.Model(u).Update("online_status", status).Error
 }
 
+//SetFaker .
+func (u *UserProfile) SetFaker() error {
+	return db.Model(u).Update("user_type", UserTypeFaker).Error
+}
+
 //ResetOnlineStatus .
 func (u *UserProfile) ResetOnlineStatus() error {
 	return db.Model(u).Where("online_status  = ?", OnlineStatusChating).Update("online_status", OnlineStatusOnline).Error
@@ -210,7 +215,7 @@ func (u *UserProfile) GetCover() *UserCoverInfo {
 
 //GetInviteList 获取我邀请的用户列表
 func (u *UserProfile) GetInviteList(skip, limit int) (ul []UserProfile, err error) {
-	if err = db.Joins("left join users on user_profile.id = users.id").Where("invited_by = ?", u.ID).Offset(skip).Limit(limit).Find(&ul).Error; err != nil {
+	if err = db.Joins("left join users on user_profile.id = users.id").Where("invited_by = ?", u.ID).Order("users.create_at desc").Offset(skip).Limit(limit).Find(&ul).Error; err != nil {
 		return nil, err
 	}
 

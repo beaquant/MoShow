@@ -127,9 +127,15 @@ func (c *DialController) GetDialDetail() {
 		return
 	}
 
+	if id == 0 {
+		dto.Message = "通话记录ID不能为0"
+		dto.Code = utils.DtoStatusParamError
+		return
+	}
+
 	dial := &models.Dial{ID: id}
 	if err := dial.Read(); err != nil {
-		beego.Error("获取通话记录失败", err, c.Ctx.Request.UserAgent(), id)
+		beego.Error("获取通话记录失败", err, c.Ctx.Request.UserAgent(), "通话记录ID:", id)
 		dto.Message = "获取通话记录失败" + err.Error()
 		dto.Code = utils.DtoStatusDatabaseError
 		return

@@ -59,8 +59,9 @@ type CommonConfig struct {
 	WithdrawCopywriting   string           `json:"wd_copywriting" description:"提现文案"`                          //提现文案
 	RechargeCopywriting   string           `json:"rcg_copywriting" description:"充值文案"`                         //充值文案
 	Banners               []Banner         `json:"banners" description:"轮播图"`                                  //轮播图
-	VideoPrice            uint64           `json:"vod_value" description:"形象视频扣费价格"`                           //形象视频扣费价格
-	MessagePrice          uint64           `json:"msg_value" description:"私聊扣费价格"`                             //私聊扣费价格
+	CheckModeBanners      []Banner         `json:"check_mode_banners" description:"审核模式轮播图"`
+	VideoPrice            uint64           `json:"vod_value" description:"形象视频扣费价格"` //形象视频扣费价格
+	MessagePrice          uint64           `json:"msg_value" description:"私聊扣费价格"`   //私聊扣费价格
 }
 
 //ForceUpdateInfo .
@@ -100,7 +101,7 @@ type Product struct {
 type IncomeRate struct {
 	InviteRechargeRate float64 `json:"invite_recharge_rate"` //被邀请人充值分成率
 	InviteIncomegeRate float64 `json:"invite_income_rate"`   //被邀请人收益分成
-	IncomeFee          float64 `json:"income_fee"`           //收益手续费
+	IncomeRate         float64 `json:"income_rate"`          //收益手续费
 }
 
 //Banner 首页banner

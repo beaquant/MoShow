@@ -97,7 +97,11 @@ func (c *TimelineController) Users() {
 
 	tli := TimelineInfo{Users: ti}
 	if config, _ := (&models.Config{}).GetCommonConfig(); config != nil {
-		tli.Banners = config.Banners
+		if faker {
+			tli.Banners = config.CheckModeBanners
+		} else {
+			tli.Banners = config.Banners
+		}
 	}
 	dto.Data = tli
 	dto.Sucess = true

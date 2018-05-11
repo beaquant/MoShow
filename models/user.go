@@ -90,6 +90,12 @@ func (u *User) ReadFromWechatID() (err error) {
 	return
 }
 
+//GetFakerNumber .
+func (u *User) GetFakerNumber() ([]User, error) {
+	var uArr []User
+	return uArr, db.Model(u).Select("users.*").Joins("left join MoShow.user_profile on users.id  = user_profile.id").Where("user_profile.user_type = ?", UserTypeFaker).Find(&uArr).Error
+}
+
 //AddAward .
 func (u *User) AddAward(count uint64, trans *gorm.DB) error {
 	if trans == nil {

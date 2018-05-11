@@ -14,9 +14,12 @@ import (
 	"github.com/garyburd/redigo/redis"
 )
 
-var timeFormat = "2006-01-02T15:04:05.000Z"
-var adminPhone = beego.AppConfig.String("adminPhoneNum")
-var adminCode = beego.AppConfig.String("adminCode")
+var (
+	timeFormat = "2006-01-02T15:04:05.000Z"
+	adminPhone = beego.AppConfig.String("adminPhoneNum")
+	adminCode  = beego.AppConfig.String("adminCode")
+	faker      = &fakerUserInfo{}
+)
 
 //AuthController 短信登陆，微信登陆，发送验证码，退出登陆等
 type AuthController struct {
@@ -26,6 +29,11 @@ type AuthController struct {
 type codeInfo struct {
 	Code string
 	Time int64
+}
+
+type fakerUserInfo struct {
+	Users map[string]models.User
+	Time  time.Time
 }
 
 //SendCode .
@@ -86,9 +94,14 @@ func (c *AuthController) Login() {
 	phoneNum := c.Ctx.Input.Param(":phone")
 	code := c.GetString("code")
 
-	if phoneNum != adminPhone {
+	if phoneNum != adminPhone && !isFaker(phoneNum) {
 		codeEx, err := redis.String(con.Do("HGET", SmsCodeRedisKey, phoneNum))
 		if err != nil {
+			if err == redis.ErrNil {
+				dto.Message = "请先获取验证码"
+				return
+			}
+
 			beego.Error("读取验证码失败", err)
 			dto.Message = "读取验证码失败" + err.Error()
 			return
@@ -120,7 +133,7 @@ func (c *AuthController) Login() {
 
 	tk := &Token{}
 	if u.ID == 0 { //该手机号未注册，执行注册逻辑
-		up, err := c.initUser(u, models.AcctTypeTelephone)
+		up, err := c.InitUser(u, models.AcctTypeTelephone)
 		if err != nil {
 			beego.Error("注册用户失败", err, c.Ctx.Request.UserAgent())
 			dto.Message = "注册用户失败\t" + err.Error()
@@ -141,6 +154,10 @@ func (c *AuthController) Login() {
 		dto.Sucess = true
 	} else {
 		if u.AcctStatus != models.AcctStatusShield {
+			if IsCheckMode4Context(c.Ctx) {
+				(&models.UserProfile{ID: u.ID}).SetFaker()
+			}
+
 			if err := (&models.UserProfile{ID: u.ID}).UpdateOnlineStatus(models.OnlineStatusOnline); err != nil {
 				beego.Error("更新在线状态失败", err, c.Ctx.Request.UserAgent())
 				dto.Message = "更新在线状态失败\t" + err.Error()
@@ -213,7 +230,7 @@ func (c *AuthController) WechatLogin() {
 	tk := &Token{}
 	if u.ID == 0 { //执行微信注册
 		u.InvitedBy = Ivt
-		up, err := c.initUser(u, models.AcctTypeWechat)
+		up, err := c.InitUser(u, models.AcctTypeWechat)
 		if err != nil {
 			beego.Error("注册用户失败", err, c.Ctx.Request.UserAgent())
 			dto.Message = "注册用户失败\t" + err.Error()
@@ -271,14 +288,17 @@ func (c *AuthController) WechatLogin() {
 	}
 }
 
-func (c *AuthController) initUser(u *models.User, acctType int) (*models.UserProfile, error) {
+//InitUser .
+func (c *AuthController) InitUser(u *models.User, acctType int) (*models.UserProfile, error) {
+	trans := models.TransactionGen()
+
 	if u.InvitedBy != 0 {
 		if err := (&models.User{ID: u.InvitedBy}).Read(); err != nil { //检测邀请人是否存在
 			u.InvitedBy = 0
+		} else {
+			(&models.UserExtra{ID: u.InvitedBy}).AddInviteCount(trans)
 		}
 	}
-
-	trans := models.TransactionGen()
 
 	u.AcctType = acctType
 	u.AcctStatus = models.AcctStatusNormal
@@ -300,7 +320,7 @@ func (c *AuthController) initUser(u *models.User, acctType int) (*models.UserPro
 
 	up := &models.UserProfile{ID: u.ID}
 	index := common.RandNumber(0, len(randomName))
-	up.Alias = randomName[index] //随机生成花名
+	up.Alias = randomName[index] + strconv.FormatUint(u.ID, 10) //随机生成花名
 	up.ImToken = imtk.Token
 	up.Birthday = 820425600
 	up.CoverPic = `{"cover_pic_info": {"image_url": "` + defaultBoysAvatar + `", "cloud_porn_check": true}}`
@@ -384,7 +404,7 @@ func genSelfUserPorfileInfo(up *models.UserProfile, pc *models.ProfileChg) (*Use
 
 	if up.Gender == models.GenderMan {
 		upi.IsFill = true
-	} else if len(up.Location) > 0 && up.Birthday > 0 && len(upi.Avatar) > 0 && len(up.Alias) > 0 {
+	} else if up.Gender == models.GenderWoman && len(up.Location) > 0 && up.Birthday > 0 && len(upi.Avatar) > 0 && len(up.Alias) > 0 {
 		upi.IsFill = true
 	} else {
 		upi.IsFill = false
@@ -423,4 +443,27 @@ func genUserPorfileInfoCommon(upi *UserProfileInfo, cv *models.UserCoverInfo) {
 	}
 
 	upi.Wallet = upi.Balance + upi.Income
+}
+
+func isFaker(num string) bool {
+	if faker.Users == nil || faker.Time.Before(time.Now()) {
+		uarr, _ := (&models.User{}).GetFakerNumber()
+		mp := make(map[string]models.User)
+
+		for index := range uarr {
+			u := uarr[index]
+			if len(u.PhoneNumber) == 0 {
+				continue
+			}
+			mp[u.PhoneNumber] = u
+		}
+
+		faker.Users = mp
+		faker.Time = time.Now().Add(5 * time.Minute)
+	}
+
+	if _, ok := faker.Users[num]; ok {
+		return true
+	}
+	return false
 }

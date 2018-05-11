@@ -222,7 +222,7 @@ func (c *UserController) Update() {
 				param["gender"] = models.GenderMan
 				up.Gender = models.GenderMan
 				defer func() {
-					if dto.Sucess {
+					if dto.Sucess && up.UserType != models.UserTypeFaker {
 						utils.SendP2PSysMessage(registWordMan, strconv.FormatUint(tk.ID, 10))
 					}
 				}()
@@ -230,7 +230,7 @@ func (c *UserController) Update() {
 				param["gender"] = models.GenderWoman
 				up.Gender = models.GenderWoman
 				defer func() {
-					if dto.Sucess {
+					if dto.Sucess && up.UserType != models.UserTypeFaker {
 						utils.SendP2PSysMessage(registWordWoman, strconv.FormatUint(tk.ID, 10))
 					}
 				}()
@@ -673,6 +673,7 @@ func (c *UserController) Report() {
 		return
 	}
 
+	utils.SendP2PSysMessage("已收到您的举报，请耐心等待运营人员处理。", strconv.FormatUint(tk.ID, 10))
 	dto.Message = "举报成功"
 	dto.Sucess = true
 }
@@ -1415,7 +1416,7 @@ func computeIncome(amount uint64) (income, inviteIncome int, err error) {
 		return
 	}
 
-	income = int(float64(amount) * (1 - rate.IncomeFee))            //收益金额
+	income = int(float64(amount) * rate.IncomeRate)                 //收益金额
 	inviteIncome = int(float64(income) * (rate.InviteIncomegeRate)) //分成金额
 	return
 }

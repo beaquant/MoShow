@@ -167,10 +167,10 @@ func (u *UserExtra) AddInviteIncomeHis(count uint64, trans *gorm.DB) error {
 		return errors.New("user_extra 更新用户历史收益 必须指定用户ID")
 	}
 
-	if trans != nil {
-		return trans.Model(u).Update("invite_income_his", gorm.Expr("invite_income_his + ?", count)).Error
+	if trans == nil {
+		trans = db
 	}
-	return db.Model(u).Update("invite_income_his", gorm.Expr("invite_income_his + ?", count)).Error
+	return trans.Model(u).Update("invite_income_his", gorm.Expr("invite_income_his + ?", count)).Error
 }
 
 //AddInviteCount .
@@ -179,8 +179,8 @@ func (u *UserExtra) AddInviteCount(trans *gorm.DB) error {
 		return errors.New("user_extra 更新邀请人数 必须指定用户ID")
 	}
 
-	if trans != nil {
-		return trans.Model(u).Update("invite_count", gorm.Expr("invite_count + ?", 1)).Error
+	if trans == nil {
+		trans = db
 	}
-	return db.Model(u).Update("invite_count", gorm.Expr("invite_count + ?", 1)).Error
+	return trans.Model(u).Update("invite_count", gorm.Expr("invite_count + ?", 1)).Error
 }

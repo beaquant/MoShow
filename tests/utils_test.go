@@ -125,6 +125,24 @@ func TestImSysMsg(t *testing.T) {
 	// t.Log(utils.SendSysMessage(&utils.ImSysNotifyMessage{Message: "名门97", Type: utils.ImSysNotifyMessageTypeText}, []string{"4"}))
 }
 
+func TestImImgMsg(t *testing.T) {
+	os.Setenv("HTTP_PROXY", "http://127.0.0.1:8889")
+	t.Log(utils.SendP2PSysImageMessage("http://pic6.wed114.cn/20130404/20130404143859739.JPG",
+		[]string{"169138", "169136", "169137", "169134", "100008", "5"}))
+}
+
+func TestImvoiceMsg(t *testing.T) {
+	os.Setenv("HTTP_PROXY", "http://127.0.0.1:8889")
+	t.Log(utils.SendP2PSysVoiceMessage("https://moshow-1255921343.cos.ap-shanghai.myqcloud.com/voice/f272948ce9d076f4f0f5bd83872af5e2.aac", 10*1000,
+		[]string{"169178"}))
+}
+
+func TestImVideoMsg(t *testing.T) {
+	os.Setenv("HTTP_PROXY", "http://127.0.0.1:8889")
+	t.Log(utils.SendP2PSysVideoMessage("https://moshow-1255921343.file.myqcloud.com/video/1691361525878287277977386.mp4",
+		[]string{"169178"}))
+}
+
 func TestTimeSubSeconds(t *testing.T) {
 	start := time.Now().Unix()
 	time.Sleep(time.Second * 2)
@@ -196,4 +214,8 @@ func (TextFormatter) Format(e *logrus.Entry) ([]byte, error) {
 	str += `
 `
 	return []byte(str), nil
+}
+
+func TestGenFacker(t *testing.T) {
+
 }

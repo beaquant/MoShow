@@ -1,6 +1,9 @@
 package utils
 
 import (
+	"net/url"
+	"path/filepath"
+
 	netease "github.com/MrSong0607/netease-im"
 	"github.com/astaxie/beego"
 )
@@ -41,6 +44,36 @@ func SendP2PMessage(fromID, toID, content string) error {
 //SendP2PSysMessage 发送点对点系统消息
 func SendP2PSysMessage(content string, toID string) error {
 	return SendP2PMessage(ImSysAdminID, toID, content)
+}
+
+//SendP2PSysImageMessage 发送图片系统消息
+func SendP2PSysImageMessage(URL string, toID []string) error {
+	u, err := url.Parse(URL)
+	if err != nil {
+		return err
+	}
+
+	return ImClient.SendBatchImageMessage(ImSysAdminID, toID, &netease.ImageMessage{URL: URL, Md5: ShaHashToHexStringFromString(URL), Extension: filepath.Ext(u.Path)}, nil)
+}
+
+//SendP2PSysVoiceMessage duration单位:毫秒
+func SendP2PSysVoiceMessage(URL string, duration uint, toID []string) error {
+	u, err := url.Parse(URL)
+	if err != nil {
+		return err
+	}
+
+	return ImClient.SendBatchVoiceMessage(ImSysAdminID, toID, &netease.VoiceMessage{URL: URL, Md5: ShaHashToHexStringFromString(URL), Duration: duration, Extension: filepath.Ext(u.Path)}, nil)
+}
+
+//SendP2PSysVideoMessage .
+func SendP2PSysVideoMessage(URL string, toID []string) error {
+	u, err := url.Parse(URL)
+	if err != nil {
+		return err
+	}
+
+	return ImClient.SendBatchVideoMessage(ImSysAdminID, toID, &netease.VideoMessage{URL: URL, Md5: ShaHashToHexStringFromString(URL), Extension: filepath.Ext(u.Path)}, nil)
 }
 
 //SendDIYSysMessage 发送自定义系统消息
