@@ -16,11 +16,15 @@ func (TimelineUser) TableName() string {
 func (t *TimelineUser) QueryAll(faker bool, gender, skip, limit int) ([]TimelineUser, error) {
 	var tl []TimelineUser
 
-	q := db.Where("gender = ?", gender)
+	q := db
 	if faker {
 		q = q.Where("user_type = ?", UserTypeFaker)
-	} else if gender == GenderWoman {
-		q = q.Where("user_type = ?", UserTypeAnchor)
+	} else {
+		q = q.Where("gender = ?", gender)
+
+		if gender == GenderWoman {
+			q = q.Where("user_type = ?", UserTypeAnchor)
+		}
 	}
 	return tl, q.Order("online_status = 1 or online_status = 2 desc, recent_duration desc").Offset(skip).Limit(limit).Find(&tl).Error
 }
@@ -29,14 +33,17 @@ func (t *TimelineUser) QueryAll(faker bool, gender, skip, limit int) ([]Timeline
 func (t *TimelineUser) QueryRecent(faker bool, timestamp int64, gender, skip, limit int) ([]TimelineUser, error) {
 	var tl []TimelineUser
 
-	q := db.Where("create_at > ?", timestamp).Where("gender = ?", gender)
+	q := db
 
 	if faker {
 		q = q.Where("user_type = ?", UserTypeFaker)
-	} else if gender == GenderWoman {
-		q = q.Where("user_type = ?", UserTypeAnchor)
-	}
+	} else {
+		q = q.Where("gender = ?", gender).Where("create_at > ?", timestamp)
 
+		if gender == GenderWoman {
+			q = q.Where("user_type = ?", UserTypeAnchor)
+		}
+	}
 	return tl, q.Order("online_status = 1 or online_status = 2 desc, recent_duration desc").Offset(skip).Limit(limit).Find(&tl).Error
 }
 
@@ -44,11 +51,16 @@ func (t *TimelineUser) QueryRecent(faker bool, timestamp int64, gender, skip, li
 func (t *TimelineUser) QuerySuggestion(faker bool, gender, skip, limit int) ([]TimelineUser, error) {
 	var tl []TimelineUser
 
-	q := db.Where("user_status = ?", UserStatusHot).Where("gender = ?", gender)
+	q := db.Where("user_status = ?", UserStatusHot)
+
 	if faker {
 		q = q.Where("user_type = ?", UserTypeFaker)
-	} else if gender == GenderWoman {
-		q = q.Where("user_type = ?", UserTypeAnchor)
+	} else {
+		q = q.Where("gender = ?", gender)
+
+		if gender == GenderWoman {
+			q = q.Where("user_type = ?", UserTypeAnchor)
+		}
 	}
 	return tl, q.Order("online_status = 1 or online_status = 2 desc, recent_duration desc").Offset(skip).Limit(limit).Find(&tl).Error
 }

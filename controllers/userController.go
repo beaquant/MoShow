@@ -84,8 +84,7 @@ func (c *UserController) Read() {
 	}
 
 	up := &models.UserProfile{ID: uid}
-	err = up.Read()
-	if err != nil {
+	if err = up.Read(); err != nil {
 		beego.Error("uid:", uidStr, err, c.Ctx.Request.UserAgent())
 		if err == gorm.ErrRecordNotFound {
 			dto.Message = "很抱歉,未能搜索到"
@@ -94,6 +93,19 @@ func (c *UserController) Read() {
 		}
 
 		return
+	}
+
+	if up.UserType != models.UserTypeFaker && up.ID != tk.ID {
+		mup := &models.UserProfile{ID: tk.ID}
+		if err := mup.Read(); err != nil {
+			dto.Message = "获取用户资料失败" + err.Error()
+			return
+		}
+
+		if mup.UserType == models.UserTypeFaker { //向马甲号隐藏真实用户
+			dto.Message = "很抱歉,未能搜索到"
+			return
+		}
 	}
 
 	upi := &UserProfileInfo{UserProfile: *up}

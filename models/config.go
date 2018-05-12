@@ -75,8 +75,7 @@ type ForceUpdateInfo struct {
 
 //ShareInfo .
 type ShareInfo struct {
-	Rule string `json:"rule" description:"奖励规则"`
-	// URL              string   `json:"url" description:"链接"`
+	Rule             string   `json:"rule" description:"奖励规则"`
 	AwardCopyWriting []string `json:"award_copywriting" description:"奖励文案"`
 }
 

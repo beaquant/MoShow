@@ -216,6 +216,25 @@ func (TextFormatter) Format(e *logrus.Entry) ([]byte, error) {
 	return []byte(str), nil
 }
 
-func TestGenFacker(t *testing.T) {
+func Test素数(t *testing.T) {
+	a := 23
 
+	if a < 1 {
+		t.Log("输入错误,不能小于1")
+		return
+	}
+
+	if a < 3 {
+		t.Log("是素数")
+		return
+	}
+
+	for i := 2; i < a; i++ {
+		if a%i == 0 {
+			t.Log("不是素数")
+			return
+		}
+	}
+
+	t.Log("是素数")
 }
