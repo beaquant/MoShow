@@ -60,7 +60,7 @@ func (c *AuthController) SendCode() {
 	utils.JSONUnMarshal(codeEx, ci)
 
 	if ci != nil && ci.Time > time.Now().Add(time.Minute*27).Unix() {
-		dto.Message = "验证码请求太频繁，请稍等"
+		dto.Message = "验证码获取太频繁"
 		return
 	}
 

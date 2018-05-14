@@ -24,6 +24,8 @@ func (t *TimelineUser) QueryAll(faker bool, gender, skip, limit int) ([]Timeline
 
 		if gender == GenderWoman {
 			q = q.Where("user_type = ?", UserTypeAnchor)
+		} else {
+			q = q.Where("user_type <> ?", UserTypeFaker)
 		}
 	}
 	return tl, q.Order("online_status = 1 or online_status = 2 desc, recent_duration desc").Offset(skip).Limit(limit).Find(&tl).Error
@@ -42,6 +44,8 @@ func (t *TimelineUser) QueryRecent(faker bool, timestamp int64, gender, skip, li
 
 		if gender == GenderWoman {
 			q = q.Where("user_type = ?", UserTypeAnchor)
+		} else {
+			q = q.Where("user_type <> ?", UserTypeFaker)
 		}
 	}
 	return tl, q.Order("online_status = 1 or online_status = 2 desc, recent_duration desc").Offset(skip).Limit(limit).Find(&tl).Error
@@ -60,6 +64,8 @@ func (t *TimelineUser) QuerySuggestion(faker bool, gender, skip, limit int) ([]T
 
 		if gender == GenderWoman {
 			q = q.Where("user_type = ?", UserTypeAnchor)
+		} else {
+			q = q.Where("user_type <> ?", UserTypeFaker)
 		}
 	}
 	return tl, q.Order("online_status = 1 or online_status = 2 desc, recent_duration desc").Offset(skip).Limit(limit).Find(&tl).Error
