@@ -72,6 +72,7 @@ type ChatChannel struct {
 	Amount           uint64
 	GiftAmount       uint64
 	logger           *logrus.Entry
+	logFile          *os.File
 	Src              *ChatClient
 	Dst              *ChatClient
 	Send             chan *WsMessage
@@ -351,7 +352,7 @@ func (c *ChatChannel) Run() {
 		beego.Error("打开日志文件失败", err)
 	} else {
 		c.logger.Logger.Out = file
-		defer file.Close()
+		c.logFile = file
 	}
 	c.logger.Infof("[uid:%d,aid:%d]房间创建成功", c.ID, c.DstID)
 	defer c.CloseChannel()
@@ -469,6 +470,7 @@ func (c *ChatChannel) Run() {
 			ms.Content, _ = utils.JSONMarshalToString(vc)
 			c.Src.Send <- ms
 			c.Dst.Send <- ms
+			time.Sleep(time.Second)
 			c.logger.Infof("[dial:%d]%s", c.DialID, "房间结算成功")
 			return
 		}
@@ -637,6 +639,7 @@ func (c *ChatChannel) CloseChannel() {
 	if c.Dst != nil {
 		close(c.Dst.Send)
 	}
+	c.logFile.Close()
 }
 
 func (c *ChatClient) Read() {
@@ -648,8 +651,6 @@ func (c *ChatClient) Read() {
 			debug.PrintStack()
 		}
 
-		c.Conn.Close()
-
 		if !c.Channel.Stoped { //未结算
 			c.Channel.logger.Infof("[uid:%d]ws:%p,%s", c.User.ID, c.Conn, "用户主动挂断或等待重连超时,执行退出流程")
 			c.Channel.Exit <- nil //发送退出信号,关闭通道后write方法会立即退出
@@ -660,7 +661,6 @@ func (c *ChatClient) Read() {
 	c.Conn.SetReadDeadline(deadline)
 	c.Conn.SetPongHandler(func(pong string) error {
 		if c.Channel.Stoped {
-			c.Conn.Close()
 			return errors.New("通道已关闭")
 		}
 
@@ -681,14 +681,14 @@ func (c *ChatClient) Read() {
 		m := &WsMessage{}
 		_, message, err := c.Conn.ReadMessage()
 		if err != nil {
-			if _, ok := err.(*websocket.CloseError); ok {
+			if _, ok := err.(*websocket.CloseError); ok && !c.Channel.Stoped {
 				if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 					c.Channel.logger.Errorf("[uid:%d]链接异常挂断:%s", c.User.ID, err.Error())
 				} else {
 					c.Channel.logger.Infof("[uid:%d]链接主动挂断:%s", c.User.ID, err.Error())
 					return
 				}
-			} else {
+			} else if !c.Channel.Stoped {
 				c.Channel.logger.Errorf("[uid:%d]读取消息错误:%s", c.User.ID, err)
 			}
 
@@ -756,7 +756,7 @@ func (c *ChatClient) Write() {
 			}
 		case <-ticker.C:
 			if c.Channel.Stoped {
-				return
+				break
 			}
 			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
 
