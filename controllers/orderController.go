@@ -101,7 +101,6 @@ func (c *OrderController) CreateWebPay() {
 	}
 	models.TransactionCommit(trans)
 
-	beego.Info(uri)
 	dto.Data = uri
 	dto.Sucess = true
 }

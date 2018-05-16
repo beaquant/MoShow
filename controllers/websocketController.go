@@ -13,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jinzhu/gorm"
+
 	"github.com/astaxie/beego"
 	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
@@ -111,7 +113,7 @@ func closeConnWithMessage(conn *websocket.Conn, ws *WsMessage) {
 	conn.SetWriteDeadline(time.Now().Add(writeWait))
 	conn.WriteJSON(ws)
 	conn.WriteMessage(websocket.CloseNormalClosure, b)
-	beego.Info("服务器主动挂断,并推送消息")
+	beego.Info("服务器主动挂断,并推送消息", string(b))
 	conn.Close()
 }
 
@@ -227,25 +229,26 @@ func (c *WebsocketController) Join() {
 
 	ws := &WsMessage{MessageType: wsMessageTypeException}
 	tk := GetToken(c.Ctx)
-	cn, ok := chatChannels[channelid]
-	if !ok || (cn.DstID != tk.ID && cn.ID != tk.ID) {
+	if cn, ok := chatChannels[channelid]; !ok {
+		ws.Content = "房间不存在或已关闭，加入失败"
+		beego.Error(ws.Content, tk.ID, c.Ctx.Request.UserAgent())
+		closeConnWithMessage(conn, ws)
+		return
+	} else if cn.DstID != tk.ID && cn.ID != tk.ID {
 		ws.Content = "用户不属于该房间，禁止加入"
 		beego.Error(ws.Content, tk.ID, c.Ctx.Request.UserAgent())
 		closeConnWithMessage(conn, ws)
 		return
-	}
-
-	if cn.StopTime != 0 {
+	} else if cn.Stoped {
 		ws.Content = "房间已关闭,加入失败"
 		beego.Error(ws.Content, tk.ID, c.Ctx.Request.UserAgent())
 		closeConnWithMessage(conn, ws)
 		return
-	}
-
-	if tk.ID == cn.ID && !cn.Stoped {
+	} else if tk.ID == cn.ID {
 		cn.logger.Info("用户重连成功,尝试挂断旧连接")
-		cn.Src.Conn.Close()
+		old := cn.Src.Conn
 		cn.Src.Conn = conn
+		old.Close()
 	} else if tk.ID == cn.DstID {
 		if cn.Dst == nil {
 			up := &models.UserProfile{ID: tk.ID}
@@ -264,8 +267,10 @@ func (c *WebsocketController) Join() {
 			cn.Join <- client
 		} else if !cn.Stoped {
 			cn.logger.Info("主播重连成功,尝试挂断旧连接")
-			cn.Dst.Conn.Close()
+
+			old := cn.Dst.Conn
 			cn.Dst.Conn = conn
+			old.Close()
 		}
 	}
 
@@ -424,19 +429,20 @@ func (c *ChatChannel) Run() {
 			}
 
 			//生成通话记录
-			dl, dt := &models.Dial{ID: c.DialID}, &models.DialTag{}
+			dl, dt, errStr := &models.Dial{ID: c.DialID}, &models.DialTag{}, "[]"
 			if exp != nil {
 				dl.Status = models.DialStatusException
 				for _, val := range exp {
 					dt.ErrorMsg = append(dt.ErrorMsg, val.Error())
+					c.logger.Errorf("视频过程中发生错误:%s", val.Error())
 				}
-				dl.Tag, _ = utils.JSONMarshalToString(dt)
+				errStr, _ = utils.JSONMarshalToString(dt.ErrorMsg)
 			} else {
 				dl.Status = models.DialStatusSuccess
 			}
 
 			trans := models.TransactionGen()
-			if err := dl.Update(map[string]interface{}{"duration": c.Timelong, "create_at": c.ChannelStartTime, "status": dl.Status, "clearing": ciStr}, trans); err != nil {
+			if err := dl.Update(map[string]interface{}{"duration": c.Timelong, "create_at": c.ChannelStartTime, "status": dl.Status, "clearing": ciStr, "tag": gorm.Expr(`JSON_SET(COALESCE(tag,"{}"),"$.errors",?)`, errStr)}, trans); err != nil {
 				js, _ := utils.JSONMarshalToString(dl)
 				c.logger.Error("[websocket结算异常]通话记录更新失败", err, js)
 				models.TransactionRollback(trans)
@@ -653,6 +659,11 @@ func (c *ChatClient) Read() {
 	c.Conn.SetReadLimit(maxMessageSize)
 	c.Conn.SetReadDeadline(deadline)
 	c.Conn.SetPongHandler(func(pong string) error {
+		if c.Channel.Stoped {
+			c.Conn.Close()
+			return errors.New("通道已关闭")
+		}
+
 		c.Channel.logger.Infof("[uid:%d]%s", c.User.ID, "收到pong消息,刷新deadline")
 
 		if _, ok := chatChannels[c.Channel.ID]; ok {
@@ -744,6 +755,9 @@ func (c *ChatClient) Write() {
 				c.Channel.logger.Error("[ws(发送消息出错)]:", err, "消息内容", ms)
 			}
 		case <-ticker.C:
+			if c.Channel.Stoped {
+				return
+			}
 			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
 
 			if err := c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {

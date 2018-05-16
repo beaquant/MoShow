@@ -1406,7 +1406,7 @@ func videoDone(from, to *models.UserProfile, video *models.VideoChgInfo, amount 
 func videoAllocateFund(from, to *models.UserProfile, price uint64) error {
 	trans := models.TransactionGen() //开始事务
 
-	beego.Info("视频扣费,用户ID:", from.ID, "金额:", price)
+	// beego.Info("视频扣费,用户ID:", from.ID, "金额:", price)
 	if err := from.Read(); err != nil {
 		return err
 	}

@@ -120,7 +120,7 @@ func (Config) TableName() string {
 func (c *Config) GetCommonGiftInfo() ([]Gift, error) {
 	if tm, ok := updateTime[configTypeGift]; giftList == nil || !ok || tm.Add(time.Minute*5).Before(time.Now()) {
 		var cf []Config
-		if err := db.Debug().Where("conf_key = ?", configTypeGift).Find(&cf).Error; err != nil {
+		if err := db.Where("conf_key = ?", configTypeGift).Find(&cf).Error; err != nil {
 			return nil, err
 		}
 
@@ -148,7 +148,7 @@ func (c *Config) GetCommonGiftInfo() ([]Gift, error) {
 func (c *Config) GetProductInfo() ([]Product, error) {
 	if tm, ok := updateTime[configTypeProduct]; giftList == nil || !ok || tm.Add(time.Minute*5).Before(time.Now()) {
 		var cf []Config
-		if err := db.Debug().Where("conf_key = ?", configTypeProduct).Find(&cf).Error; err != nil {
+		if err := db.Where("conf_key = ?", configTypeProduct).Find(&cf).Error; err != nil {
 			return nil, err
 		}
 
