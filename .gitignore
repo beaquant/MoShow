@@ -19,6 +19,7 @@ debug
 .glide/
 
 app.conf
+tests/conf/app.conf
 swagger
 MoShow
 MoShow.tar.gz
