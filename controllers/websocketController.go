@@ -28,7 +28,7 @@ const (
 	pongWait = 65 * time.Second
 
 	// Send pings to peer with this period. Must be less than pongWait.
-	pingPeriod = 10 * time.Second
+	pingPeriod = 5 * time.Second
 
 	// Maximum message size allowed from peer.
 	maxMessageSize = 512
@@ -83,11 +83,12 @@ type ChatChannel struct {
 
 //ChatClient .
 type ChatClient struct {
-	User    *models.UserProfile
-	Channel *ChatChannel
-	Conn    *websocket.Conn
-	Request *http.Request
-	Send    chan *WsMessage
+	User     *models.UserProfile
+	Channel  *ChatChannel
+	Conn     *websocket.Conn
+	Request  *http.Request
+	Send     chan *WsMessage
+	DeadLine time.Time
 }
 
 //WsMessage .
@@ -199,7 +200,7 @@ func (c *WebsocketController) Create() {
 	channel := &ChatChannel{Join: make(chan *ChatClient, 5), Send: make(chan *WsMessage, 5), Exit: make(chan []error, 5), Gift: make(chan *models.GiftHisInfo, 5), ID: tk.ID, DstID: parter, DialID: dl.ID}
 	go channel.Run()
 
-	client := &ChatClient{User: up, Conn: conn, Send: make(chan *WsMessage), Request: c.Ctx.Request}
+	client := &ChatClient{User: up, Conn: conn, Send: make(chan *WsMessage), Request: c.Ctx.Request, DeadLine: time.Now().Add(pongWait)}
 	client.Channel = channel
 	chatChannels[tk.ID] = channel
 	chattingUser[tk.ID] = nil
@@ -261,7 +262,7 @@ func (c *WebsocketController) Join() {
 			}
 
 			cn.Price = up.Price
-			client := &ChatClient{User: up, Channel: cn, Conn: conn, Send: make(chan *WsMessage), Request: c.Ctx.Request}
+			client := &ChatClient{User: up, Channel: cn, Conn: conn, Send: make(chan *WsMessage), Request: c.Ctx.Request, DeadLine: time.Now().Add(pongWait)}
 
 			go client.Read()
 			go client.Write()
@@ -643,8 +644,6 @@ func (c *ChatChannel) CloseChannel() {
 }
 
 func (c *ChatClient) Read() {
-	curConnection, deadline := c.Conn, time.Now().Add(pongWait)
-
 	defer func() {
 		if err := recover(); err != nil {
 			beego.Error(err)
@@ -657,21 +656,8 @@ func (c *ChatClient) Read() {
 		}
 	}()
 
-	c.Conn.SetReadLimit(maxMessageSize)
-	c.Conn.SetReadDeadline(deadline)
-	c.Conn.SetPongHandler(func(pong string) error {
-		if c.Channel.Stoped {
-			return errors.New("通道已关闭")
-		}
-
-		c.Channel.logger.Infof("[uid:%d]%s", c.User.ID, "收到pong消息,刷新deadline")
-
-		if _, ok := chatChannels[c.Channel.ID]; ok {
-			deadline = time.Now().Add(pongWait)
-			c.Conn.SetReadDeadline(deadline)
-		}
-		return nil
-	})
+	curConnection := c.Conn
+	c.connInit()
 
 	for {
 		if c.Channel.Stoped {
@@ -692,7 +678,7 @@ func (c *ChatClient) Read() {
 				c.Channel.logger.Errorf("[uid:%d]读取消息错误:%s", c.User.ID, err)
 			}
 
-			for time.Now().Before(deadline) { //在截止时间之前,间隔一秒判断是否重连
+			for time.Now().Before(c.DeadLine) { //在截止时间之前,间隔一秒判断是否重连
 				if c.Channel.Stoped { //聊天结束
 					return
 				}
@@ -707,6 +693,7 @@ func (c *ChatClient) Read() {
 				c.Channel.logger.Infof("[uid:%d]重连成功,房间继续保留", c.User.ID)
 				curConnection.Close()
 				curConnection = c.Conn
+				c.connInit()
 				continue
 			}
 			return
@@ -765,4 +752,23 @@ func (c *ChatClient) Write() {
 			}
 		}
 	}
+}
+
+func (c *ChatClient) connInit() {
+	c.DeadLine = time.Now().Add(pongWait)
+	c.Conn.SetReadLimit(maxMessageSize)
+	c.Conn.SetReadDeadline(c.DeadLine)
+	c.Conn.SetPongHandler(func(pong string) error {
+		if c.Channel.Stoped {
+			return errors.New("通道已关闭")
+		}
+
+		c.Channel.logger.Infof("[uid:%d]%s", c.User.ID, "收到pong消息,刷新deadline")
+
+		if _, ok := chatChannels[c.Channel.ID]; ok {
+			c.DeadLine = time.Now().Add(pongWait)
+			c.Conn.SetReadDeadline(c.DeadLine)
+		}
+		return nil
+	})
 }
