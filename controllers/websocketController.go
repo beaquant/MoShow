@@ -722,6 +722,7 @@ func (c *ChatClient) Write() {
 
 		c.Conn.Close()
 		ticker.Stop()
+		c.Channel.logFile.Close()
 	}()
 	for {
 		select {

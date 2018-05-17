@@ -18,7 +18,8 @@ debug
 # Project-local glide cache, RE: https://github.com/Masterminds/glide/issues/736
 .glide/
 
-conf/app.conf
+app.conf
+tests/conf/app.conf
 swagger
 MoShow
 MoShow.tar.gz
