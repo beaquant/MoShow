@@ -59,8 +59,9 @@ type CommonConfig struct {
 	WithdrawCopywriting   string           `json:"wd_copywriting" description:"提现文案"`                          //提现文案
 	RechargeCopywriting   string           `json:"rcg_copywriting" description:"充值文案"`                         //充值文案
 	Banners               []Banner         `json:"banners" description:"轮播图"`                                  //轮播图
-	VideoPrice            uint64           `json:"vod_value" description:"形象视频扣费价格"`                           //形象视频扣费价格
-	MessagePrice          uint64           `json:"msg_value" description:"私聊扣费价格"`                             //私聊扣费价格
+	CheckModeBanners      []Banner         `json:"check_mode_banners" description:"审核模式轮播图"`
+	VideoPrice            uint64           `json:"vod_value" description:"形象视频扣费价格"` //形象视频扣费价格
+	MessagePrice          uint64           `json:"msg_value" description:"私聊扣费价格"`   //私聊扣费价格
 }
 
 //ForceUpdateInfo .
@@ -74,8 +75,7 @@ type ForceUpdateInfo struct {
 
 //ShareInfo .
 type ShareInfo struct {
-	Rule string `json:"rule" description:"奖励规则"`
-	// URL              string   `json:"url" description:"链接"`
+	Rule             string   `json:"rule" description:"奖励规则"`
 	AwardCopyWriting []string `json:"award_copywriting" description:"奖励文案"`
 }
 
@@ -100,7 +100,7 @@ type Product struct {
 type IncomeRate struct {
 	InviteRechargeRate float64 `json:"invite_recharge_rate"` //被邀请人充值分成率
 	InviteIncomegeRate float64 `json:"invite_income_rate"`   //被邀请人收益分成
-	IncomeFee          float64 `json:"income_fee"`           //收益手续费
+	IncomeRate         float64 `json:"income_rate"`          //收益手续费
 }
 
 //Banner 首页banner
@@ -120,7 +120,7 @@ func (Config) TableName() string {
 func (c *Config) GetCommonGiftInfo() ([]Gift, error) {
 	if tm, ok := updateTime[configTypeGift]; giftList == nil || !ok || tm.Add(time.Minute*5).Before(time.Now()) {
 		var cf []Config
-		if err := db.Debug().Where("conf_key = ?", configTypeGift).Find(&cf).Error; err != nil {
+		if err := db.Where("conf_key = ?", configTypeGift).Find(&cf).Error; err != nil {
 			return nil, err
 		}
 
@@ -148,7 +148,7 @@ func (c *Config) GetCommonGiftInfo() ([]Gift, error) {
 func (c *Config) GetProductInfo() ([]Product, error) {
 	if tm, ok := updateTime[configTypeProduct]; giftList == nil || !ok || tm.Add(time.Minute*5).Before(time.Now()) {
 		var cf []Config
-		if err := db.Debug().Where("conf_key = ?", configTypeProduct).Find(&cf).Error; err != nil {
+		if err := db.Where("conf_key = ?", configTypeProduct).Find(&cf).Error; err != nil {
 			return nil, err
 		}
 

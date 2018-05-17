@@ -13,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jinzhu/gorm"
+
 	"github.com/astaxie/beego"
 	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
@@ -20,7 +22,7 @@ import (
 
 const (
 	// Time allowed to write a message to the peer.
-	writeWait = 30 * time.Second
+	writeWait = 10 * time.Second
 
 	// Time allowed to read the next pong message from the peer.
 	pongWait = 65 * time.Second
@@ -70,6 +72,7 @@ type ChatChannel struct {
 	Amount           uint64
 	GiftAmount       uint64
 	logger           *logrus.Entry
+	logFile          *os.File
 	Src              *ChatClient
 	Dst              *ChatClient
 	Send             chan *WsMessage
@@ -98,7 +101,7 @@ type WsMessage struct {
 type VideoCost struct {
 	Balance       uint64 `json:"balance" description:"用户余额"`
 	Cost          uint64 `json:"cost" description:"用户花费"`
-	AnchorBalance uint64 `json:"anchor_balance" description:"主播余额"`
+	AnchorBalance uint64 `json:"ac_blc" description:"主播余额"`
 	Income        uint64 `json:"income,omitempty" description:"主播收益"`
 	Timelong      uint64 `json:"timelong" description:"聊天时长"`
 	NIMChannelID  uint64 `json:"NIMChannelID,omitempty" description:"网易云房间ID"`
@@ -111,7 +114,7 @@ func closeConnWithMessage(conn *websocket.Conn, ws *WsMessage) {
 	conn.SetWriteDeadline(time.Now().Add(writeWait))
 	conn.WriteJSON(ws)
 	conn.WriteMessage(websocket.CloseNormalClosure, b)
-	beego.Info("服务器主动挂断,并推送消息")
+	beego.Info("服务器主动挂断,并推送消息", string(b))
 	conn.Close()
 }
 
@@ -165,6 +168,12 @@ func (c *WebsocketController) Create() {
 		return
 	}
 
+	if pp.OnlineStatus == models.OnlineStatusBusy {
+		ws.Content = "对方暂时离开，请稍后再拨"
+		closeConnWithMessage(conn, ws)
+		return
+	}
+
 	if pp.UserType != models.UserTypeAnchor {
 		ws.Content = "对方不是主播,不能直播"
 		closeConnWithMessage(conn, ws)
@@ -187,7 +196,7 @@ func (c *WebsocketController) Create() {
 	}
 
 	//Exit通道要设置缓冲区，不然会在写Exit的时候死锁导致无法读Exit
-	channel := &ChatChannel{Join: make(chan *ChatClient), Send: make(chan *WsMessage), Exit: make(chan []error, 1), Gift: make(chan *models.GiftHisInfo), ID: tk.ID, DstID: parter, DialID: dl.ID}
+	channel := &ChatChannel{Join: make(chan *ChatClient, 5), Send: make(chan *WsMessage, 5), Exit: make(chan []error, 5), Gift: make(chan *models.GiftHisInfo, 5), ID: tk.ID, DstID: parter, DialID: dl.ID}
 	go channel.Run()
 
 	client := &ChatClient{User: up, Conn: conn, Send: make(chan *WsMessage), Request: c.Ctx.Request}
@@ -221,27 +230,26 @@ func (c *WebsocketController) Join() {
 
 	ws := &WsMessage{MessageType: wsMessageTypeException}
 	tk := GetToken(c.Ctx)
-	cn, ok := chatChannels[channelid]
-	if !ok || (cn.DstID != tk.ID && cn.ID != tk.ID) {
+	if cn, ok := chatChannels[channelid]; !ok {
+		ws.Content = "房间不存在或已关闭，加入失败"
+		beego.Error(ws.Content, tk.ID, c.Ctx.Request.UserAgent())
+		closeConnWithMessage(conn, ws)
+		return
+	} else if cn.DstID != tk.ID && cn.ID != tk.ID {
 		ws.Content = "用户不属于该房间，禁止加入"
 		beego.Error(ws.Content, tk.ID, c.Ctx.Request.UserAgent())
 		closeConnWithMessage(conn, ws)
 		return
-	}
-
-	if cn.StopTime != 0 {
+	} else if cn.Stoped {
 		ws.Content = "房间已关闭,加入失败"
 		beego.Error(ws.Content, tk.ID, c.Ctx.Request.UserAgent())
 		closeConnWithMessage(conn, ws)
 		return
-	}
-
-	var client *ChatClient
-	if tk.ID == cn.ID && !cn.Stoped {
+	} else if tk.ID == cn.ID {
 		cn.logger.Info("用户重连成功,尝试挂断旧连接")
-		cn.Src.Conn.Close()
+		old := cn.Src.Conn
 		cn.Src.Conn = conn
-		client = cn.Src
+		old.Close()
 	} else if tk.ID == cn.DstID {
 		if cn.Dst == nil {
 			up := &models.UserProfile{ID: tk.ID}
@@ -253,21 +261,22 @@ func (c *WebsocketController) Join() {
 			}
 
 			cn.Price = up.Price
-			client = &ChatClient{User: up, Channel: cn, Conn: conn, Send: make(chan *WsMessage), Request: c.Ctx.Request}
+			client := &ChatClient{User: up, Channel: cn, Conn: conn, Send: make(chan *WsMessage), Request: c.Ctx.Request}
 
+			go client.Read()
+			go client.Write()
 			cn.Join <- client
 		} else if !cn.Stoped {
 			cn.logger.Info("主播重连成功,尝试挂断旧连接")
-			cn.Dst.Conn.Close()
+
+			old := cn.Dst.Conn
 			cn.Dst.Conn = conn
-			client = cn.Dst
+			old.Close()
 		}
 	}
 
 	chattingUser[tk.ID] = nil
 
-	go client.Read()
-	go client.Write()
 }
 
 //Reject .
@@ -334,8 +343,6 @@ func (ChatChannel) Format(e *logrus.Entry) ([]byte, error) {
 
 //Run .
 func (c *ChatChannel) Run() {
-	defer c.CloseChannel()
-
 	c.ChannelStartTime = time.Now().Unix()
 	//初始化日志模块
 	c.logger = logrus.WithFields(logrus.Fields{"dial_id": c.DialID})
@@ -345,9 +352,10 @@ func (c *ChatChannel) Run() {
 		beego.Error("打开日志文件失败", err)
 	} else {
 		c.logger.Logger.Out = file
-		defer file.Close()
+		c.logFile = file
 	}
 	c.logger.Infof("[uid:%d,aid:%d]房间创建成功", c.ID, c.DstID)
+	defer c.CloseChannel()
 
 	for {
 		select {
@@ -379,6 +387,9 @@ func (c *ChatChannel) Run() {
 				c.Dst.Send <- m
 			}
 		case exp := <-c.Exit:
+			if c.Stoped {
+				break
+			}
 			c.Stoped = true
 
 			if c.StartTime == 0 {
@@ -419,19 +430,20 @@ func (c *ChatChannel) Run() {
 			}
 
 			//生成通话记录
-			dl, dt := &models.Dial{ID: c.DialID}, &models.DialTag{}
+			dl, dt, errStr := &models.Dial{ID: c.DialID}, &models.DialTag{}, "[]"
 			if exp != nil {
 				dl.Status = models.DialStatusException
 				for _, val := range exp {
 					dt.ErrorMsg = append(dt.ErrorMsg, val.Error())
+					c.logger.Errorf("视频过程中发生错误:%s", val.Error())
 				}
-				dl.Tag, _ = utils.JSONMarshalToString(dt)
+				errStr, _ = utils.JSONMarshalToString(dt.ErrorMsg)
 			} else {
 				dl.Status = models.DialStatusSuccess
 			}
 
 			trans := models.TransactionGen()
-			if err := dl.Update(map[string]interface{}{"duration": c.Timelong, "create_at": c.ChannelStartTime, "status": dl.Status, "clearing": ciStr}, trans); err != nil {
+			if err := dl.Update(map[string]interface{}{"duration": c.Timelong, "create_at": c.ChannelStartTime, "status": dl.Status, "clearing": ciStr, "tag": gorm.Expr(`JSON_SET(COALESCE(tag,"{}"),"$.errors",?)`, errStr)}, trans); err != nil {
 				js, _ := utils.JSONMarshalToString(dl)
 				c.logger.Error("[websocket结算异常]通话记录更新失败", err, js)
 				models.TransactionRollback(trans)
@@ -454,9 +466,11 @@ func (c *ChatChannel) Run() {
 			vc, _ := c.genVideoCost()
 			gincome, _, _ := computeIncome(c.GiftAmount)
 			vc.Income, vc.NIMChannelID = uint64(income+gincome), c.NIMChannelID
+			vc.Cost += c.GiftAmount
 			ms.Content, _ = utils.JSONMarshalToString(vc)
 			c.Src.Send <- ms
 			c.Dst.Send <- ms
+			time.Sleep(time.Second)
 			c.logger.Infof("[dial:%d]%s", c.DialID, "房间结算成功")
 			return
 		}
@@ -489,7 +503,11 @@ func (c *ChatChannel) wsMsgDeal(msg *WsMessage) {
 
 		if !c.Inited { //双方进入房间，初始化房间，开始视频
 			c.Inited = true
-			c.StartTime = time.Now().Unix()
+
+			if c.NIMChannelID != 0 {
+				ciStr, _ := utils.JSONMarshalToString(&models.ClearingInfo{NIMChannelID: c.NIMChannelID})
+				(&models.Dial{ID: c.DialID}).Update(map[string]interface{}{"clearing": ciStr}, nil)
+			}
 
 			c.logger.Info("视频开始,开始扣费")
 			c.Amount += c.Price
@@ -497,15 +515,12 @@ func (c *ChatChannel) wsMsgDeal(msg *WsMessage) {
 			if err := videoAllocateFund(c.Src.User, c.Dst.User, c.Price); err != nil {
 				c.logger.Error("扣费失败", err)
 				if !c.Stoped {
-					c.Exit <- nil
+					c.Exit <- []error{err}
 				}
+				return
 			}
 
-			if c.NIMChannelID != 0 {
-				ciStr, _ := utils.JSONMarshalToString(&models.ClearingInfo{NIMChannelID: c.NIMChannelID, Cost: c.Amount})
-				(&models.Dial{ID: c.DialID}).Update(map[string]interface{}{"clearing": ciStr}, nil)
-			}
-
+			c.StartTime = time.Now().Unix() + 1 //精度问题
 			go c.ticktokPay()
 		}
 
@@ -554,6 +569,7 @@ func (c *ChatChannel) wsMsgDeal(msg *WsMessage) {
 
 func (c *ChatChannel) ticktokPay() {
 	ticker := time.NewTicker(60 * time.Second)
+
 	defer func() {
 		if err := recover(); err != nil {
 			c.logger.Error(err)
@@ -565,13 +581,13 @@ func (c *ChatChannel) ticktokPay() {
 	for {
 		select {
 		case <-ticker.C:
-			if c.StopTime == 0 { //若频道未关闭,每隔60秒扣费一次
+			if !c.Stoped { //若频道未关闭,每隔60秒扣费一次
 				c.Timelong = uint64(time.Now().Unix() - c.StartTime)
 
 				//扣费
 				if err := videoAllocateFund(c.Src.User, c.Dst.User, c.Price); err != nil { //扣费失败关闭聊天频道
 					c.logger.Error(err)
-					m := &WsMessage{MessageType: wsMessageTypeSystem, Content: "用户扣费失败"}
+					m := &WsMessage{MessageType: wsMessageTypeSystem, Content: "余额不足，已结束视频"}
 					c.Src.Send <- m
 					c.Dst.Send <- m
 
@@ -634,53 +650,70 @@ func (c *ChatClient) Read() {
 			debug.PrintStack()
 		}
 
-		curConnection.Close()
-		for time.Now().Before(deadline) { //在截止时间之前,间隔一秒判断是否重连
-			if c.Channel.StopTime == 0 { //聊天通道未结束
-				if curConnection != c.Conn { //重连成功
-					c.Channel.logger.Info("重连成功,房间继续保留,房间ID:", c.Channel.ID)
-					return
-				}
-			}
-			time.Sleep(time.Second)
-		}
-
-		c.Channel.logger.Infof("[ws:%p]:%s", c.Conn, "用户主动挂断或等待重连超时,执行退出流程")
 		if !c.Channel.Stoped { //未结算
+			c.Channel.logger.Infof("[uid:%d]ws:%p,%s", c.User.ID, c.Conn, "用户主动挂断或等待重连超时,执行退出流程")
 			c.Channel.Exit <- nil //发送退出信号,关闭通道后write方法会立即退出
 		}
 	}()
-	curConnection.SetReadLimit(maxMessageSize)
-	curConnection.SetReadDeadline(deadline)
-	curConnection.SetPongHandler(func(pong string) error {
+
+	c.Conn.SetReadLimit(maxMessageSize)
+	c.Conn.SetReadDeadline(deadline)
+	c.Conn.SetPongHandler(func(pong string) error {
+		if c.Channel.Stoped {
+			return errors.New("通道已关闭")
+		}
+
 		c.Channel.logger.Infof("[uid:%d]%s", c.User.ID, "收到pong消息,刷新deadline")
 
 		if _, ok := chatChannels[c.Channel.ID]; ok {
 			deadline = time.Now().Add(pongWait)
-			curConnection.SetReadDeadline(deadline)
+			c.Conn.SetReadDeadline(deadline)
 		}
 		return nil
 	})
 
 	for {
+		if c.Channel.Stoped {
+			return
+		}
+
 		m := &WsMessage{}
-		_, message, err := curConnection.ReadMessage()
+		_, message, err := c.Conn.ReadMessage()
 		if err != nil {
-			if _, ok := err.(*websocket.CloseError); ok {
+			if _, ok := err.(*websocket.CloseError); ok && !c.Channel.Stoped {
 				if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-					c.Channel.logger.Error("链接异常挂断", err, "用户ID:", c.User.ID, "Agent:", c.Request.UserAgent())
+					c.Channel.logger.Errorf("[uid:%d]链接异常挂断:%s", c.User.ID, err.Error())
 				} else {
-					c.Channel.logger.Info("链接主动挂断", err, "用户ID:", c.User.ID, "Agent:", c.Request.UserAgent())
+					c.Channel.logger.Infof("[uid:%d]链接主动挂断:%s", c.User.ID, err.Error())
+					return
 				}
-			} else {
+			} else if !c.Channel.Stoped {
 				c.Channel.logger.Errorf("[uid:%d]读取消息错误:%s", c.User.ID, err)
 			}
-			break
+
+			for time.Now().Before(deadline) { //在截止时间之前,间隔一秒判断是否重连
+				if c.Channel.Stoped { //聊天结束
+					return
+				}
+
+				if curConnection != c.Conn { //重连成功
+					break
+				}
+				time.Sleep(time.Second)
+			}
+
+			if curConnection != c.Conn { //重连成功
+				c.Channel.logger.Infof("[uid:%d]重连成功,房间继续保留", c.User.ID)
+				curConnection.Close()
+				curConnection = c.Conn
+				continue
+			}
+			return
 		}
 
 		err = utils.JSONUnMarshalFromByte(message, m)
 		if err == nil {
-			if c.Channel.StopTime == 0 {
+			if !c.Channel.Stoped {
 				c.Channel.logger.Infof("[uid:%d]收到客户端消息:%s", c.User.ID, string(message))
 				c.Channel.Send <- m
 			}
@@ -691,7 +724,7 @@ func (c *ChatClient) Read() {
 }
 
 func (c *ChatClient) Write() {
-	ticker, curConnection := time.NewTicker(pingPeriod), c.Conn
+	ticker := time.NewTicker(pingPeriod)
 
 	defer func() {
 		if err := recover(); err != nil {
@@ -699,32 +732,36 @@ func (c *ChatClient) Write() {
 			debug.PrintStack()
 		}
 
+		c.Conn.Close()
 		ticker.Stop()
+		c.Channel.logFile.Close()
 	}()
 	for {
 		select {
 		case message, ok := <-c.Send:
 			if !ok {
-				break
+				return //通道关闭，聊天已挂断
 			}
 			if message != nil {
 				message.DialID = c.Channel.DialID
 			}
 
-			curConnection.SetWriteDeadline(time.Now().Add(writeWait))
+			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
 
 			ms, _ := utils.JSONMarshalToString(message)
 			c.Channel.logger.Infof("[uid:%d]发送消息:%s", c.User.ID, ms)
 
-			if err := curConnection.WriteJSON(message); err != nil {
+			if err := c.Conn.WriteJSON(message); err != nil {
 				c.Channel.logger.Error("[ws(发送消息出错)]:", err, "消息内容", ms)
 			}
 		case <-ticker.C:
-			curConnection.SetWriteDeadline(time.Now().Add(writeWait))
+			if c.Channel.Stoped {
+				break
+			}
+			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
 
-			if err := curConnection.WriteMessage(websocket.PingMessage, nil); err != nil {
-				c.Channel.logger.Warningf("[uid:%d]%s", c.User.ID, "ping操作错误,进入等待重连状态")
-				return //ping失败，网络中断,退出循环
+			if err := c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				c.Channel.logger.Warningf("[uid:%d]%s", c.User.ID, "ping失败")
 			}
 		}
 	}

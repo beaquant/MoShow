@@ -78,7 +78,7 @@ func ImgPornCheckSingle(url string) (bool, error) {
 		return false, err
 	}
 
-	if res.Result == qCloud.PornDetectPorn {
+	if res.Result == qCloud.PornDetectPorn || res.PornScore >= 83 {
 		return true, nil
 	}
 

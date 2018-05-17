@@ -84,8 +84,7 @@ func (c *UserController) Read() {
 	}
 
 	up := &models.UserProfile{ID: uid}
-	err = up.Read()
-	if err != nil {
+	if err = up.Read(); err != nil {
 		beego.Error("uid:", uidStr, err, c.Ctx.Request.UserAgent())
 		if err == gorm.ErrRecordNotFound {
 			dto.Message = "很抱歉,未能搜索到"
@@ -94,6 +93,19 @@ func (c *UserController) Read() {
 		}
 
 		return
+	}
+
+	if up.UserType != models.UserTypeFaker && up.ID != tk.ID {
+		mup := &models.UserProfile{ID: tk.ID}
+		if err := mup.Read(); err != nil {
+			dto.Message = "获取用户资料失败" + err.Error()
+			return
+		}
+
+		if mup.UserType == models.UserTypeFaker { //向马甲号隐藏真实用户
+			dto.Message = "很抱歉,未能搜索到"
+			return
+		}
 	}
 
 	upi := &UserProfileInfo{UserProfile: *up}
@@ -222,7 +234,7 @@ func (c *UserController) Update() {
 				param["gender"] = models.GenderMan
 				up.Gender = models.GenderMan
 				defer func() {
-					if dto.Sucess {
+					if dto.Sucess && up.UserType != models.UserTypeFaker {
 						utils.SendP2PSysMessage(registWordMan, strconv.FormatUint(tk.ID, 10))
 					}
 				}()
@@ -230,7 +242,7 @@ func (c *UserController) Update() {
 				param["gender"] = models.GenderWoman
 				up.Gender = models.GenderWoman
 				defer func() {
-					if dto.Sucess {
+					if dto.Sucess && up.UserType != models.UserTypeFaker {
 						utils.SendP2PSysMessage(registWordWoman, strconv.FormatUint(tk.ID, 10))
 					}
 				}()
@@ -673,6 +685,7 @@ func (c *UserController) Report() {
 		return
 	}
 
+	utils.SendP2PSysMessage("已收到您的举报，请耐心等待运营人员处理。", strconv.FormatUint(tk.ID, 10))
 	dto.Message = "举报成功"
 	dto.Sucess = true
 }
@@ -1393,7 +1406,7 @@ func videoDone(from, to *models.UserProfile, video *models.VideoChgInfo, amount 
 func videoAllocateFund(from, to *models.UserProfile, price uint64) error {
 	trans := models.TransactionGen() //开始事务
 
-	beego.Info("视频扣费,用户ID:", from.ID, "金额:", price)
+	// beego.Info("视频扣费,用户ID:", from.ID, "金额:", price)
 	if err := from.Read(); err != nil {
 		return err
 	}
@@ -1415,7 +1428,7 @@ func computeIncome(amount uint64) (income, inviteIncome int, err error) {
 		return
 	}
 
-	income = int(float64(amount) * (1 - rate.IncomeFee))            //收益金额
+	income = int(float64(amount) * rate.IncomeRate)                 //收益金额
 	inviteIncome = int(float64(income) * (rate.InviteIncomegeRate)) //分成金额
 	return
 }

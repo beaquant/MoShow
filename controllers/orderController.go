@@ -101,7 +101,6 @@ func (c *OrderController) CreateWebPay() {
 	}
 	models.TransactionCommit(trans)
 
-	beego.Info(uri)
 	dto.Data = uri
 	dto.Sucess = true
 }
@@ -231,7 +230,7 @@ func invitorRechargeIncome(fromUID, amount uint64, chginfo string, trans *gorm.D
 
 	if u.InvitedBy != 0 {
 		ivtIncome, up := int((float64(amount) * rate.InviteRechargeRate)), &models.UserProfile{ID: u.InvitedBy}
-		chg := &models.BalanceChg{UserID: u.InvitedBy, Amount: ivtIncome, Time: time.Now().Unix(), ChgType: models.BalanceChgTypeInvitationRechargeIncome, ChgInfo: chginfo}
+		chg := &models.BalanceChg{UserID: u.InvitedBy, FromUserID: u.ID, Amount: ivtIncome, Time: time.Now().Unix(), ChgType: models.BalanceChgTypeInvitationRechargeIncome, ChgInfo: chginfo}
 
 		if err := up.AddIncome(ivtIncome, trans); err != nil {
 			beego.Error("邀请人增加收益失败", err)

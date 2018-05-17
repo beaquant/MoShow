@@ -38,5 +38,5 @@ func (w *Withdraw) Add(trans *gorm.DB) error {
 //List .
 func (w *Withdraw) List(skip, limit int) ([]Withdraw, error) {
 	var wd []Withdraw
-	return wd, db.Where("user_id = ?", w.UserID).Offset(skip).Limit(limit).Find(&wd).Error
+	return wd, db.Where("user_id = ?", w.UserID).Order("create_at desc").Offset(skip).Limit(limit).Find(&wd).Error
 }
