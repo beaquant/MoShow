@@ -1101,7 +1101,7 @@ func (c *UserController) Withdraw() {
 		return
 	}
 
-	if amount%5000 != 0 {
+	if amount%5000 != 0 || amount == 0 {
 		beego.Error("提现金额必须是5000的整数倍,金额:", amount, c.Ctx.Request.UserAgent())
 		dto.Message = "提现金额必须是5000的整数倍"
 		dto.Code = utils.DtoStatusParamError

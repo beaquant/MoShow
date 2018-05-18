@@ -57,11 +57,11 @@ func (Dial) TableName() string {
 //Add .
 func (d *Dial) Add() error {
 	if len(d.Tag) == 0 {
-		d.Tag = "null"
+		d.Tag = "{}"
 	}
 
 	if len(d.Clearing) == 0 {
-		d.Clearing = "null"
+		d.Clearing = "{}"
 	}
 
 	if d.CreateAt == 0 {
@@ -88,7 +88,7 @@ func (d *Dial) UpdateNmAudioCopy(aci *netease.AudioCopyInfo) error {
 	}
 
 	fields := make(map[string]interface{})
-	fields["tag"] = gorm.Expr(`JSON_SET(if(tag = cast('null' as json),"{}",tag),'$.nm_audio_copy',cast(? as json))`, str)
+	fields["tag"] = gorm.Expr(`JSON_SET(COALESCE(tag,"{}"),'$.nm_audio_copy',cast(? as json))`, str)
 	if d.Duration != 0 {
 		nimDuration, err := strconv.ParseUint(aci.Duration, 10, 64)
 		if err != nil {
@@ -114,7 +114,7 @@ func (d *Dial) UpdateNmAudioDlCopy(adci *netease.AudioDownloadCopyInfo, fi []net
 		return err
 	}
 
-	return db.Model(d).Update("tag", gorm.Expr(`JSON_SET(if(tag = cast('null' as json),"{}",tag),'$.nm_file_copy',cast(? as json),'$.',cast(? as json))`, str, fiStr)).Error
+	return db.Model(d).Update("tag", gorm.Expr(`JSON_SET(COALESCE(tag,"{}"),"{}",tag),'$.nm_file_copy',cast(? as json),'$.',cast(? as json))`, str, fiStr)).Error
 }
 
 //Read .

@@ -432,7 +432,7 @@ func (c *ChatChannel) Run() {
 
 			//生成通话记录
 			dl, dt, errStr := &models.Dial{ID: c.DialID}, &models.DialTag{}, "[]"
-			if exp != nil {
+			if exp != nil && len(exp) > 0 {
 				dl.Status = models.DialStatusException
 				for _, val := range exp {
 					dt.ErrorMsg = append(dt.ErrorMsg, val.Error())
@@ -444,7 +444,7 @@ func (c *ChatChannel) Run() {
 			}
 
 			trans := models.TransactionGen()
-			if err := dl.Update(map[string]interface{}{"duration": c.Timelong, "create_at": c.ChannelStartTime, "status": dl.Status, "clearing": ciStr, "tag": gorm.Expr(`JSON_SET(COALESCE(tag,"{}"),"$.errors",?)`, errStr)}, trans); err != nil {
+			if err := dl.Update(map[string]interface{}{"duration": c.Timelong, "create_at": c.ChannelStartTime, "status": dl.Status, "clearing": ciStr, "tag": gorm.Expr(`JSON_SET(COALESCE(tag,"{}"),"$.errors",cast(? as json))`, errStr)}, trans); err != nil {
 				js, _ := utils.JSONMarshalToString(dl)
 				c.logger.Error("[websocket结算异常]通话记录更新失败", err, js)
 				models.TransactionRollback(trans)
@@ -516,7 +516,7 @@ func (c *ChatChannel) wsMsgDeal(msg *WsMessage) {
 			if err := videoAllocateFund(c.Src.User, c.Dst.User, c.Price); err != nil {
 				c.logger.Error("扣费失败", err)
 				if !c.Stoped {
-					c.Exit <- []error{err}
+					c.Exit <- []error{errors.New("扣费失败\t" + err.Error())}
 				}
 				return
 			}
@@ -594,7 +594,7 @@ func (c *ChatChannel) ticktokPay() {
 
 					time.Sleep(time.Second)
 					if !c.Stoped {
-						c.Exit <- nil
+						c.Exit <- []error{errors.New("余额不足，扣费失败，强制挂断\t" + err.Error())}
 					}
 					return
 				}
@@ -652,7 +652,7 @@ func (c *ChatClient) Read() {
 
 		if !c.Channel.Stoped { //未结算
 			c.Channel.logger.Infof("[uid:%d]ws:%p,%s", c.User.ID, c.Conn, "用户主动挂断或等待重连超时,执行退出流程")
-			c.Channel.Exit <- nil //发送退出信号,关闭通道后write方法会立即退出
+			c.Channel.Exit <- []error{errors.New("用户主动挂断或等待重连超时")} //发送退出信号,关闭通道后write方法会立即退出
 		}
 	}()
 
