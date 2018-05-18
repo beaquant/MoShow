@@ -423,11 +423,9 @@ func (c *ChatChannel) Run() {
 			}
 			ciStr, _ := utils.JSONMarshalToString(&models.ClearingInfo{NIMChannelID: c.NIMChannelID, Cost: c.Amount, Income: uint64(income), Price: c.Price, Timelong: c.Timelong})
 
-			if exp == nil || len(exp) == 0 { //没有异常的情况下再给主播结费，否则只生成异常通话记录
-				if err := videoDone(c.Src.User, c.Dst.User, &models.VideoChgInfo{TimeLong: c.Timelong, Price: c.Price, DialID: c.DialID}, c.Amount); err != nil {
-					c.logger.Error("[websocket结算异常]视频结费错误", err, "发起人:", c.ID, "接受人:", c.DstID, "金额:", c.Amount, "通话时长:", c.Timelong)
-					exp = append(exp, errors.New("[websocket结算异常]视频结费错误:"+err.Error()))
-				}
+			if err := videoDone(c.Src.User, c.Dst.User, &models.VideoChgInfo{TimeLong: c.Timelong, Price: c.Price, DialID: c.DialID}, c.Amount); err != nil {
+				c.logger.Error("[websocket结算异常]视频结费错误", err, "发起人:", c.ID, "接受人:", c.DstID, "金额:", c.Amount, "通话时长:", c.Timelong)
+				exp = append(exp, errors.New("[websocket结算异常]视频结费错误:"+err.Error()))
 			}
 
 			//生成通话记录
