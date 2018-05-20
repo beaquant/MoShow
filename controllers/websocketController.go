@@ -115,7 +115,7 @@ func closeConnWithMessage(conn *websocket.Conn, ws *WsMessage) {
 	conn.SetWriteDeadline(time.Now().Add(writeWait))
 	conn.WriteJSON(ws)
 	conn.WriteMessage(websocket.CloseNormalClosure, b)
-	beego.Info("服务器主动挂断,并推送消息", string(b))
+	// beego.Info("服务器主动挂断,并推送消息", string(b))
 	conn.Close()
 }
 
@@ -415,6 +415,13 @@ func (c *ChatChannel) Run() {
 				}
 			}
 
+			if err := (&models.UserProfile{ID: c.ID}).UpdateOnlineStatus(models.OnlineStatusOnline); err != nil { //设置在线状态
+				c.logger.Errorf("[%d]重置在线状态失败\t%s", c.ID, err.Error())
+			}
+			if err := (&models.UserProfile{ID: c.DstID}).UpdateOnlineStatus(models.OnlineStatusOnline); err != nil {
+				c.logger.Errorf("[%d]重置在线状态失败\t%s", c.DstID, err.Error())
+			}
+
 			c.logger.Infof("[uid:%d,aid:%d]%s", c.ID, c.DstID, "开始结算")
 			income, _, err := computeIncome(c.Amount)
 			if err != nil {
@@ -506,6 +513,13 @@ func (c *ChatChannel) wsMsgDeal(msg *WsMessage) {
 			if c.NIMChannelID != 0 {
 				ciStr, _ := utils.JSONMarshalToString(&models.ClearingInfo{NIMChannelID: c.NIMChannelID})
 				(&models.Dial{ID: c.DialID}).Update(map[string]interface{}{"clearing": ciStr}, nil)
+			}
+
+			if err := (&models.UserProfile{ID: c.ID}).UpdateOnlineStatus(models.OnlineStatusChating); err != nil { //热聊状态
+				c.logger.Errorf("[%d]设置热聊状态失败\t%s", c.ID, err.Error())
+			}
+			if err := (&models.UserProfile{ID: c.DstID}).UpdateOnlineStatus(models.OnlineStatusChating); err != nil {
+				c.logger.Errorf("[%d]设置热聊状态失败\t%s", c.DstID, err.Error())
 			}
 
 			c.logger.Info("视频开始,开始扣费")
