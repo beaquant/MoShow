@@ -11,5 +11,5 @@ import (
 
 func TestCheckModePattern(t *testing.T) {
 	os.Setenv("GOCACHE", "off")
-	t.Log(controllers.IsCheckMode("Maxiu/1.0.0(Android:23;OPPO R9s)null"))
+	t.Log(controllers.IsCheckMode("Mxiu/1.0.0(Android:24;VTR-AL00)xiaomi"))
 }

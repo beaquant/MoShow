@@ -175,7 +175,7 @@ func (c *WebsocketController) Create() {
 		return
 	}
 
-	if pp.UserType != models.UserTypeAnchor {
+	if pp.UserType != models.UserTypeAnchor && pp.UserType != models.UserTypeFaker {
 		ws.Content = "对方不是主播,不能直播"
 		closeConnWithMessage(conn, ws)
 		return
@@ -448,14 +448,13 @@ func (c *ChatChannel) Run() {
 				dl.Status = models.DialStatusSuccess
 			}
 
-			trans := models.TransactionGen()
-			if err := dl.Update(map[string]interface{}{"duration": c.Timelong, "create_at": c.ChannelStartTime, "status": dl.Status, "clearing": ciStr, "tag": gorm.Expr(`JSON_SET(COALESCE(tag,"{}"),"$.errors",cast(? as json))`, errStr)}, trans); err != nil {
+			if err := dl.Update(map[string]interface{}{"duration": c.Timelong, "create_at": c.ChannelStartTime, "status": dl.Status, "clearing": ciStr, "tag": gorm.Expr(`JSON_SET(COALESCE(tag,"{}"),"$.errors",cast(? as json))`, errStr)}, nil); err != nil {
 				js, _ := utils.JSONMarshalToString(dl)
-				c.logger.Error("[websocket结算异常]通话记录更新失败", err, js)
-				models.TransactionRollback(trans)
-				return
+				c.logger.Errorf("[websocket结算异常]通话记录更新失败:%s\t%s", err.Error(), js)
+				beego.Error("[websocket结算异常]通话记录更新失败", err, js)
 			}
 
+			trans := models.TransactionGen()
 			if err := c.Src.User.AddDialDuration(c.Timelong, trans); err != nil {
 				c.logger.Error("[websocket结算异常]用户增加通话时长失败", err, c.ID)
 				models.TransactionRollback(trans)

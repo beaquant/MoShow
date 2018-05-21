@@ -19,8 +19,8 @@ debug
 .glide/
 
 app.conf
-tests/conf/app.conf
 swagger
 MoShow
 MoShow.tar.gz
 logs/*_ws.log
+tests/conf/app.conf
