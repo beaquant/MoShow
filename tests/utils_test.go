@@ -238,3 +238,8 @@ func Test素数(t *testing.T) {
 
 	t.Log("是素数")
 }
+
+func TestUint(t *testing.T) {
+	a := uint64(10)
+	t.Log(a - 15)
+}

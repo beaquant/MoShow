@@ -326,6 +326,10 @@ func (c *ChatChannel) genVideoCost() (*VideoCost, error) {
 	vc.AnchorBalance = aup.Balance + aup.Income
 	vc.Cost = c.Amount
 	vc.Timelong = c.Timelong
+
+	if vc.Timelong%60 == 1 { //精度问题
+		vc.Timelong--
+	}
 	return vc, nil
 }
 
@@ -439,6 +443,7 @@ func (c *ChatChannel) Run() {
 			dl, dt, errStr := &models.Dial{ID: c.DialID}, &models.DialTag{}, "[]"
 			if exp != nil && len(exp) > 0 {
 				dl.Status = models.DialStatusException
+				beego.Error("结算过程中发生错误,标记为异常通话:", dl.ID)
 				for _, val := range exp {
 					dt.ErrorMsg = append(dt.ErrorMsg, val.Error())
 					c.logger.Errorf("视频过程中发生错误:%s", val.Error())
@@ -532,7 +537,7 @@ func (c *ChatChannel) wsMsgDeal(msg *WsMessage) {
 				return
 			}
 
-			c.StartTime = time.Now().Unix() + 1 //精度问题
+			c.StartTime = time.Now().Unix()
 			go c.ticktokPay()
 		}
 

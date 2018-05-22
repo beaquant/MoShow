@@ -3,11 +3,11 @@ package models
 import (
 	"MoShow/utils"
 	"database/sql"
-	"math"
 	"strconv"
 	"time"
 
 	netease "github.com/MrSong0607/netease-im"
+	"github.com/astaxie/beego"
 	"github.com/jinzhu/gorm"
 )
 
@@ -94,7 +94,10 @@ func (d *Dial) UpdateNmAudioCopy(aci *netease.AudioCopyInfo) error {
 		if err != nil {
 			return err
 		}
-		if math.Abs(float64(d.Duration-(nimDuration/2))) > 10 {
+
+		deviation := float64(d.Duration) - (float64(nimDuration) / 2)
+		if deviation > 10 || deviation < -10 {
+			beego.Error("通话时长与云信返回通话时长误差过大，标记为异常通话，ID:", d.ID)
 			fields["status"] = DialStatusException
 		}
 	}
