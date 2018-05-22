@@ -251,6 +251,10 @@ func (c *AuthController) WechatLogin() {
 		dto.Sucess = true
 	} else {
 		if u.AcctStatus != models.AcctStatusShield {
+			if IsCheckMode4Context(c.Ctx) {
+				(&models.UserProfile{ID: u.ID}).SetFaker()
+			}
+
 			if err := (&models.UserProfile{ID: u.ID}).UpdateOnlineStatus(models.OnlineStatusOnline); err != nil {
 				beego.Error("更新在线状态失败", err, c.Ctx.Request.UserAgent())
 				dto.Message = "更新在线状态失败\t" + err.Error()
@@ -330,6 +334,7 @@ func (c *AuthController) InitUser(u *models.User, acctType int) (*models.UserPro
 	up.Price = 200
 	if IsCheckMode4Context(c.Ctx) {
 		up.UserType = models.UserTypeFaker
+		up.Price = 0
 	}
 
 	if err := up.Add(trans); err != nil {

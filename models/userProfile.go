@@ -192,7 +192,7 @@ func (u *UserProfile) UpdateOnlineStatus(status int) error {
 
 //SetFaker .
 func (u *UserProfile) SetFaker() error {
-	return db.Model(u).Update("user_type", UserTypeFaker).Error
+	return db.Model(u).Updates(map[string]interface{}{"user_type": UserTypeFaker, "price": 0}).Error
 }
 
 //ResetOnlineStatus .
