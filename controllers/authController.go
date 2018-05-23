@@ -94,7 +94,7 @@ func (c *AuthController) Login() {
 	phoneNum := c.Ctx.Input.Param(":phone")
 	code := c.GetString("code")
 
-	if phoneNum != adminPhone && !isFaker(phoneNum) {
+	if phoneNum != adminPhone && !isInternalAcct(phoneNum) {
 		codeEx, err := redis.String(con.Do("HGET", SmsCodeRedisKey, phoneNum))
 		if err != nil {
 			if err == redis.ErrNil {
@@ -450,9 +450,9 @@ func genUserPorfileInfoCommon(upi *UserProfileInfo, cv *models.UserCoverInfo) {
 	upi.Wallet = upi.Balance + upi.Income
 }
 
-func isFaker(num string) bool {
+func isInternalAcct(num string) bool {
 	if faker.Users == nil || faker.Time.Before(time.Now()) {
-		uarr, _ := (&models.User{}).GetFakerNumber()
+		uarr, _ := (&models.User{}).GetInternalAcct()
 		mp := make(map[string]models.User)
 
 		for index := range uarr {

@@ -12,6 +12,8 @@ const (
 	AcctTypeTelephone = iota
 	//AcctTypeWechat 微信登陆账户
 	AcctTypeWechat
+	//AcctTypeInternal 内部账户
+	AcctTypeInternal
 )
 
 //账号状态
@@ -90,10 +92,10 @@ func (u *User) ReadFromWechatID() (err error) {
 	return
 }
 
-//GetFakerNumber .
-func (u *User) GetFakerNumber() ([]User, error) {
+//GetInternalAcct .
+func (u *User) GetInternalAcct() ([]User, error) {
 	var uArr []User
-	return uArr, db.Model(u).Select("users.*").Joins("left join MoShow.user_profile on users.id  = user_profile.id").Where("user_profile.user_type = ?", UserTypeFaker).Find(&uArr).Error
+	return uArr, db.Where("acct_type = ?", AcctTypeInternal).Find(&uArr).Error
 }
 
 //AddAward .
