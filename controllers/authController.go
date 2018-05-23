@@ -67,7 +67,7 @@ func (c *AuthController) SendCode() {
 	code := strconv.Itoa(utils.RandNumber(1000, 9999))
 
 	if res, err := utils.SendMsgByAPIKey(num, code); err != nil {
-		beego.Error("发送验证码失败:\t" + res + "\r\n" + err.Error())
+		beego.Error("发送验证码失败:", num, res, err)
 		dto.Message = err.Error()
 	} else {
 		cs, _ := utils.JSONMarshalToString(&codeInfo{Code: code, Time: time.Now().Add(time.Minute * 30).Unix()})

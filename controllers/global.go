@@ -145,7 +145,7 @@ func GetToken(ctx *context.Context) *Token {
 	dto := &utils.ResultDTO{Sucess: false, Code: utils.DtoStatusAuthError}
 
 	if err != nil {
-		beego.Error("token解密失败", err)
+		beego.Error("token解密失败", err, ctx.Request.RequestURI, ctx.Request.UserAgent(), ctx.Input.IP())
 		dto.Message = "Token校验失败,请先登录"
 		ctx.Output.JSON(dto, false, false)
 		return nil
