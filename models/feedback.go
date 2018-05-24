@@ -31,8 +31,8 @@ type FeedBackReport struct {
 
 //FeedBackSuggestion 意见反馈
 type FeedBackSuggestion struct {
-	Content string `json:"feedback_content"`
-	Img     string `json:"img"`
+	Content string   `json:"feedback_content"`
+	Img     []string `json:"img"`
 }
 
 //TableName .

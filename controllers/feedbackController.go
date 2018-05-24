@@ -26,7 +26,7 @@ func (c *FeedbackController) Suggestion() {
 
 	f := &models.FeedBack{UserID: tk.ID}
 	r := &models.FeedBackSuggestion{}
-	r.Img = c.GetString("img")
+	utils.JSONUnMarshal(c.GetString("img"), &r.Img)
 	r.Content = c.GetString("content")
 
 	if err := f.AddSuggestion(r); err != nil {

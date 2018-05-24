@@ -699,7 +699,7 @@ func (c *UserController) Report() {
 
 	f := &models.FeedBack{UserID: tk.ID}
 	r := &models.FeedBackReport{TgUserID: toID}
-	r.Img = c.GetString("img")
+	utils.JSONUnMarshal(c.GetString("img"), &r.Img)
 	r.Content = c.GetString("content")
 	r.Cate = c.GetString("cate")
 	if err := f.AddReport(r); err != nil {
