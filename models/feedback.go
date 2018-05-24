@@ -2,6 +2,7 @@ package models
 
 import (
 	"MoShow/utils"
+	"errors"
 	"time"
 )
 
@@ -41,6 +42,10 @@ func (FeedBack) TableName() string {
 
 //AddReport .
 func (f *FeedBack) AddReport(r *FeedBackReport) (err error) {
+	if r.TgUserID == 0 {
+		return errors.New("被举报人的ID不能为0")
+	}
+
 	f.Type = FeedBackTypeReport
 	f.Time = time.Now().Unix()
 	if f.Content, err = utils.JSONMarshalToString(r); err != nil {

@@ -168,7 +168,9 @@ func GetToken(ctx *context.Context) *Token {
 	defer con.Close()
 	val, err := redis.String(con.Do("HGET", TokenValidRedisKey, tk.ID))
 	if err != nil {
-		beego.Error("redis获取token失败", err)
+		if err != redis.ErrNil {
+			beego.Error("redis获取token失败", err)
+		}
 		dto.Message = "校验单端登陆失败"
 		ctx.Output.JSON(dto, false, false)
 		return nil

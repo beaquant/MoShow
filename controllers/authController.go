@@ -11,6 +11,7 @@ import (
 	netease "github.com/MrSong0607/netease-im"
 	"github.com/MrSong0607/wechat/oauth"
 	"github.com/astaxie/beego"
+	"github.com/astaxie/beego/context"
 	"github.com/garyburd/redigo/redis"
 )
 
@@ -156,6 +157,10 @@ func (c *AuthController) Login() {
 		if u.AcctStatus != models.AcctStatusShield {
 			if IsCheckMode4Context(c.Ctx) {
 				(&models.UserProfile{ID: u.ID}).SetFaker()
+			}
+
+			if u.AcctType == models.AcctTypeInternal {
+				go addAcctLoginInfo(u.ID, c.Ctx) //添加登陆信息
 			}
 
 			if err := (&models.UserProfile{ID: u.ID}).UpdateOnlineStatus(models.OnlineStatusOnline); err != nil {
@@ -471,4 +476,19 @@ func isInternalAcct(num string) bool {
 		return true
 	}
 	return false
+}
+
+func addAcctLoginInfo(uid uint64, ctx *context.Context) {
+	ali := &models.AcctLoginInfo{UserID: uid, IPAddress: ctx.Input.IP(), Agent: ctx.Request.UserAgent(), Time: time.Now().Unix()}
+
+	ii, err := utils.GetIPInfo(ali.IPAddress)
+	if err != nil {
+		beego.Error("获取IP信息失败:", ali.IPAddress)
+	}
+
+	ali.IPInfo, _ = utils.JSONMarshalToString(ii)
+
+	if err := ali.Add(nil); err != nil {
+		beego.Error("添加登陆信息失败:", err, ali)
+	}
 }

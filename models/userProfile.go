@@ -72,7 +72,7 @@ type UserProfile struct {
 	Price            uint64 `json:"price,omitempty" gorm:"column:price" description:"视频价格/分"`
 	UserType         int    `json:"user_type" gorm:"column:user_type" description:"用户类型"`
 	ImToken          string `json:"-" gorm:"column:im_token" description:"网易云信token"`
-	UserStatus       int    `json:"user_status" gorm:"column:user_status" description:"用户状态"`
+	UserStatus       int    `json:"-" gorm:"column:user_status" description:"用户状态"`
 	OnlineStatus     int    `json:"online_status" gorm:"column:online_status" description:"在线状态"`
 	AnchorAuthStatus int    `json:"anchor_auth_status" gorm:"column:anchor_auth_status" description:"主播认证状态"`
 	DialAccept       uint64 `json:"-" gorm:"column:dial_accept" description:"视频接通数"`

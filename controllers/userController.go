@@ -89,20 +89,37 @@ func (c *UserController) Read() {
 		if err == gorm.ErrRecordNotFound {
 			dto.Message = "很抱歉,未能搜索到"
 		} else {
+			beego.Error("获取用户资料失败:", up.ID, err)
 			dto.Message = err.Error()
 		}
 
 		return
 	}
 
-	if up.UserType != models.UserTypeFaker && up.ID != tk.ID {
-		mup := &models.UserProfile{ID: tk.ID}
-		if err := mup.Read(); err != nil {
-			dto.Message = "获取用户资料失败" + err.Error()
+	if up.ID != tk.ID {
+		if up.UserStatus == models.UserStatusBlock { //隐藏屏蔽用户
+			dto.Message = "很抱歉,未能搜索到"
 			return
 		}
 
-		if mup.UserType == models.UserTypeFaker { //向马甲号隐藏真实用户
+		if up.UserType != models.UserTypeFaker {
+			mup := &models.UserProfile{ID: tk.ID}
+			if err := mup.Read(); err != nil {
+				dto.Message = "获取用户资料失败" + err.Error()
+				return
+			}
+
+			if mup.UserType == models.UserTypeFaker { //向马甲号隐藏真实用户
+				dto.Message = "很抱歉,未能搜索到"
+				return
+			}
+		}
+
+		user := &models.User{ID: up.ID}
+		if err := user.Read(); err != nil {
+			beego.Error("获取用户失败:", up.ID, err)
+		}
+		if user.AcctStatus == models.AcctStatusShield { //屏蔽被封号的用户
 			dto.Message = "很抱歉,未能搜索到"
 			return
 		}
@@ -671,6 +688,12 @@ func (c *UserController) Report() {
 	if err != nil {
 		beego.Error(err)
 		dto.Message = "举报用户的ID格式错误\t" + err.Error()
+		return
+	}
+
+	if toID == 0 {
+		beego.Error("举报用户的ID格式错误", uidStr, c.Ctx.Request.RequestURI, c.Ctx.Request.UserAgent())
+		dto.Message = "举报用户的ID格式错误\t" + uidStr
 		return
 	}
 
