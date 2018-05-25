@@ -24,3 +24,4 @@ MoShow
 MoShow.tar.gz
 logs/*_ws.log
 tests/conf/app.conf
+vendor
