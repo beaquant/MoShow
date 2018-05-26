@@ -427,7 +427,7 @@ func (c *ChatChannel) Run() {
 			}
 
 			c.logger.Infof("[uid:%d,aid:%d]%s", c.ID, c.DstID, "开始结算")
-			income, _, err := computeIncome(c.Amount)
+			income, _, err := (&UserProfileInfo{UserProfile: *c.Dst.User}).computeIncome(c.Amount)
 			if err != nil {
 				c.logger.Error("计算分成失败", err)
 				exp = append(exp, err)
@@ -474,7 +474,7 @@ func (c *ChatChannel) Run() {
 			models.TransactionCommit(trans)
 			ms := &WsMessage{MessageType: wsMessageTypeChannelEnd, DialID: c.DialID}
 			vc, _ := c.genVideoCost()
-			gincome, _, _ := computeIncome(c.GiftAmount)
+			gincome, _, _ := (&UserProfileInfo{UserProfile: *c.Dst.User}).computeIncome(c.GiftAmount)
 			vc.Income, vc.NIMChannelID = uint64(income+gincome), c.NIMChannelID
 			vc.Cost += c.GiftAmount
 			ms.Content, _ = utils.JSONMarshalToString(vc)

@@ -435,6 +435,11 @@ func (c *UserController) SendGift() {
 	}
 
 	toUserProfile := &models.UserProfile{ID: toID}
+	if err = toUserProfile.Read(); err != nil {
+		beego.Error(err)
+		dto.Message = "获取用户信息失败\t" + err.Error()
+		return
+	}
 
 	var gift *models.Gift
 	for index := range gft {
@@ -1309,8 +1314,8 @@ func sendGift(from, to *models.UserProfile, gift *models.GiftHisInfo) error {
 
 	chgInfo, _ := utils.JSONMarshalToString(gift)
 
-	amount := gift.GiftInfo.Price * gift.Count         //消费金额
-	income, inviteIncome, err := computeIncome(amount) //收益金额,分成金额
+	amount := gift.GiftInfo.Price * gift.Count                                              //消费金额
+	income, inviteIncome, err := (&UserProfileInfo{UserProfile: *to}).computeIncome(amount) //收益金额,分成金额
 	if err != nil {
 		return err
 	}
@@ -1370,7 +1375,7 @@ func videoDone(from, to *models.UserProfile, video *models.VideoChgInfo, amount 
 
 	chgInfo, _ := utils.JSONMarshalToString(video)
 
-	income, inviteIncome, err := computeIncome(amount) //收益金额,分成金额
+	income, inviteIncome, err := (&UserProfileInfo{UserProfile: *to}).computeIncome(amount) //收益金额,分成金额
 	if err != nil {
 		return err
 	}
@@ -1444,7 +1449,7 @@ func videoAllocateFund(from, to *models.UserProfile, price uint64) error {
 }
 
 //computeIncome 计算收益
-func computeIncome(amount uint64) (income, inviteIncome int, err error) {
+func (toUser *UserProfileInfo) computeIncome(amount uint64) (income, inviteIncome int, err error) {
 	rate, err := (&models.Config{}).GetIncomeRate()
 	if err != nil {
 		err = errors.New("获取收益分成率失败" + err.Error())
@@ -1453,6 +1458,10 @@ func computeIncome(amount uint64) (income, inviteIncome int, err error) {
 
 	income = int(float64(amount) * rate.IncomeRate)                 //收益金额
 	inviteIncome = int(float64(income) * (rate.InviteIncomegeRate)) //分成金额
+
+	if toUser.SpecialRate > 0 {
+		income = int(float64(amount) * toUser.SpecialRate)
+	}
 	return
 }
 
