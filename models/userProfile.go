@@ -262,10 +262,10 @@ func (u *UserProfile) AddIncome(amount int, trans *gorm.DB) error {
 		return nil
 	}
 
-	if trans != nil {
-		return trans.Model(u).Update("income", gorm.Expr("income + ?", amount)).Error
+	if trans == nil {
+		trans = db
 	}
-	return db.Model(u).Update("income", gorm.Expr("income + ?", amount)).Error
+	return trans.Model(u).Update("income", gorm.Expr("income + ?", amount)).Error
 }
 
 //DeFund 用户扣款

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"runtime"
 	"testing"
+	"time"
 )
 
 func TestRuntimeCall(t *testing.T) {
@@ -13,5 +14,28 @@ func TestRuntimeCall(t *testing.T) {
 			break
 		}
 		fmt.Printf("skip = %v, pc = %v, file = %v, line = %v\n", skip, pc, file, line)
+	}
+}
+
+func TestSelect(t *testing.T) {
+	ticker := time.NewTicker(time.Second)
+
+	fmt.Println("start")
+	for i := 0; ; i++ {
+		select {
+		case <-ticker.C:
+			if i < 5 {
+				fmt.Println("continue")
+				continue
+			}
+
+			fmt.Println("break")
+			break
+
+			if i > 10 {
+				fmt.Println("return")
+				return
+			}
+		}
 	}
 }

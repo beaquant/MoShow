@@ -201,7 +201,9 @@ func (c *DialController) NmCallback() {
 
 		dl := &models.Dial{}
 		if err := dl.ReadFromNimID(ci.ChannelID); err != nil { //找不到通话记录，丢弃该回执
-			beego.Error("云信回执找不到指定的聊天通道相关的通话记录,NimID:", ci.ChannelID)
+			if ci.Duration != "0" {
+				beego.Error("云信回执找不到指定的聊天通道相关的通话记录,NimID:", ci.ChannelID, ci)
+			}
 			break
 		}
 

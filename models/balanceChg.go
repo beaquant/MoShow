@@ -93,16 +93,6 @@ func (b *BalanceChg) AddChg(trans *gorm.DB, chg ...*BalanceChg) error {
 	return nil
 }
 
-//IsVideoPayed .
-// func (b *BalanceChg) IsVideoPayed(uri string, tid uint64) (bool, error) {
-// 	var count int
-// 	err := db.Model(b).Where("user_id = ?", b.UserID).Where("chg_type = ?", BalanceChgTypeVideoView).Where(`chg_info ->>'$.target_id' = ?`, tid).Where(`chg_info ->>'$.url' = ?`, uri).Count(&count).Error
-// 	if count > 0 {
-// 		return true, err
-// 	}
-// 	return false, err
-// }
-
 //GetIncomeChgs .
 func (b *BalanceChg) GetIncomeChgs(limit, skip int) ([]BalanceChg, error) {
 	if limit == 0 {

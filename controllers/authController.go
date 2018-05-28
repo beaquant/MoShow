@@ -20,6 +20,7 @@ var (
 	adminPhone = beego.AppConfig.String("adminPhoneNum")
 	adminCode  = beego.AppConfig.String("adminCode")
 	faker      = &fakerUserInfo{}
+	actives    = &CacheActiveInfo{}
 )
 
 //AuthController 短信登陆，微信登陆，发送验证码，退出登陆等
@@ -35,6 +36,18 @@ type codeInfo struct {
 type fakerUserInfo struct {
 	Users map[string]models.User
 	Time  time.Time
+}
+
+//ActiveInfo .
+type ActiveInfo struct {
+	models.Active
+	Detail models.ActiveDetail
+}
+
+//CacheActiveInfo .
+type CacheActiveInfo struct {
+	Actives []ActiveInfo
+	Time    time.Time
 }
 
 //SendCode .
@@ -491,4 +504,56 @@ func addAcctLoginInfo(uid uint64, ctx *context.Context) {
 	if err := ali.Add(nil); err != nil {
 		beego.Error("添加登陆信息失败:", err, ali)
 	}
+}
+
+//SendActivity 发送促活消息
+func SendActivity(uid uint64) error {
+	if actives.Time.Before(time.Now()) {
+		acts, err := (models.Active{}).GetActive()
+		if err != nil {
+			return err
+		}
+
+		for index := range acts {
+			acti := ActiveInfo{Active: acts[index]}
+			utils.JSONUnMarshal(acts[index].Content, &acti.Detail)
+			actives.Actives = append(actives.Actives, acti)
+		}
+
+		actives.Time = time.Now().Add(5 * time.Second)
+	}
+
+	tmp, startTime := make([]ActiveInfo, len(actives.Actives)), time.Now()
+	copy(tmp, actives.Actives)
+
+	for len(tmp) > 0 {
+		i := 0
+		for _, x := range tmp {
+			if time.Now().After(startTime.Add(time.Duration(x.DelayTime) * time.Second)) {
+				var err error
+				fromid, toid := strconv.FormatUint(x.UserID, 10), strconv.FormatUint(uid, 10)
+				switch x.Type {
+				case models.ActiveTypeMessage:
+					err = utils.SendP2PMessage(fromid, toid, x.Detail.Message)
+				case models.ActiveTypeImage:
+					err = utils.SendP2PImageMessage(x.Detail.FileURL, fromid, []string{toid})
+				case models.ActiveTypeVoice:
+					err = utils.SendP2PVoiceMessage(x.Detail.FileURL, x.Detail.Duration*1000, fromid, []string{toid})
+				case models.ActiveTypeVideo:
+					err = utils.SendP2PVideoMessage(x.Detail.FileURL, x.Detail.Duration*1000, fromid, []string{toid})
+				}
+				if err != nil {
+					beego.Error("发送促活消息失败 active_id:", x.ID, "to:", toid, "from:", fromid, err)
+				}
+			} else {
+				// copy and increment index
+				tmp[i] = x
+				i++
+			}
+		}
+		time.Sleep(time.Second)
+		tmp = tmp[:i]
+	}
+
+	return nil
 }

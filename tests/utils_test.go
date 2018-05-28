@@ -68,7 +68,8 @@ func TestJson(t *testing.T) {
 	// t.Log(utils.JSONUnMarshal("null", a))
 
 	// a := &models.Banner{}
-	a := &models.UserCoverInfo{CoverPicture: &models.Picture{ImageURL: "1"}, DesVideo: &models.Video{VideoURL: "1"}}
+	// a := &models.UserCoverInfo{CoverPicture: &models.Picture{ImageURL: "1"}, DesVideo: &models.Video{VideoURL: "1"}}
+	a := &models.ActiveDetail{}
 	t.Log(utils.JSONMarshalToString(a))
 }
 
@@ -138,9 +139,9 @@ func TestImvoiceMsg(t *testing.T) {
 }
 
 func TestImVideoMsg(t *testing.T) {
-	os.Setenv("HTTP_PROXY", "http://127.0.0.1:8889")
-	t.Log(utils.SendP2PSysVideoMessage("https://moshow-1255921343.file.myqcloud.com/video/1691361525878287277977386.mp4",
-		[]string{"169178"}))
+	// os.Setenv("HTTP_PROXY", "http://127.0.0.1:8889")
+	t.Log(utils.SendP2PSysVideoMessage("https://moshow-1255921343.file.myqcloud.com/video/1691361525878287277977386.mp4", 10,
+		[]string{"169298"}))
 }
 
 func TestTimeSubSeconds(t *testing.T) {

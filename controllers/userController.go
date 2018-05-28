@@ -85,12 +85,12 @@ func (c *UserController) Read() {
 
 	up := &models.UserProfile{ID: uid}
 	if err = up.Read(); err != nil {
-		beego.Error("uid:", uidStr, err, c.Ctx.Request.UserAgent())
 		if err == gorm.ErrRecordNotFound {
 			dto.Message = "很抱歉,未能搜索到"
 		} else {
 			beego.Error("获取用户资料失败:", up.ID, err)
 			dto.Message = err.Error()
+			beego.Error("uid:", uidStr, err, c.Ctx.Request.UserAgent())
 		}
 
 		return
@@ -253,6 +253,11 @@ func (c *UserController) Update() {
 				defer func() {
 					if dto.Sucess && up.UserType != models.UserTypeFaker {
 						utils.SendP2PSysMessage(registWordMan, strconv.FormatUint(tk.ID, 10))
+						go func() {
+							if err := SendActivity(tk.ID); err != nil {
+								beego.Error("促活推送失败", err)
+							}
+						}()
 					}
 				}()
 			} else if gender == 2 {
@@ -1052,6 +1057,12 @@ func (c *UserController) ReduceAmount() {
 		return
 	}
 
+	if up.Balance+up.Income < uint64(amount) { //检查余额
+		dto.Message = "余额不足，请充值"
+		dto.Code = utils.DtoStatusDatabaseError
+		return
+	}
+
 	trans := models.TransactionGen() //开始事务
 	if err := up.DeFund(uint64(amount), trans); err != nil {
 		models.TransactionRollback(trans)
@@ -1391,7 +1402,7 @@ func videoDone(from, to *models.UserProfile, video *models.VideoChgInfo, amount 
 	}
 
 	if iu != nil {
-		if err := iu.AddBalance(inviteIncome, trans); err != nil { //邀请人收益
+		if err := iu.AddIncome(inviteIncome, trans); err != nil { //邀请人收益
 			models.TransactionRollback(trans)
 			return err
 		}

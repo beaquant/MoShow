@@ -656,7 +656,6 @@ func (c *ChatChannel) CloseChannel() {
 	if c.Dst != nil {
 		close(c.Dst.Send)
 	}
-	c.logFile.Close()
 }
 
 func (c *ChatClient) Read() {
@@ -684,7 +683,7 @@ func (c *ChatClient) Read() {
 		_, message, err := c.Conn.ReadMessage()
 		if err != nil {
 			if _, ok := err.(*websocket.CloseError); ok && !c.Channel.Stoped {
-				if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
 					c.Channel.logger.Errorf("[uid:%d]链接异常挂断:%s", c.User.ID, err.Error())
 				} else {
 					c.Channel.logger.Infof("[uid:%d]链接主动挂断:%s", c.User.ID, err.Error())
