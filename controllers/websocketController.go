@@ -233,7 +233,7 @@ func (c *WebsocketController) Join() {
 	tk := GetToken(c.Ctx)
 	if cn, ok := chatChannels[channelid]; !ok {
 		ws.Content = "房间不存在或已关闭，加入失败"
-		beego.Error(ws.Content, tk.ID, c.Ctx.Request.UserAgent())
+		beego.Error(ws.Content, "用户ID:", tk.ID, "房间ID:", channelid, c.Ctx.Request.UserAgent())
 		closeConnWithMessage(conn, ws)
 		return
 	} else if cn.DstID != tk.ID && cn.ID != tk.ID {
@@ -348,6 +348,13 @@ func (ChatChannel) Format(e *logrus.Entry) ([]byte, error) {
 
 //Run .
 func (c *ChatChannel) Run() {
+	defer func() {
+		if err := recover(); err != nil {
+			beego.Error(err)
+			debug.PrintStack()
+		}
+	}()
+
 	c.ChannelStartTime = time.Now().Unix()
 	//初始化日志模块
 	c.logger = logrus.WithFields(logrus.Fields{"dial_id": c.DialID})

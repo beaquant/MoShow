@@ -5,6 +5,7 @@ import (
 	"MoShow/utils"
 	"boys/common"
 	"errors"
+	"runtime/debug"
 	"strconv"
 	"time"
 
@@ -492,6 +493,13 @@ func isInternalAcct(num string) bool {
 }
 
 func addAcctLoginInfo(uid uint64, ctx *context.Context) {
+	defer func() {
+		if err := recover(); err != nil {
+			beego.Error(err)
+			debug.PrintStack()
+		}
+	}()
+
 	ali := &models.AcctLoginInfo{UserID: uid, IPAddress: ctx.Input.IP(), Agent: ctx.Request.UserAgent(), Time: time.Now().Unix()}
 
 	ii, err := utils.GetIPInfo(ali.IPAddress)
@@ -509,6 +517,8 @@ func addAcctLoginInfo(uid uint64, ctx *context.Context) {
 //SendActivity 发送促活消息
 func SendActivity(uid uint64) error {
 	if actives.Time.Before(time.Now()) {
+		newActives := &CacheActiveInfo{Time: time.Now().Add(5 * time.Minute)}
+
 		acts, err := (models.Active{}).GetActive()
 		if err != nil {
 			return err
@@ -517,10 +527,10 @@ func SendActivity(uid uint64) error {
 		for index := range acts {
 			acti := ActiveInfo{Active: acts[index]}
 			utils.JSONUnMarshal(acts[index].Content, &acti.Detail)
-			actives.Actives = append(actives.Actives, acti)
+			newActives.Actives = append(newActives.Actives, acti)
 		}
 
-		actives.Time = time.Now().Add(5 * time.Second)
+		actives = newActives
 	}
 
 	tmp, startTime := make([]ActiveInfo, len(actives.Actives)), time.Now()

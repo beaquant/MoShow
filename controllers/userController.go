@@ -5,6 +5,7 @@ import (
 	"MoShow/utils"
 	"errors"
 	"net/url"
+	"runtime/debug"
 	"sort"
 	"strconv"
 	"strings"
@@ -254,6 +255,13 @@ func (c *UserController) Update() {
 					if dto.Sucess && up.UserType != models.UserTypeFaker {
 						utils.SendP2PSysMessage(registWordMan, strconv.FormatUint(tk.ID, 10))
 						go func() {
+							defer func() {
+								if err := recover(); err != nil {
+									beego.Error(err)
+									debug.PrintStack()
+								}
+							}()
+
 							if err := SendActivity(tk.ID); err != nil {
 								beego.Error("促活推送失败", err)
 							}
@@ -1496,6 +1504,13 @@ func selectPic(imgURL string, arr []models.Picture) *models.Picture {
 }
 
 func checkPorn(up *models.UserProfile, cover *models.UserCoverInfo) {
+	defer func() {
+		if err := recover(); err != nil {
+			beego.Error(err)
+			debug.PrintStack()
+		}
+	}()
+
 	var glrNew []models.Picture
 
 	needUpdate := false
