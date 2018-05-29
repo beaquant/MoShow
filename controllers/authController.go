@@ -553,7 +553,7 @@ func SendActivity(uid uint64) error {
 					err = utils.SendP2PVideoMessage(x.Detail.FileURL, x.Detail.Duration*1000, fromid, []string{toid})
 				}
 				if err != nil {
-					beego.Error("发送促活消息失败 active_id:", x.ID, "to:", toid, "from:", fromid, err)
+					beego.Error("发送促活消息失败 active_id:", x.ID, "to:", toid, "from:", fromid, err, "促活内容:", x)
 				}
 			} else {
 				// copy and increment index

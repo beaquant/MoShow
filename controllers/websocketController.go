@@ -141,14 +141,14 @@ func (c *WebsocketController) Create() {
 	tk := GetToken(c.Ctx)
 	if _, ok := chattingUser[tk.ID]; ok { //如果用户正在聊天，拒绝创建聊天通道
 		ws.Content = "您已在通话中"
-		beego.Error(ws.Content, tk.ID, c.Ctx.Request.UserAgent())
+		beego.Error(ws.Content, "用户ID:", tk.ID, "主播ID:", parter, c.Ctx.Request.UserAgent())
 		closeConnWithMessage(conn, ws)
 		return
 	}
 
 	if _, ok := chattingUser[parter]; ok { //如果主播正在聊天，拒绝创建聊天通道
 		ws.Content = "对方正在通话中"
-		beego.Error(ws.Content, tk.ID, c.Ctx.Request.UserAgent())
+		beego.Error(ws.Content, "用户ID:", tk.ID, "主播ID:", parter, c.Ctx.Request.UserAgent())
 		closeConnWithMessage(conn, ws)
 		return
 	}
@@ -353,21 +353,23 @@ func (c *ChatChannel) Run() {
 			beego.Error(err)
 			debug.PrintStack()
 		}
+
+		c.CloseChannel()
 	}()
 
 	c.ChannelStartTime = time.Now().Unix()
 	//初始化日志模块
-	c.logger = logrus.WithFields(logrus.Fields{"dial_id": c.DialID})
-	logrus.SetFormatter(c)
+	loger := logrus.New()
+	loger.Formatter = c
 	file, err := os.OpenFile(path.Join("logs", fmt.Sprintf("%d_ws.log", c.ID)), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		beego.Error("打开日志文件失败", err)
 	} else {
-		c.logger.Logger.Out = file
+		loger.Out = file
 		c.logFile = file
 	}
+	c.logger = loger.WithFields(logrus.Fields{"dial_id": c.DialID})
 	c.logger.Infof("[uid:%d,aid:%d]房间创建成功", c.ID, c.DstID)
-	defer c.CloseChannel()
 
 	for {
 		select {
@@ -487,8 +489,7 @@ func (c *ChatChannel) Run() {
 			ms.Content, _ = utils.JSONMarshalToString(vc)
 			c.Src.Send <- ms
 			c.Dst.Send <- ms
-			time.Sleep(time.Second)
-			c.logger.Infof("[dial:%d]%s", c.DialID, "房间结算成功")
+			c.logger.Infof("主播[%d] 用户[%d] %s", c.DstID, c.ID, "房间结算成功")
 			return
 		}
 	}
@@ -647,14 +648,16 @@ func (c *ChatChannel) CloseChannel() {
 		beego.Error(err)
 		debug.PrintStack()
 	}
+	delete(chatChannels, c.ID)
+	delete(chattingUser, c.ID)
+	delete(chattingUser, c.DstID)
+	c.logger.Infof("主播[%d] 用户[%d] %s", c.DstID, c.ID, "房间清理成功")
 
+	time.Sleep(time.Second)
 	close(c.Send)
 	close(c.Exit)
 	close(c.Join)
 	close(c.Gift)
-	delete(chatChannels, c.ID)
-	delete(chattingUser, c.ID)
-	delete(chattingUser, c.DstID)
 
 	if c.Src != nil {
 		close(c.Src.Send)
@@ -686,18 +689,17 @@ func (c *ChatClient) Read() {
 			return
 		}
 
-		m := &WsMessage{}
 		_, message, err := c.Conn.ReadMessage()
 		if err != nil {
-			if _, ok := err.(*websocket.CloseError); ok && !c.Channel.Stoped {
-				if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
-					c.Channel.logger.Errorf("[uid:%d]链接异常挂断:%s", c.User.ID, err.Error())
-				} else {
-					c.Channel.logger.Infof("[uid:%d]链接主动挂断:%s", c.User.ID, err.Error())
-					return
-				}
-			} else if !c.Channel.Stoped {
-				c.Channel.logger.Errorf("[uid:%d]读取消息错误:%s", c.User.ID, err)
+			if c.Channel.Stoped {
+				return
+			}
+
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+				c.Channel.logger.Errorf("[uid:%d]读取消息错误:%s", c.User.ID, err.Error())
+			} else {
+				c.Channel.logger.Infof("[uid:%d]链接主动挂断:%s", c.User.ID, err.Error())
+				return
 			}
 
 			for time.Now().Before(c.DeadLine) { //在截止时间之前,间隔一秒判断是否重连
@@ -721,6 +723,7 @@ func (c *ChatClient) Read() {
 			return
 		}
 
+		m := &WsMessage{}
 		err = utils.JSONUnMarshalFromByte(message, m)
 		if err == nil {
 			if !c.Channel.Stoped {

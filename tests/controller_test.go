@@ -21,5 +21,5 @@ func TestActive(t *testing.T) {
 	go func() { t.Log(controllers.SendActivity(169293)) }()
 	go func() { t.Log(controllers.SendActivity(169143)) }()
 	go func() { t.Log(controllers.SendActivity(170034)) }()
-	time.Sleep(50 * time.Second)
+	time.Sleep(150 * time.Second)
 }
