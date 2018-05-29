@@ -28,6 +28,11 @@ func init() {
 
 }
 
+//GetContext .
+func GetContext() *gorm.DB {
+	return db
+}
+
 //TransactionGen .
 func TransactionGen() *gorm.DB {
 	return db.Begin()

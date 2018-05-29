@@ -68,11 +68,20 @@ func (c *OrderController) CreateWebPay() {
 		return
 	}
 
-	prod, err := getProdFromID(pid)
+	ep, err := getProdFromID(pid)
+	prod := *ep
 	if err != nil {
 		beego.Error("产品ID错误", pid, err, c.Ctx.Request.UserAgent())
 		dto.Message = "产品ID错误\t" + err.Error()
 		return
+	}
+
+	u := models.User{ID: tk.ID}
+	if err := u.Read(); err != nil {
+		beego.Error(err)
+	} else if u.InvitedBy != 0 {
+		prod.Extra++
+		prod.Extra /= 2 //邀请用户充值奖励减半
 	}
 
 	prodInfo, err := utils.JSONMarshalToString(prod)

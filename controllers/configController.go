@@ -69,7 +69,7 @@ func (c *ConfigController) GetGiftList() {
 // @Success 200 {object} utils.ResultDTO
 // @router /products [get]
 func (c *ConfigController) GetProductList() {
-	dto := utils.ResultDTO{}
+	tk, dto := GetToken(c.Ctx), &utils.ResultDTO{}
 	defer dto.JSONResult(&c.Controller)
 
 	conf := &models.Config{}
@@ -80,7 +80,25 @@ func (c *ConfigController) GetProductList() {
 		return
 	}
 
-	dto.Data = val
+	u := models.User{ID: tk.ID}
+	if err := u.Read(); err != nil {
+		beego.Error(err)
+	} else {
+		if u.InvitedBy != 0 {
+			var nProd []models.Product
+			for index := range val {
+				np := val[index]
+				np.Extra++
+				np.Extra /= 2 //邀请用户充值奖励减半
+				nProd = append(nProd, np)
+			}
+
+			dto.Data = nProd
+		} else {
+			dto.Data = val
+		}
+	}
+
 	dto.Sucess = true
 }
 

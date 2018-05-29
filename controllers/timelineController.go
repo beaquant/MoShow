@@ -55,31 +55,36 @@ func (c *TimelineController) Users() {
 		return
 	}
 
-	var gender int
-	var faker bool
-	if up.UserType == models.UserTypeAnchor {
-		gender = models.GenderMan
-	} else {
-		gender = models.GenderWoman
-	}
-
-	if up.UserType == models.UserTypeFaker {
-		faker = true
-	}
-
 	cate := c.GetString("cate")
 	if len(cate) == 0 {
 		cate = "suggestion"
 	}
 
-	var ul []models.TimelineUser
+	ul := []models.TimelineUser{}
+	qs := models.GetContext().Table((models.UserProfile{}).TableName()).Select("user_profile.*,create_at").Joins("left join users on users.id = user_profile.id")
+	if up.UserType == models.UserTypeFaker {
+		qs = qs.Where("user_type = ?", models.UserTypeFaker)
+	} else {
+		if up.UserType != models.UserTypeAnchor {
+			qs = qs.Where("user_type = ?", models.UserTypeAnchor).Where("gender = ?", models.GenderWoman)
+		} else {
+			qs = qs.Where("user_type <> ?", models.UserTypeFaker).Where("gender = ?", models.GenderMan)
+		}
+	}
+
 	switch cate {
 	case "newcomer":
-		ul, err = (&models.TimelineUser{}).QueryRecent(faker, time.Now().AddDate(0, 0, -15).Unix(), gender, skip, limit)
+		if up.UserType != models.UserTypeFaker {
+			qs = qs.Where("create_at > ?", time.Now().AddDate(0, 0, -15).Unix())
+		}
+		err = qs.Order("online_status = 1 or online_status = 2 desc, id desc").Offset(skip).Limit(limit).Find(&ul).Error
 	case "active":
-		ul, err = (&models.TimelineUser{}).QueryAll(faker, gender, skip, limit)
+		err = qs.Order("online_status = 1 or online_status = 2 desc, recent_duration desc").Offset(skip).Limit(limit).Find(&ul).Error
 	case "suggestion":
-		ul, err = (&models.TimelineUser{}).QuerySuggestion(faker, gender, skip, limit)
+		if up.UserType != models.UserTypeFaker {
+			qs = qs.Where("user_status = ?", models.UserStatusHot)
+		}
+		err = qs.Order("online_status = 1 or online_status = 2 desc, recent_duration desc").Offset(skip).Limit(limit).Find(&ul).Error
 	}
 
 	if err != nil {
@@ -97,7 +102,7 @@ func (c *TimelineController) Users() {
 
 	tli := TimelineInfo{Users: ti}
 	if config, _ := (&models.Config{}).GetCommonConfig(); config != nil {
-		if faker {
+		if up.UserType == models.UserTypeFaker {
 			tli.Banners = config.CheckModeBanners
 		} else {
 			tli.Banners = config.Banners

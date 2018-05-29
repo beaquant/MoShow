@@ -462,6 +462,9 @@ func (c *ChatChannel) Run() {
 				dl.Status = models.DialStatusSuccess
 			}
 
+			c.Src.User.UpdateRecentDialTime()
+			c.Dst.User.UpdateRecentDialTime()
+
 			if err := dl.Update(map[string]interface{}{"duration": c.Timelong, "create_at": c.ChannelStartTime, "status": dl.Status, "clearing": ciStr, "tag": gorm.Expr(`JSON_SET(COALESCE(tag,"{}"),"$.errors",cast(? as json))`, errStr)}, nil); err != nil {
 				js, _ := utils.JSONMarshalToString(dl)
 				c.logger.Errorf("[websocket结算异常]通话记录更新失败:%s\t%s", err.Error(), js)
@@ -489,6 +492,8 @@ func (c *ChatChannel) Run() {
 			ms.Content, _ = utils.JSONMarshalToString(vc)
 			c.Src.Send <- ms
 			c.Dst.Send <- ms
+
+			time.Sleep(time.Second)
 			c.logger.Infof("主播[%d] 用户[%d] %s", c.DstID, c.ID, "房间结算成功")
 			return
 		}
@@ -653,7 +658,6 @@ func (c *ChatChannel) CloseChannel() {
 	delete(chattingUser, c.DstID)
 	c.logger.Infof("主播[%d] 用户[%d] %s", c.DstID, c.ID, "房间清理成功")
 
-	time.Sleep(time.Second)
 	close(c.Send)
 	close(c.Exit)
 	close(c.Join)
@@ -675,6 +679,12 @@ func (c *ChatClient) Read() {
 			debug.PrintStack()
 		}
 
+		defer func() {
+			if err := recover(); err != nil {
+				beego.Error(err)
+				debug.PrintStack()
+			}
+		}()
 		if !c.Channel.Stoped { //未结算
 			c.Channel.logger.Infof("[uid:%d]ws:%p,%s", c.User.ID, c.Conn, "用户主动挂断或等待重连超时,执行退出流程")
 			c.Channel.Exit <- []error{errors.New("用户主动挂断或等待重连超时")} //发送退出信号,关闭通道后write方法会立即退出

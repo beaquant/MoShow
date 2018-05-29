@@ -78,6 +78,7 @@ type UserProfile struct {
 	DialAccept       uint64  `json:"-" gorm:"column:dial_accept" description:"视频接通数"`
 	DialDeny         uint64  `json:"-" gorm:"column:dial_deny" description:"视频拒接数"`
 	DialDuration     uint64  `json:"dial_duration" gorm:"column:dial_duration" description:"通话时间"`
+	Duration         uint64  `json:"recent_duration" gorm:"column:recent_duration" description:"最近通话时间"`
 	AlipayAcct       string  `json:"-" gorm:"column:alipay_acct" description:"支付宝账号"`
 	SpecialRate      float64 `json:"-" gorm:"column:special_rate" description:"特殊分成"`
 	UpdateAt         int64   `json:"update_at" gorm:"column:update_at" description:"更新时间"`
@@ -169,6 +170,11 @@ func (u *UserProfile) Update(fields map[string]interface{}, trans *gorm.DB) erro
 		trans = db
 	}
 	return trans.Model(u).Updates(fields).Error
+}
+
+//UpdateRecentDialTime .
+func (u *UserProfile) UpdateRecentDialTime() error {
+	return db.Model(u).Update("recent_duration", gorm.Expr("COALESCE((SELECT sum(duration) FROM MoShow.dial where to_user_id = ? and create_at >= ? GROUP BY to_user_id),0)", u.ID, time.Now().Add(-3*24*time.Hour).Unix())).Error
 }
 
 //UpdateCover .
