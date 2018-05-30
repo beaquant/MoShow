@@ -47,45 +47,45 @@ func SendP2PSysMessage(content string, toID string) error {
 }
 
 //SendP2PSysImageMessage 发送图片系统消息
-func SendP2PSysImageMessage(URL string, toID []string) error {
+func SendP2PSysImageMessage(URL string, toID []string) (string, error) {
 	return SendP2PImageMessage(URL, ImSysAdminID, toID)
 }
 
 //SendP2PSysVoiceMessage duration单位:毫秒
-func SendP2PSysVoiceMessage(URL string, duration uint, toID []string) error {
+func SendP2PSysVoiceMessage(URL string, duration uint, toID []string) (string, error) {
 	return SendP2PVoiceMessage(URL, duration, ImSysAdminID, toID)
 }
 
 //SendP2PSysVideoMessage .
-func SendP2PSysVideoMessage(URL string, duration uint, toID []string) error {
+func SendP2PSysVideoMessage(URL string, duration uint, toID []string) (string, error) {
 	return SendP2PVideoMessage(URL, duration, ImSysAdminID, toID)
 }
 
 //SendP2PImageMessage .
-func SendP2PImageMessage(URL string, fromID string, toID []string) error {
+func SendP2PImageMessage(URL string, fromID string, toID []string) (string, error) {
 	u, err := url.Parse(URL)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	return ImClient.SendBatchImageMessage(fromID, toID, &netease.ImageMessage{URL: URL, Md5: ShaHashToHexStringFromString(URL), Extension: filepath.Ext(u.Path)}, nil)
 }
 
 //SendP2PVoiceMessage duration单位:毫秒
-func SendP2PVoiceMessage(URL string, duration uint, fromID string, toID []string) error {
+func SendP2PVoiceMessage(URL string, duration uint, fromID string, toID []string) (string, error) {
 	u, err := url.Parse(URL)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	return ImClient.SendBatchVoiceMessage(fromID, toID, &netease.VoiceMessage{URL: URL, Md5: ShaHashToHexStringFromString(URL), Duration: duration, Extension: filepath.Ext(u.Path)}, nil)
 }
 
 //SendP2PVideoMessage .
-func SendP2PVideoMessage(URL string, duration uint, fromID string, toID []string) error {
+func SendP2PVideoMessage(URL string, duration uint, fromID string, toID []string) (string, error) {
 	u, err := url.Parse(URL)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	return ImClient.SendBatchVideoMessage(fromID, toID, &netease.VideoMessage{URL: URL, Duration: duration, Md5: ShaHashToHexStringFromString(URL), Extension: filepath.Ext(u.Path)}, nil)

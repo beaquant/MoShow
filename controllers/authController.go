@@ -516,6 +516,13 @@ func addAcctLoginInfo(uid uint64, ctx *context.Context) {
 
 //SendActivity 发送促活消息
 func SendActivity(uid uint64) error {
+	defer func() {
+		if err := recover(); err != nil {
+			beego.Error(err)
+			debug.PrintStack()
+		}
+	}()
+
 	if actives.Time.Before(time.Now()) {
 		newActives := &CacheActiveInfo{Time: time.Now().Add(5 * time.Minute)}
 
@@ -541,19 +548,20 @@ func SendActivity(uid uint64) error {
 		for _, x := range tmp {
 			if time.Now().After(startTime.Add(time.Duration(x.DelayTime) * time.Second)) {
 				var err error
+				var str string
 				fromid, toid := strconv.FormatUint(x.UserID, 10), strconv.FormatUint(uid, 10)
 				switch x.Type {
 				case models.ActiveTypeMessage:
 					err = utils.SendP2PMessage(fromid, toid, x.Detail.Message)
 				case models.ActiveTypeImage:
-					err = utils.SendP2PImageMessage(x.Detail.FileURL, fromid, []string{toid})
+					str, err = utils.SendP2PImageMessage(x.Detail.FileURL, fromid, []string{toid})
 				case models.ActiveTypeVoice:
-					err = utils.SendP2PVoiceMessage(x.Detail.FileURL, x.Detail.Duration*1000, fromid, []string{toid})
+					str, err = utils.SendP2PVoiceMessage(x.Detail.FileURL, x.Detail.Duration*1000, fromid, []string{toid})
 				case models.ActiveTypeVideo:
-					err = utils.SendP2PVideoMessage(x.Detail.FileURL, x.Detail.Duration*1000, fromid, []string{toid})
+					str, err = utils.SendP2PVideoMessage(x.Detail.FileURL, x.Detail.Duration*1000, fromid, []string{toid})
 				}
 				if err != nil {
-					beego.Error("发送促活消息失败 active_id:", x.ID, "to:", toid, "from:", fromid, err, "促活内容:", x)
+					beego.Error("发送促活消息失败 active_id:", x.ID, "to:", toid, "from:", fromid, err, str, "促活内容:", x)
 				}
 			} else {
 				// copy and increment index

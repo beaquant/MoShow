@@ -23,7 +23,7 @@
   branch = "master"
   name = "github.com/MrSong0607/netease-im"
   packages = ["."]
-  revision = "8d7ed33c4eaa809d67fcda1078ad5c988a552f27"
+  revision = "b020097ab632e06d5b8c61f5ff5fcb79d818a776"
 
 [[projects]]
   branch = "master"
@@ -55,14 +55,14 @@
 [[projects]]
   name = "github.com/go-resty/resty"
   packages = ["."]
-  revision = "f0976a825c7520308909ce5a9e8b4f8675fdd6de"
-  version = "v1.5"
+  revision = "fc3ad735b5565cada42d34bc298573fd3fe5adc6"
+  version = "v1.6"
 
 [[projects]]
   branch = "master"
   name = "github.com/go-sql-driver/mysql"
   packages = ["."]
-  revision = "ceae19ce1c5ac766abad8db04d649a7a83e91ced"
+  revision = "affd4c93966fe80839dc3dd720440aaad00914b9"
 
 [[projects]]
   branch = "master"
@@ -74,7 +74,7 @@
   branch = "master"
   name = "github.com/gorilla/websocket"
   packages = ["."]
-  revision = "21ab95fa12b9bdd8fecf5fa3586aad941cc98785"
+  revision = "c17c80cb48b806045fc338c94c849909a2e41c12"
 
 [[projects]]
   branch = "master"
@@ -95,7 +95,7 @@
   branch = "master"
   name = "github.com/json-iterator/go"
   packages = ["."]
-  revision = "2ddf6d758266fcb080a4f9e054b9f292c85e6798"
+  revision = "8744d7c5c7b40a53e018f78d8c508b3315260b96"
 
 [[projects]]
   name = "github.com/jtolds/gls"
@@ -151,7 +151,7 @@
     ".",
     "encoding"
   ]
-  revision = "6721a4f1c65387ccab987545462396b74287c7da"
+  revision = "e80398693b09f91acf9cf8ce8ee1acecc4ab2fda"
 
 [[projects]]
   name = "github.com/smartystreets/assertions"
@@ -177,7 +177,7 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
-  revision = "159ae71589f303f9fbfd7528413e0fe944b9c1cb"
+  revision = "ab813273cd59e1333f7ae7bff5d027d4aadf528c"
 
 [[projects]]
   branch = "master"
@@ -186,7 +186,7 @@
     "idna",
     "publicsuffix"
   ]
-  revision = "dfa909b99c79129e1100513e5cd36307665e5723"
+  revision = "89e543239a64caf31d3a6865872ea120b41446df"
 
 [[projects]]
   branch = "master"
@@ -195,7 +195,7 @@
     "unix",
     "windows"
   ]
-  revision = "b269ba27edabbc65a34a9ccdcaca3744d43ac3c8"
+  revision = "c11f84a56e43e20a78cee75a7c034031ecf57d1f"
 
 [[projects]]
   name = "golang.org/x/text"

@@ -22,8 +22,7 @@ type TimelineInfo struct {
 //TimelineUserInfo .
 type TimelineUserInfo struct {
 	UserProfileInfo
-	CreatedAt int64  `json:"create_at" gorm:"column:create_at"`
-	Duration  uint64 `json:"recent_duration" gorm:"column:recent_duration"`
+	CreatedAt int64 `json:"create_at" gorm:"column:create_at"`
 }
 
 //Users .
@@ -61,9 +60,10 @@ func (c *TimelineController) Users() {
 	}
 
 	ul := []models.TimelineUser{}
-	qs := models.GetContext().Table((models.UserProfile{}).TableName()).Select("user_profile.*,create_at").Joins("left join users on users.id = user_profile.id")
+	qs := models.GetContext().Table((models.UserProfile{}).TableName()).Select("user_profile.*,create_at").
+		Joins("left join users on users.id = user_profile.id").Where("users.id <> 1 and user_profile.user_status <> ? and users.acct_status <> ?", models.UserStatusBlock, models.AcctStatusShield)
 	if up.UserType == models.UserTypeFaker {
-		qs = qs.Where("user_type = ?", models.UserTypeFaker)
+		qs = qs.Where("user_type = ?", models.UserTypeFaker).Order("dial_duration desc")
 	} else {
 		if up.UserType != models.UserTypeAnchor {
 			qs = qs.Where("user_type = ?", models.UserTypeAnchor).Where("gender = ?", models.GenderWoman)
@@ -77,14 +77,14 @@ func (c *TimelineController) Users() {
 		if up.UserType != models.UserTypeFaker {
 			qs = qs.Where("create_at > ?", time.Now().AddDate(0, 0, -15).Unix())
 		}
-		err = qs.Order("online_status = 1 or online_status = 2 desc, id desc").Offset(skip).Limit(limit).Find(&ul).Error
+		err = qs.Order("online_status = 1 or online_status = 2 desc, id desc").Offset(skip).Limit(limit).Scan(&ul).Error
 	case "active":
-		err = qs.Order("online_status = 1 or online_status = 2 desc, recent_duration desc").Offset(skip).Limit(limit).Find(&ul).Error
+		err = qs.Order("online_status = 1 or online_status = 2 desc, recent_duration desc").Offset(skip).Limit(limit).Scan(&ul).Error
 	case "suggestion":
 		if up.UserType != models.UserTypeFaker {
 			qs = qs.Where("user_status = ?", models.UserStatusHot)
 		}
-		err = qs.Order("online_status = 1 or online_status = 2 desc, recent_duration desc").Offset(skip).Limit(limit).Find(&ul).Error
+		err = qs.Order("online_status = 1 or online_status = 2 desc, recent_duration desc").Offset(skip).Limit(limit).Scan(&ul).Error
 	}
 
 	if err != nil {
@@ -97,7 +97,7 @@ func (c *TimelineController) Users() {
 	for index := range ul {
 		upi := &UserProfileInfo{UserProfile: ul[index].UserProfile}
 		genUserPorfileInfoCommon(upi, upi.GetCover())
-		ti = append(ti, TimelineUserInfo{UserProfileInfo: *upi, CreatedAt: ul[index].CreatedAt, Duration: ul[index].Duration})
+		ti = append(ti, TimelineUserInfo{UserProfileInfo: *upi, CreatedAt: ul[index].CreatedAt})
 	}
 
 	tli := TimelineInfo{Users: ti}

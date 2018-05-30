@@ -83,6 +83,7 @@ type ChatChannel struct {
 
 //ChatClient .
 type ChatClient struct {
+	Role     string
 	User     *models.UserProfile
 	Channel  *ChatChannel
 	Conn     *websocket.Conn
@@ -200,7 +201,7 @@ func (c *WebsocketController) Create() {
 	channel := &ChatChannel{Join: make(chan *ChatClient, 5), Send: make(chan *WsMessage, 5), Exit: make(chan []error, 5), Gift: make(chan *models.GiftHisInfo, 5), ID: tk.ID, DstID: parter, DialID: dl.ID}
 	go channel.Run()
 
-	client := &ChatClient{User: up, Conn: conn, Send: make(chan *WsMessage), Request: c.Ctx.Request, DeadLine: time.Now().Add(pongWait)}
+	client := &ChatClient{User: up, Role: "用户", Conn: conn, Send: make(chan *WsMessage), Request: c.Ctx.Request, DeadLine: time.Now().Add(pongWait)}
 	client.Channel = channel
 	chatChannels[tk.ID] = channel
 	chattingUser[tk.ID] = nil
@@ -262,7 +263,7 @@ func (c *WebsocketController) Join() {
 			}
 
 			cn.Price = up.Price
-			client := &ChatClient{User: up, Channel: cn, Conn: conn, Send: make(chan *WsMessage), Request: c.Ctx.Request, DeadLine: time.Now().Add(pongWait)}
+			client := &ChatClient{User: up, Role: "主播", Channel: cn, Conn: conn, Send: make(chan *WsMessage), Request: c.Ctx.Request, DeadLine: time.Now().Add(pongWait)}
 
 			go client.Read()
 			go client.Write()
@@ -275,9 +276,7 @@ func (c *WebsocketController) Join() {
 			old.Close()
 		}
 	}
-
 	chattingUser[tk.ID] = nil
-
 }
 
 //Reject .
@@ -381,7 +380,7 @@ func (c *ChatChannel) Run() {
 			}
 
 			client.Send <- &WsMessage{MessageType: wsMessageTypeJoinSuccess, Content: "加入房间成功"}
-			c.logger.Infof("[uid:%d]用户加入房间,Agent:%s", client.User.ID, client.Request.UserAgent())
+			c.logger.Infof("[uid:%d,role:%s]用户加入房间,Agent:%s", client.User.ID, client.Role, client.Request.UserAgent())
 		case msg := <-c.Send:
 			go c.wsMsgDeal(msg)
 		case gift := <-c.Gift:
@@ -686,7 +685,7 @@ func (c *ChatClient) Read() {
 			}
 		}()
 		if !c.Channel.Stoped { //未结算
-			c.Channel.logger.Infof("[uid:%d]ws:%p,%s", c.User.ID, c.Conn, "用户主动挂断或等待重连超时,执行退出流程")
+			c.Channel.logger.Infof("[uid:%d,role:%s]ws:%p,%s", c.User.ID, c.Role, c.Conn, "用户主动挂断或等待重连超时,执行退出流程")
 			c.Channel.Exit <- []error{errors.New("用户主动挂断或等待重连超时")} //发送退出信号,关闭通道后write方法会立即退出
 		}
 	}()
@@ -705,10 +704,10 @@ func (c *ChatClient) Read() {
 				return
 			}
 
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
-				c.Channel.logger.Errorf("[uid:%d]读取消息错误:%s", c.User.ID, err.Error())
-			} else {
-				c.Channel.logger.Infof("[uid:%d]链接主动挂断:%s", c.User.ID, err.Error())
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				c.Channel.logger.Errorf("[uid:%d,role:%s]读取消息错误:%s", c.User.ID, c.Role, err.Error())
+			} else if !c.Channel.Inited {
+				c.Channel.logger.Infof("[uid:%d,role:%s]链接主动挂断:%s,主播未接通,不等待重连，直接退出", c.User.ID, c.Role, err.Error())
 				return
 			}
 
@@ -724,7 +723,7 @@ func (c *ChatClient) Read() {
 			}
 
 			if curConnection != c.Conn { //重连成功
-				c.Channel.logger.Infof("[uid:%d]重连成功,房间继续保留", c.User.ID)
+				c.Channel.logger.Infof("[uid:%d,role:%s]重连成功,房间继续保留", c.User.ID, c.Role)
 				curConnection.Close()
 				curConnection = c.Conn
 				c.connInit()
@@ -737,7 +736,7 @@ func (c *ChatClient) Read() {
 		err = utils.JSONUnMarshalFromByte(message, m)
 		if err == nil {
 			if !c.Channel.Stoped {
-				c.Channel.logger.Infof("[uid:%d]收到客户端消息:%s", c.User.ID, string(message))
+				c.Channel.logger.Infof("[uid:%d,role:%s]收到客户端消息:%s", c.User.ID, c.Role, string(message))
 				c.Channel.Send <- m
 			}
 		} else {
@@ -772,7 +771,7 @@ func (c *ChatClient) Write() {
 			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
 
 			ms, _ := utils.JSONMarshalToString(message)
-			c.Channel.logger.Infof("[uid:%d]发送消息:%s", c.User.ID, ms)
+			c.Channel.logger.Infof("[uid:%d,role:%s]发送消息:%s", c.User.ID, c.Role, ms)
 
 			if err := c.Conn.WriteJSON(message); err != nil {
 				c.Channel.logger.Error("[ws(发送消息出错)]:", err, "消息内容", ms)
@@ -784,7 +783,7 @@ func (c *ChatClient) Write() {
 			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
 
 			if err := c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
-				c.Channel.logger.Warningf("[uid:%d]%s", c.User.ID, "ping失败")
+				c.Channel.logger.Warningf("[uid:%d,role:%s]%s", c.User.ID, c.Role, "ping失败")
 			}
 		}
 	}
@@ -799,7 +798,7 @@ func (c *ChatClient) connInit() {
 			return errors.New("通道已关闭")
 		}
 
-		c.Channel.logger.Infof("[uid:%d]%s", c.User.ID, "收到pong消息,刷新deadline")
+		c.Channel.logger.Infof("[uid:%d,role:%s]%s", c.User.ID, c.Role, "收到pong消息,刷新deadline")
 
 		if _, ok := chatChannels[c.Channel.ID]; ok {
 			c.DeadLine = time.Now().Add(pongWait)

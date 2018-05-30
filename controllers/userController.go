@@ -114,6 +114,7 @@ func (c *UserController) Read() {
 				dto.Message = "很抱歉,未能搜索到"
 				return
 			}
+			up.UpdateRecentDialTime()
 		}
 
 		user := &models.User{ID: up.ID}
@@ -255,13 +256,6 @@ func (c *UserController) Update() {
 					if dto.Sucess && up.UserType != models.UserTypeFaker {
 						utils.SendP2PSysMessage(registWordMan, strconv.FormatUint(tk.ID, 10))
 						go func() {
-							defer func() {
-								if err := recover(); err != nil {
-									beego.Error(err)
-									debug.PrintStack()
-								}
-							}()
-
 							if err := SendActivity(tk.ID); err != nil {
 								beego.Error("促活推送失败", err)
 							}

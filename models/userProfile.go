@@ -174,7 +174,7 @@ func (u *UserProfile) Update(fields map[string]interface{}, trans *gorm.DB) erro
 
 //UpdateRecentDialTime .
 func (u *UserProfile) UpdateRecentDialTime() error {
-	return db.Model(u).Update("recent_duration", gorm.Expr("COALESCE((SELECT sum(duration) FROM MoShow.dial where to_user_id = ? and create_at >= ? GROUP BY to_user_id),0)", u.ID, time.Now().Add(-3*24*time.Hour).Unix())).Error
+	return db.Model(u).Update("recent_duration", gorm.Expr("COALESCE((SELECT sum(duration) FROM MoShow.dial where (to_user_id = ? or from_user_id = ?) and create_at >= ? GROUP BY to_user_id or from_user_id),0)", u.ID, u.ID, time.Now().Add(-3*24*time.Hour).Unix())).Error
 }
 
 //UpdateCover .
