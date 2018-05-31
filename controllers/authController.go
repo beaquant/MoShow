@@ -148,7 +148,7 @@ func (c *AuthController) Login() {
 
 	tk := &Token{}
 	if u.ID == 0 { //该手机号未注册，执行注册逻辑
-		up, err := c.InitUser(u, models.AcctTypeTelephone)
+		up, err := c.InitUser(u, models.AcctTypeTelephone, defaultBoysAvatar)
 		if err != nil {
 			beego.Error("注册用户失败", err, c.Ctx.Request.UserAgent())
 			dto.Message = "注册用户失败\t" + err.Error()
@@ -249,7 +249,7 @@ func (c *AuthController) WechatLogin() {
 	tk := &Token{}
 	if u.ID == 0 { //执行微信注册
 		u.InvitedBy = Ivt
-		up, err := c.InitUser(u, models.AcctTypeWechat)
+		up, err := c.InitUser(u, models.AcctTypeWechat, info.HeadImgURL)
 		if err != nil {
 			beego.Error("注册用户失败", err, c.Ctx.Request.UserAgent())
 			dto.Message = "注册用户失败\t" + err.Error()
@@ -312,7 +312,7 @@ func (c *AuthController) WechatLogin() {
 }
 
 //InitUser .
-func (c *AuthController) InitUser(u *models.User, acctType int) (*models.UserProfile, error) {
+func (c *AuthController) InitUser(u *models.User, acctType int, avatar string) (*models.UserProfile, error) {
 	trans := models.TransactionGen()
 
 	if u.InvitedBy != 0 {
@@ -346,11 +346,14 @@ func (c *AuthController) InitUser(u *models.User, acctType int) (*models.UserPro
 	up.Alias = randomName[index] + strconv.FormatUint(u.ID, 10) //随机生成花名
 	up.ImToken = imtk.Token
 	up.Birthday = 820425600
-	up.CoverPic = `{"cover_pic_info": {"image_url": "` + defaultBoysAvatar + `", "cloud_porn_check": true}}`
 	up.OnlineStatus = models.OnlineStatusOnline
 	up.Description = "你不主动我们怎么会有故事"
 	up.Location = "北京市"
 	up.Price = 200
+
+	uci := &models.UserCoverInfo{CoverPicture: &models.Picture{ImageURL: avatar, CloudCheck: true}}
+	up.CoverPic, _ = utils.JSONMarshalToString(uci)
+
 	if IsCheckMode4Context(c.Ctx) {
 		up.UserType = models.UserTypeFaker
 		up.Price = 0

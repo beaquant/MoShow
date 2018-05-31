@@ -158,14 +158,6 @@ func (c *WebsocketController) Create() {
 		return
 	}
 
-	up := &models.UserProfile{ID: tk.ID}
-	if err := up.Read(); err != nil {
-		ws.Content = "获取用户信息失败\t" + err.Error()
-		beego.Error("获取用户信息失败", err, tk.ID, c.Ctx.Request.UserAgent())
-		closeConnWithMessage(conn, ws)
-		return
-	}
-
 	pp := &models.UserProfile{ID: parter}
 	if err := pp.Read(); err != nil {
 		ws.Content = "获取用户信息失败\t" + err.Error()
@@ -182,6 +174,14 @@ func (c *WebsocketController) Create() {
 
 	if pp.UserType != models.UserTypeAnchor && pp.UserType != models.UserTypeFaker {
 		ws.Content = "对方不是主播,不能直播"
+		closeConnWithMessage(conn, ws)
+		return
+	}
+
+	up := &models.UserProfile{ID: tk.ID}
+	if err := up.Read(); err != nil {
+		ws.Content = "获取用户信息失败\t" + err.Error()
+		beego.Error("获取用户信息失败", err, tk.ID, c.Ctx.Request.UserAgent())
 		closeConnWithMessage(conn, ws)
 		return
 	}
@@ -203,6 +203,7 @@ func (c *WebsocketController) Create() {
 
 	//Exit通道要设置缓冲区，不然会在写Exit的时候死锁导致无法读Exit
 	channel := &ChatChannel{Join: make(chan *ChatClient, 5), Send: make(chan *WsMessage, 5), Exit: make(chan []error, 5), Gift: make(chan *models.GiftHisInfo, 5), ID: tk.ID, DstID: parter, DialID: dl.ID}
+	channel.initLogOutput()
 	go channel.Run()
 
 	client := &ChatClient{User: up, Role: "用户", Conn: conn, Send: make(chan *WsMessage), Request: c.Ctx.Request, DeadLine: time.Now().Add(pongWait)}
@@ -349,6 +350,20 @@ func (ChatChannel) Format(e *logrus.Entry) ([]byte, error) {
 	return []byte(str), nil
 }
 
+//初始化日志模块
+func (c *ChatChannel) initLogOutput() {
+	loger := logrus.New()
+	loger.Formatter = c
+	file, err := os.OpenFile(path.Join("logs", fmt.Sprintf("%d_ws.log", c.ID)), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		beego.Error("打开日志文件失败", err)
+	} else {
+		loger.Out = file
+		c.logFile = file
+	}
+	c.logger = loger.WithFields(logrus.Fields{"dial_id": c.DialID})
+}
+
 //Run .
 func (c *ChatChannel) Run() {
 	defer func() {
@@ -361,17 +376,7 @@ func (c *ChatChannel) Run() {
 	}()
 
 	c.ChannelStartTime = time.Now().Unix()
-	//初始化日志模块
-	loger := logrus.New()
-	loger.Formatter = c
-	file, err := os.OpenFile(path.Join("logs", fmt.Sprintf("%d_ws.log", c.ID)), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	if err != nil {
-		beego.Error("打开日志文件失败", err)
-	} else {
-		loger.Out = file
-		c.logFile = file
-	}
-	c.logger = loger.WithFields(logrus.Fields{"dial_id": c.DialID})
+
 	c.logger.Infof("[uid:%d,aid:%d]房间创建成功", c.ID, c.DstID)
 
 	for {
@@ -710,9 +715,12 @@ func (c *ChatClient) Read() {
 
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				c.Channel.logger.Errorf("[uid:%d,role:%s]读取消息错误:%s", c.User.ID, c.Role, err.Error())
-			} else if c.Channel.Dst == nil {
+			} else {
 				c.Channel.logger.Infof("[uid:%d,role:%s]链接主动挂断:%s", c.User.ID, c.Role, err.Error())
-				c.DeadLine = time.Now().Add(5 * time.Second) //房间未初始化时挂断，等待5秒重连
+			}
+
+			if !c.Channel.Inited { //房间未初始化时挂断，等待5秒重连
+				c.DeadLine = time.Now().Add(5 * time.Second)
 			}
 
 			for time.Now().Before(c.DeadLine) { //在截止时间之前,间隔一秒判断是否重连

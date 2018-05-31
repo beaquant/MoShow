@@ -62,7 +62,7 @@
   branch = "master"
   name = "github.com/go-sql-driver/mysql"
   packages = ["."]
-  revision = "affd4c93966fe80839dc3dd720440aaad00914b9"
+  revision = "7413002f368fba928eefaf762c91a2acfeabdf68"
 
 [[projects]]
   branch = "master"
@@ -186,7 +186,7 @@
     "idna",
     "publicsuffix"
   ]
-  revision = "89e543239a64caf31d3a6865872ea120b41446df"
+  revision = "1e491301e022f8f977054da4c2d852decd59571f"
 
 [[projects]]
   branch = "master"
