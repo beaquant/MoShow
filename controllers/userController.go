@@ -24,6 +24,12 @@ var (
 	registWordWoman    = "欢迎漂亮的小姐姐，赶紧去认证形象视频吧，认证通过就可跟帅气的小哥哥畅聊了。审核通过后会有系统消息提示，快速审核通道添加运营小哥哥微信:"
 )
 
+func init() {
+	if cfg, err := (&models.Config{}).GetCommonConfig(); err == nil {
+		registWordWoman += cfg.CheckStaffWechat
+	}
+}
+
 //UserController 用户信息查询，更新等接口
 type UserController struct {
 	beego.Controller
@@ -51,12 +57,6 @@ type UserOperateInfo struct {
 	User   *UserProfileInfo `json:"user"`
 	OpTime int64            `json:"time"`
 	Award  uint64           `json:"awd"`
-}
-
-func init() {
-	if cfg, err := (&models.Config{}).GetCommonConfig(); err == nil {
-		registWordWoman += cfg.CheckStaffWechat
-	}
 }
 
 //Read .

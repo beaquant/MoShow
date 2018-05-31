@@ -110,7 +110,6 @@ type VideoCost struct {
 }
 
 func closeConnWithMessage(conn *websocket.Conn, ws *WsMessage) {
-	ws.MessageType = wsMessageTypeJoinFail
 	b, _ := utils.JSONMarshal(ws)
 
 	conn.SetWriteDeadline(time.Now().Add(writeWait))
@@ -138,18 +137,23 @@ func (c *WebsocketController) Create() {
 		return
 	}
 
-	ws := &WsMessage{MessageType: wsMessageTypeException}
-	tk := GetToken(c.Ctx)
+	ws, tk := &WsMessage{MessageType: wsMessageTypeException}, GetToken(c.Ctx)
+	if _, ok := chatChannels[tk.ID]; !ok { //不在聊天通道里,从聊天人中清除用户
+		if _, ok := chattingUser[tk.ID]; ok {
+			delete(chattingUser, tk.ID)
+		}
+	}
+
 	if _, ok := chattingUser[tk.ID]; ok { //如果用户正在聊天，拒绝创建聊天通道
 		ws.Content = "您已在通话中"
-		beego.Error(ws.Content, "用户ID:", tk.ID, "主播ID:", parter, c.Ctx.Request.UserAgent())
+		beego.Error(ws.Content, "用户ID:", tk.ID, "主播ID:", parter, c.Ctx.Request.UserAgent(), c.Ctx.Request.RequestURI)
 		closeConnWithMessage(conn, ws)
 		return
 	}
 
 	if _, ok := chattingUser[parter]; ok { //如果主播正在聊天，拒绝创建聊天通道
 		ws.Content = "对方正在通话中"
-		beego.Error(ws.Content, "用户ID:", tk.ID, "主播ID:", parter, c.Ctx.Request.UserAgent())
+		beego.Error(ws.Content, "用户ID:", tk.ID, "主播ID:", parter, c.Ctx.Request.UserAgent(), c.Ctx.Request.RequestURI)
 		closeConnWithMessage(conn, ws)
 		return
 	}
@@ -234,17 +238,17 @@ func (c *WebsocketController) Join() {
 	tk := GetToken(c.Ctx)
 	if cn, ok := chatChannels[channelid]; !ok {
 		ws.Content = "房间不存在或已关闭，加入失败"
-		beego.Error(ws.Content, "用户ID:", tk.ID, "房间ID:", channelid, c.Ctx.Request.UserAgent())
+		beego.Error(ws.Content, "用户ID:", tk.ID, "房间ID:", channelid, c.Ctx.Request.UserAgent(), c.Ctx.Request.RequestURI)
 		closeConnWithMessage(conn, ws)
 		return
 	} else if cn.DstID != tk.ID && cn.ID != tk.ID {
 		ws.Content = "用户不属于该房间，禁止加入"
-		beego.Error(ws.Content, tk.ID, c.Ctx.Request.UserAgent())
+		beego.Error(ws.Content, "用户ID:", tk.ID, c.Ctx.Request.UserAgent(), c.Ctx.Request.RequestURI)
 		closeConnWithMessage(conn, ws)
 		return
 	} else if cn.Stoped {
 		ws.Content = "房间已关闭,加入失败"
-		beego.Error(ws.Content, tk.ID, c.Ctx.Request.UserAgent())
+		beego.Error(ws.Content, "用户ID:", tk.ID, c.Ctx.Request.UserAgent(), c.Ctx.Request.RequestURI)
 		closeConnWithMessage(conn, ws)
 		return
 	} else if tk.ID == cn.ID {
@@ -252,7 +256,7 @@ func (c *WebsocketController) Join() {
 		old := cn.Src.Conn
 		cn.Src.Conn = conn
 		old.Close()
-	} else if tk.ID == cn.DstID {
+	} else if tk.ID == cn.DstID && !cn.Stoped {
 		if cn.Dst == nil {
 			up := &models.UserProfile{ID: tk.ID}
 			if err := up.Read(); err != nil {
@@ -268,7 +272,8 @@ func (c *WebsocketController) Join() {
 			go client.Read()
 			go client.Write()
 			cn.Join <- client
-		} else if !cn.Stoped {
+			chattingUser[tk.ID] = nil
+		} else {
 			cn.logger.Info("主播重连成功,尝试挂断旧连接")
 
 			old := cn.Dst.Conn
@@ -276,7 +281,6 @@ func (c *WebsocketController) Join() {
 			old.Close()
 		}
 	}
-	chattingUser[tk.ID] = nil
 }
 
 //Reject .
@@ -380,7 +384,7 @@ func (c *ChatChannel) Run() {
 			}
 
 			client.Send <- &WsMessage{MessageType: wsMessageTypeJoinSuccess, Content: "加入房间成功"}
-			c.logger.Infof("[uid:%d,role:%s]用户加入房间,Agent:%s", client.User.ID, client.Role, client.Request.UserAgent())
+			c.logger.Infof("[uid:%d,role:%s]加入房间,Agent:%s", client.User.ID, client.Role, client.Request.UserAgent())
 		case msg := <-c.Send:
 			go c.wsMsgDeal(msg)
 		case gift := <-c.Gift:
@@ -706,9 +710,9 @@ func (c *ChatClient) Read() {
 
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				c.Channel.logger.Errorf("[uid:%d,role:%s]读取消息错误:%s", c.User.ID, c.Role, err.Error())
-			} else if !c.Channel.Inited {
-				c.Channel.logger.Infof("[uid:%d,role:%s]链接主动挂断:%s,主播未接通,不等待重连，直接退出", c.User.ID, c.Role, err.Error())
-				return
+			} else if c.Channel.Dst == nil {
+				c.Channel.logger.Infof("[uid:%d,role:%s]链接主动挂断:%s", c.User.ID, c.Role, err.Error())
+				c.DeadLine = time.Now().Add(5 * time.Second) //房间未初始化时挂断，等待5秒重连
 			}
 
 			for time.Now().Before(c.DeadLine) { //在截止时间之前,间隔一秒判断是否重连
