@@ -1158,7 +1158,7 @@ func (c *UserController) Withdraw() {
 	}
 
 	if up.Income < amount {
-		beego.Error("账户收益不足以提现:"+strconv.FormatUint(up.Income, 10)+strconv.FormatUint(amount, 10), c.Ctx.Request.UserAgent())
+		beego.Error("账户收益不足以提现,收益:", up.Income, "提现金额", amount, "用户:", tk.ID, c.Ctx.Request.UserAgent())
 		dto.Message = "账户收益不足以提现"
 		dto.Code = utils.DtoStatusParamError
 		return

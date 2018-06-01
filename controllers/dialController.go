@@ -3,6 +3,7 @@ package controllers
 import (
 	"MoShow/models"
 	"MoShow/utils"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -214,12 +215,8 @@ func (c *DialController) NmCallback() {
 		}
 
 		if cn, ok := chatChannels[dl.FromUserID]; ok && strconv.FormatUint(cn.NIMChannelID, 10) == ci.ChannelID { //如果云信返回回执,聊天通道还没结束，则强行结束
-			if cn.Src != nil {
-				cn.Src.Conn.Close()
-			}
-
-			if cn.Dst != nil {
-				cn.Dst.Conn.Close()
+			if !cn.Stoped {
+				cn.Exit <- []error{errors.New("云信通道关闭，强制结束websocket")}
 			}
 		}
 	case netease.EventTypeMediaInfo:

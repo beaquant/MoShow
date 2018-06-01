@@ -537,6 +537,7 @@ func SendActivity(uid uint64) error {
 		for index := range acts {
 			acti := ActiveInfo{Active: acts[index]}
 			utils.JSONUnMarshal(acts[index].Content, &acti.Detail)
+			acti.Detail.FileURL = utils.TransCosToCDN(acti.Detail.FileURL)
 			newActives.Actives = append(newActives.Actives, acti)
 		}
 

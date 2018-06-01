@@ -28,7 +28,7 @@ const (
 	pongWait = 65 * time.Second
 
 	// Send pings to peer with this period. Must be less than pongWait.
-	pingPeriod = 5 * time.Second
+	pingPeriod = 10 * time.Second
 
 	// Maximum message size allowed from peer.
 	maxMessageSize = 512
@@ -137,7 +137,7 @@ func (c *WebsocketController) Create() {
 		return
 	}
 
-	ws, tk := &WsMessage{MessageType: wsMessageTypeException}, GetToken(c.Ctx)
+	ws, tk := &WsMessage{MessageType: wsMessageTypeJoinFail}, GetToken(c.Ctx)
 	if _, ok := chatChannels[tk.ID]; !ok { //不在聊天通道里,从聊天人中清除用户
 		if _, ok := chattingUser[tk.ID]; ok {
 			delete(chattingUser, tk.ID)
@@ -235,7 +235,7 @@ func (c *WebsocketController) Join() {
 		return
 	}
 
-	ws := &WsMessage{MessageType: wsMessageTypeException}
+	ws := &WsMessage{MessageType: wsMessageTypeJoinFail}
 	tk := GetToken(c.Ctx)
 	if cn, ok := chatChannels[channelid]; !ok {
 		ws.Content = "房间不存在或已关闭，加入失败"
@@ -717,6 +717,10 @@ func (c *ChatClient) Read() {
 				c.Channel.logger.Errorf("[uid:%d,role:%s]读取消息错误:%s", c.User.ID, c.Role, err.Error())
 			} else {
 				c.Channel.logger.Infof("[uid:%d,role:%s]链接主动挂断:%s", c.User.ID, c.Role, err.Error())
+			}
+
+			if c.Channel.Dst == nil { //主播未连接时时挂断，直接退出
+				return
 			}
 
 			if !c.Channel.Inited { //房间未初始化时挂断，等待5秒重连
