@@ -19,6 +19,7 @@ type FeedBack struct {
 	UserID  uint64 `json:"user_id" gorm:"column:user_id"`
 	Type    int    `json:"type" gorm:"column:type"`
 	Content string `json:"content" gorm:"column:content"`
+	LogFile string `json:"log_file" gorm:"column:log_file"`
 	Time    int64  `json:"time" gorm:"column:time"`
 }
 

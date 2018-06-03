@@ -12,7 +12,7 @@ import (
 
 func TestCheckModePattern(t *testing.T) {
 	os.Setenv("GOCACHE", "off")
-	t.Log(controllers.IsCheckMode("Mxiu/1.0.0(Android:24;VTR-AL00)xiaomi"))
+	t.Log(controllers.IsCheckMode("Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.101 Safari/537.36 QIHU 360SE/Nutch-1.13"))
 }
 
 func TestActive(t *testing.T) {

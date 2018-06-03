@@ -203,13 +203,13 @@ func (c *DialController) NmCallback() {
 		dl := &models.Dial{}
 		if err := dl.ReadFromNimID(ci.ChannelID); err != nil { //找不到通话记录，丢弃该回执
 			if ci.Duration != "0" {
-				beego.Error("云信回执找不到指定的聊天通道相关的通话记录,NimID:", ci.ChannelID, ci)
+				beego.Error("云信回执找不到指定的聊天通道相关的通话记录,NimID:", ci.ChannelID, "body", string(bd))
 			}
 			break
 		}
 
 		if err := dl.UpdateNmAudioCopy(ci); err != nil {
-			beego.Error("更新云信通话时长信息回执失败", err)
+			beego.Error("更新云信通话时长信息回执失败", err, "body", string(bd))
 			c.Abort(strconv.Itoa(http.StatusBadRequest))
 			return
 		}
@@ -245,7 +245,7 @@ func (c *DialController) NmCallback() {
 		}
 
 		if err := dl.UpdateNmAudioDlCopy(dci, fi); err != nil {
-			beego.Error("更新云信视频录制地址信息失败", err)
+			beego.Error("更新点播信息失败", err, "body", string(bd))
 			c.Abort(strconv.Itoa(http.StatusBadRequest))
 			return
 		}

@@ -28,6 +28,7 @@ func (c *FeedbackController) Suggestion() {
 	r := &models.FeedBackSuggestion{}
 	utils.JSONUnMarshal(c.GetString("img"), &r.Img)
 	r.Content = c.GetString("content")
+	f.LogFile = c.GetString("log")
 
 	if err := f.AddSuggestion(r); err != nil {
 		beego.Error(err)

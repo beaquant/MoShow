@@ -460,7 +460,7 @@ func (c *ChatChannel) Run() {
 			dl, dt, errStr := &models.Dial{ID: c.DialID}, &models.DialTag{}, "[]"
 			if exp != nil && len(exp) > 0 {
 				dl.Status = models.DialStatusException
-				beego.Error("结算过程中发生错误,标记为异常通话:", dl.ID)
+				// beego.Error("结算过程中发生错误,标记为异常通话:", dl.ID)
 				for _, val := range exp {
 					dt.ErrorMsg = append(dt.ErrorMsg, val.Error())
 					c.logger.Errorf("视频过程中发生错误:%s", val.Error())

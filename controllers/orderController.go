@@ -215,6 +215,11 @@ func userRecharge(uid, coinCount uint64, chgInfo string, trans *gorm.DB) error {
 		return err
 	}
 
+	if err := (&models.UserExtra{ID: uid}).AddRechargeCount(trans); err != nil {
+		beego.Error("用户充值，增加充值次数失败", err)
+		return err
+	}
+
 	prod := &models.Product{}
 	utils.JSONUnMarshal(chgInfo, prod)
 	if prod.CoinCount != 0 {

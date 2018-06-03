@@ -18,6 +18,7 @@ type UserExtra struct {
 	InviteIncomeHis uint64 `json:"invite_income_his" gorm:"column:invite_income_his" description:"邀请历史总收益"`
 	BalanceHis      uint64 `json:"balance_his" gorm:"column:balance_his" description:"历史总充值"`
 	InviteCount     uint64 `json:"invite_count" gorm:"column:invite_count" description:"邀请总人数"`
+	RechargeCount   uint64 `json:"recharge_count" gorm:"column:recharge_count" description:"邀请总人数"`
 	VideoViewPay    string `json:"-" gorm:"column:video_view_pay" description:"视频付费记录"`
 }
 
@@ -183,4 +184,16 @@ func (u *UserExtra) AddInviteCount(trans *gorm.DB) error {
 		trans = db
 	}
 	return trans.Model(u).Update("invite_count", gorm.Expr("invite_count + ?", 1)).Error
+}
+
+//AddRechargeCount .
+func (u *UserExtra) AddRechargeCount(trans *gorm.DB) error {
+	if u.ID == 0 {
+		return errors.New("user_extra 更新充值次数 必须指定用户ID")
+	}
+
+	if trans == nil {
+		trans = db
+	}
+	return trans.Model(u).Update("recharge_count", gorm.Expr("recharge_count + ?", 1)).Error
 }

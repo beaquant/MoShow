@@ -332,7 +332,7 @@ func (c *UserController) Update() {
 		if dt, err := time.Parse("2006-01-02", birth); err == nil {
 			param["birthday"], up.Birthday = dt.Unix(), dt.Unix()
 		} else {
-			beego.Error(err)
+			beego.Error(tk.ID, err, c.Ctx.Request.UserAgent())
 			dto.Message = err.Error()
 			return
 		}
@@ -464,7 +464,7 @@ func (c *UserController) SendGift() {
 	giftChg := &models.GiftHisInfo{Count: giftCount, GiftInfo: *gift}
 	if giftCount*gift.Price > fromUserProfile.Balance+fromUserProfile.Income {
 		dto.Message = "余额不足"
-		beego.Error("赠送礼物余额不足,用户ID:", fromUserProfile.ID, "礼物总价:", giftCount*gift.Price, "用户余额:", fromUserProfile.Balance, "用户收益:", fromUserProfile.Income)
+		beego.Error("赠送礼物余额不足,用户ID:", fromUserProfile.ID, "礼物总价:", giftCount*gift.Price, "用户余额:", fromUserProfile.Balance, "用户收益:", fromUserProfile.Income, c.Ctx.Request.UserAgent(), c.Ctx.Input.IP())
 		return
 	}
 
