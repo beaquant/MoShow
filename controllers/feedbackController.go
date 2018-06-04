@@ -36,7 +36,7 @@ func (c *FeedbackController) Suggestion() {
 		return
 	}
 
-	utils.SendP2PSysMessage("已收到您的反馈，请耐心等待运营人员处理。", strconv.FormatUint(tk.ID, 10))
+	utils.SendP2PSysMessage(suggestionCpw, strconv.FormatUint(tk.ID, 10))
 	dto.Message = "反馈成功!"
 	dto.Sucess = true
 }

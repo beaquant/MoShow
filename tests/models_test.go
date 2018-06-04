@@ -19,3 +19,8 @@ func TestUpdateRecentDuration(t *testing.T) {
 	up := &models.UserProfile{ID: 1}
 	t.Log(up.UpdateRecentDialTime())
 }
+
+func TestGetDialCount(t *testing.T) {
+	ue := &models.UserExtra{ID: 1}
+	t.Log(ue.GetMissedDialCount(nil))
+}

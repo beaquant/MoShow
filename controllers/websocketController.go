@@ -11,6 +11,7 @@ import (
 	"runtime/debug"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -79,6 +80,7 @@ type ChatChannel struct {
 	Join             chan *ChatClient
 	Exit             chan []error
 	Gift             chan *models.GiftHisInfo
+	mutex            *sync.Mutex
 }
 
 //ChatClient .
@@ -202,7 +204,7 @@ func (c *WebsocketController) Create() {
 	}
 
 	//Exit通道要设置缓冲区，不然会在写Exit的时候死锁导致无法读Exit
-	channel := &ChatChannel{Join: make(chan *ChatClient, 5), Send: make(chan *WsMessage, 5), Exit: make(chan []error, 5), Gift: make(chan *models.GiftHisInfo, 5), ID: tk.ID, DstID: parter, DialID: dl.ID}
+	channel := &ChatChannel{Join: make(chan *ChatClient, 5), Send: make(chan *WsMessage, 5), Exit: make(chan []error, 5), Gift: make(chan *models.GiftHisInfo, 5), ID: tk.ID, DstID: parter, DialID: dl.ID, mutex: new(sync.Mutex)}
 	channel.initLogOutput()
 	go channel.Run()
 
@@ -247,7 +249,7 @@ func (c *WebsocketController) Join() {
 		beego.Error(ws.Content, "用户ID:", tk.ID, c.Ctx.Request.UserAgent(), c.Ctx.Request.RequestURI)
 		closeConnWithMessage(conn, ws)
 		return
-	} else if cn.Stoped {
+	} else if cn.ChannelStopped() {
 		ws.Content = "房间已关闭,加入失败"
 		beego.Error(ws.Content, "用户ID:", tk.ID, c.Ctx.Request.UserAgent(), c.Ctx.Request.RequestURI)
 		closeConnWithMessage(conn, ws)
@@ -257,7 +259,7 @@ func (c *WebsocketController) Join() {
 		old := cn.Src.Conn
 		cn.Src.Conn = conn
 		old.Close()
-	} else if tk.ID == cn.DstID && !cn.Stoped {
+	} else if tk.ID == cn.DstID && !cn.ChannelStopped() {
 		if cn.Dst == nil {
 			up := &models.UserProfile{ID: tk.ID}
 			if err := up.Read(); err != nil {
@@ -306,8 +308,8 @@ func (c *WebsocketController) Reject() {
 		return
 	}
 
-	if !cn.Stoped { //未结算
-		cn.Exit <- nil
+	if !cn.ChannelStopped() { //未结算
+		cn.ChannelExit(nil)
 		(&models.UserProfile{ID: tk.ID}).AddDialReject(nil)
 	}
 
@@ -393,7 +395,7 @@ func (c *ChatChannel) Run() {
 		case msg := <-c.Send:
 			go c.wsMsgDeal(msg)
 		case gift := <-c.Gift:
-			if !c.Stoped {
+			if !c.ChannelStopped() {
 				c.GiftAmount += gift.Count * gift.GiftInfo.Price
 
 				vc, err := c.genVideoCost()
@@ -409,11 +411,6 @@ func (c *ChatChannel) Run() {
 				c.Dst.Send <- m
 			}
 		case exp := <-c.Exit:
-			if c.Stoped {
-				break
-			}
-			c.Stoped = true
-
 			if c.StartTime == 0 {
 				c.StartTime = c.ChannelStartTime
 			}
@@ -503,9 +500,47 @@ func (c *ChatChannel) Run() {
 
 			time.Sleep(time.Second)
 			c.logger.Infof("主播[%d] 用户[%d] %s", c.DstID, c.ID, "房间结算成功")
+			c.missedDialDeal()
 			return
 		}
 	}
+}
+
+func (c *ChatChannel) missedDialDeal() {
+	if c.NIMChannelID != 0 { //删除云信通道
+		utils.ImClient.DeleteRoom(strconv.FormatUint(c.NIMChannelID, 10))
+	} else if c.Dst == nil && time.Now().Unix()-c.ChannelStartTime > 5 { //超过5秒主播未接通，增加未接数
+		ue := models.UserExtra{ID: c.DstID}
+		if ct, _ := ue.GetMissedDialCount(nil); ct > 6 { //未接次数超过6次，状态设为勿扰
+			if err := (&models.UserProfile{ID: c.DstID}).UpdateOnlineStatus(models.OnlineStatusBusy); err != nil {
+				beego.Error("主播强制设置勿扰状态失败", "ID:", c.DstID, err)
+			}
+		} else {
+			if err := ue.AddMissedDialCount(nil); err != nil {
+				beego.Error("增加主播未接数失败", "ID:", c.DstID, err)
+			}
+		}
+	}
+}
+
+//ChannelExit .
+func (c *ChatChannel) ChannelExit(errs []error) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	if c.Stoped {
+		return
+	}
+
+	c.Stoped = true
+	c.Exit <- errs
+}
+
+//ChannelStopped .
+func (c *ChatChannel) ChannelStopped() bool {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	return c.Stoped
 }
 
 func (c *ChatChannel) wsMsgDeal(msg *WsMessage) {
@@ -552,8 +587,8 @@ func (c *ChatChannel) wsMsgDeal(msg *WsMessage) {
 			//扣费
 			if err := videoAllocateFund(c.Src.User, c.Dst.User, c.Price); err != nil {
 				c.logger.Error("扣费失败", err)
-				if !c.Stoped {
-					c.Exit <- []error{errors.New("扣费失败\t" + err.Error())}
+				if !c.ChannelStopped() {
+					c.ChannelExit([]error{errors.New("扣费失败\t" + err.Error())})
 				}
 				return
 			}
@@ -601,7 +636,7 @@ func (c *ChatChannel) wsMsgDeal(msg *WsMessage) {
 			errs = append(errs, errors.New("解析结费请求参数错误:"+msg.Content))
 			c.logger.Error("解析结费请求参数错误", msg.Content, msg.MessageType, msg.Content)
 		}
-		c.Exit <- errs
+		c.ChannelExit(errs)
 	}
 }
 
@@ -610,7 +645,7 @@ func (c *ChatChannel) ticktokPay() {
 
 	defer func() {
 		if err := recover(); err != nil {
-			c.logger.Error(err)
+			beego.Error(err)
 			debug.PrintStack()
 		}
 		ticker.Stop()
@@ -619,7 +654,7 @@ func (c *ChatChannel) ticktokPay() {
 	for {
 		select {
 		case <-ticker.C:
-			if !c.Stoped { //若频道未关闭,每隔60秒扣费一次
+			if !c.ChannelStopped() { //若频道未关闭,每隔60秒扣费一次
 				c.Timelong = uint64(time.Now().Unix() - c.StartTime)
 
 				//扣费
@@ -630,8 +665,8 @@ func (c *ChatChannel) ticktokPay() {
 					c.Dst.Send <- m
 
 					time.Sleep(time.Second)
-					if !c.Stoped {
-						c.Exit <- []error{errors.New("余额不足，扣费失败，强制挂断\t" + err.Error())}
+					if !c.ChannelStopped() {
+						c.ChannelExit([]error{errors.New("余额不足，扣费失败，强制挂断\t" + err.Error())})
 					}
 					return
 				}
@@ -693,9 +728,9 @@ func (c *ChatClient) Read() {
 				debug.PrintStack()
 			}
 		}()
-		if !c.Channel.Stoped { //未结算
+		if !c.Channel.ChannelStopped() { //未结算
 			c.Channel.logger.Infof("[uid:%d,role:%s]ws:%p,%s", c.User.ID, c.Role, c.Conn, "用户主动挂断或等待重连超时,执行退出流程")
-			c.Channel.Exit <- []error{errors.New("用户主动挂断或等待重连超时")} //发送退出信号,关闭通道后write方法会立即退出
+			c.Channel.ChannelExit([]error{errors.New("用户主动挂断或等待重连超时")}) //发送退出信号,关闭通道后write方法会立即退出
 		}
 	}()
 
@@ -703,13 +738,13 @@ func (c *ChatClient) Read() {
 	c.connInit()
 
 	for {
-		if c.Channel.Stoped {
+		if c.Channel.ChannelStopped() {
 			return
 		}
 
 		_, message, err := c.Conn.ReadMessage()
 		if err != nil {
-			if c.Channel.Stoped {
+			if c.Channel.ChannelStopped() {
 				return
 			}
 
@@ -728,7 +763,7 @@ func (c *ChatClient) Read() {
 			}
 
 			for time.Now().Before(c.DeadLine) { //在截止时间之前,间隔一秒判断是否重连
-				if c.Channel.Stoped { //聊天结束
+				if c.Channel.ChannelStopped() { //聊天结束
 					return
 				}
 
@@ -751,7 +786,7 @@ func (c *ChatClient) Read() {
 		m := &WsMessage{}
 		err = utils.JSONUnMarshalFromByte(message, m)
 		if err == nil {
-			if !c.Channel.Stoped {
+			if !c.Channel.ChannelStopped() {
 				c.Channel.logger.Infof("[uid:%d,role:%s]收到客户端消息:%s", c.User.ID, c.Role, string(message))
 				c.Channel.Send <- m
 			}
@@ -793,7 +828,7 @@ func (c *ChatClient) Write() {
 				c.Channel.logger.Error("[ws(发送消息出错)]:", err, "消息内容", ms)
 			}
 		case <-ticker.C:
-			if c.Channel.Stoped {
+			if c.Channel.ChannelStopped() {
 				break
 			}
 			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
@@ -810,7 +845,7 @@ func (c *ChatClient) connInit() {
 	c.Conn.SetReadLimit(maxMessageSize)
 	c.Conn.SetReadDeadline(c.DeadLine)
 	c.Conn.SetPongHandler(func(pong string) error {
-		if c.Channel.Stoped {
+		if c.Channel.ChannelStopped() {
 			return errors.New("通道已关闭")
 		}
 

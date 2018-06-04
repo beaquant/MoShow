@@ -20,13 +20,17 @@ var (
 	defaultBoysAvatar  = "https://moshow-1255921343.file.myqcloud.com/sys/default_boys.jpg"
 	defaultGirlsAvatar = "https://moshow-1255921343.file.myqcloud.com/sys/default_girl.jpg"
 	randomName         = []string{"方块", "守护", "阿夜", "奇迹", "嘻嘻", "皮皮", "大地", "节奏", "武藏", "依流", "慧流", "娜娜", "配角", "二堂", "复社", "日奈", "森亚建", "露露", "尤里佳", "黑执事", "夏尔", "米卡", "亚洛斯", "伊丽", "克洛德", "索玛", "阿格尼", "梅林", "巴德尔", "葬依屋", "雷格尔", "刘时", "蓝猫", "汉娜", "田中先生", "菲尼安", "骑士", "玖兰枢", "玖兰", "锥生零", "黑主灰阎", "一条", "矢野", "锥生", "绯樱闲", "早园", "架园晓", "蓝堂荌", "玖兰李士", "夜刈", "琉星", "支葵", "凡多", "姆海威", "艾利斯", "弗斯塔斯", "琉佳", "千里", "十牙", "莎白", "米多", "福特", "优姬", "托兰西", "拓麻", "莉磨", "天天", "冷冷", "拜拜", "白白", "陌陌", "默默", "可可", "拉拉", "东东", "栋栋", "奇奇", "于鏊", "魔能", "嘿嘿", "哒哒", "呵呵", "大佬", "大爷"}
-	registWordMan      = "欢迎帅气的小哥哥，你想要的这里都有，赶紧找个TA开始一对一畅聊吧。"
+	registWordMan      = "欢迎帅气的小哥哥，你想要的这里都有，赶紧找个TA开始一对一畅聊吧。\r\n同时赠你一本【防骗大宝典】http://t.cn/R1RNNte"
 	registWordWoman    = "欢迎漂亮的小姐姐，赶紧去认证形象视频吧，认证通过就可跟帅气的小哥哥畅聊了。审核通过后会有系统消息提示，快速审核通道添加运营小哥哥微信:"
+	reportCpw          = "已收到您的举报，请耐心等待运营人员处理。您可以添加我们客服微信提供详细记录，方便快速处理。微信号："
+	suggestionCpw      = "已收到您的反馈，请耐心等待运营人员处理。您可以添加我们客服微信提供详细记录，方便快速处理。微信号："
 )
 
 func init() {
 	if cfg, err := (&models.Config{}).GetCommonConfig(); err == nil {
 		registWordWoman += cfg.CheckStaffWechat
+		reportCpw += cfg.CheckStaffWechat
+		suggestionCpw += cfg.CheckStaffWechat
 	}
 }
 
@@ -474,7 +478,7 @@ func (c *UserController) SendGift() {
 		return
 	}
 
-	if cn, ok := chatChannels[tk.ID]; ok && !cn.Stoped { //如果用户在视频中赠送礼物，将金额加到主播显示的收益中
+	if cn, ok := chatChannels[tk.ID]; ok && !cn.ChannelStopped() { //如果用户在视频中赠送礼物，将金额加到主播显示的收益中
 		cn.Gift <- giftChg
 	}
 
@@ -720,7 +724,7 @@ func (c *UserController) Report() {
 		return
 	}
 
-	utils.SendP2PSysMessage("已收到您的举报，请耐心等待运营人员处理。", strconv.FormatUint(tk.ID, 10))
+	utils.SendP2PSysMessage(reportCpw, strconv.FormatUint(tk.ID, 10))
 	dto.Message = "举报成功"
 	dto.Sucess = true
 }
@@ -814,6 +818,12 @@ func (c *UserController) SetBusyStatus() {
 		beego.Error("更新在线状态失败", err, c.Ctx.Request.UserAgent())
 		dto.Message = "更新在线状态失败\t" + err.Error()
 		return
+	}
+
+	if status == models.OnlineStatusOnline {
+		if err := (&models.UserExtra{ID: tk.ID}).ResetMissedDialCount(nil); err != nil {
+			beego.Error("重置未接数失败", tk.ID, err, c.Ctx.Request.UserAgent())
+		}
 	}
 
 	dto.Sucess = true

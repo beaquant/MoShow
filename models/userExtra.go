@@ -19,6 +19,7 @@ type UserExtra struct {
 	BalanceHis      uint64 `json:"balance_his" gorm:"column:balance_his" description:"历史总充值"`
 	InviteCount     uint64 `json:"invite_count" gorm:"column:invite_count" description:"邀请总人数"`
 	RechargeCount   uint64 `json:"recharge_count" gorm:"column:recharge_count" description:"邀请总人数"`
+	MissedDialCount uint64 `json:"missed_dial_count" gorm:"column:missed_dial_count" description:"未接通话数"`
 	VideoViewPay    string `json:"-" gorm:"column:video_view_pay" description:"视频付费记录"`
 }
 
@@ -196,4 +197,41 @@ func (u *UserExtra) AddRechargeCount(trans *gorm.DB) error {
 		trans = db
 	}
 	return trans.Model(u).Update("recharge_count", gorm.Expr("recharge_count + ?", 1)).Error
+}
+
+//AddMissedDialCount .
+func (u *UserExtra) AddMissedDialCount(trans *gorm.DB) error {
+	if u.ID == 0 {
+		return errors.New("user_extra 更新未接次数 必须指定用户ID")
+	}
+
+	if trans == nil {
+		trans = db
+	}
+	return trans.Model(u).Update("missed_dial_count", gorm.Expr("missed_dial_count + ?", 1)).Error
+}
+
+//ResetMissedDialCount .
+func (u *UserExtra) ResetMissedDialCount(trans *gorm.DB) error {
+	if u.ID == 0 {
+		return errors.New("user_extra 更新未接次数 必须指定用户ID")
+	}
+
+	if trans == nil {
+		trans = db
+	}
+	return trans.Model(u).Update("missed_dial_count", 0).Error
+}
+
+//GetMissedDialCount .
+func (u *UserExtra) GetMissedDialCount(trans *gorm.DB) (uint64, error) {
+	if u.ID == 0 {
+		return 0, errors.New("user_extra 获取未接次数 必须指定用户ID")
+	}
+
+	if trans == nil {
+		trans = db
+	}
+
+	return u.MissedDialCount, trans.Select("missed_dial_count").Find(u).Error
 }

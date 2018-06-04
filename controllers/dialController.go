@@ -215,7 +215,7 @@ func (c *DialController) NmCallback() {
 		}
 
 		if cn, ok := chatChannels[dl.FromUserID]; ok && strconv.FormatUint(cn.NIMChannelID, 10) == ci.ChannelID { //如果云信返回回执,聊天通道还没结束，则强行结束
-			if !cn.Stoped {
+			if !cn.ChannelStopped() {
 				cn.Exit <- []error{errors.New("云信通道关闭，强制结束websocket")}
 			}
 		}
@@ -248,6 +248,33 @@ func (c *DialController) NmCallback() {
 			beego.Error("更新点播信息失败", err, "body", string(bd))
 			c.Abort(strconv.Itoa(http.StatusBadRequest))
 			return
+		}
+
+	case netease.EventTypeLogin:
+		lci := &netease.LoginEventCopyInfo{}
+		if err := utils.JSONUnMarshalFromByte(bd, lci); err != nil {
+			beego.Error("云信回执解析错误", err, "body", string(bd))
+			c.Abort(strconv.Itoa(http.StatusBadRequest))
+			return
+		}
+
+		uid, err := strconv.ParseUint(lci.AcctID, 10, 64)
+		if err != nil {
+			beego.Error("登陆回执用户ID格式错误", err, "body", string(bd))
+			c.Abort(strconv.Itoa(http.StatusBadRequest))
+			return
+		}
+
+		missedCount, _ := (&models.UserExtra{ID: uid}).GetMissedDialCount(nil)
+
+		if err := (&models.UserExtra{ID: uid}).ResetMissedDialCount(nil); err != nil {
+			beego.Error("重置用户未接数失败", uid, err)
+		}
+
+		if missedCount > 6 {
+			if err := (&models.UserProfile{ID: uid}).UpdateOnlineStatus(models.OnlineStatusOnline); err != nil {
+				beego.Error("更新用户在线状态失败")
+			}
 		}
 	}
 

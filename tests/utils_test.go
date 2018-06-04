@@ -119,7 +119,7 @@ func TestReg(t *testing.T) {
 }
 
 func TestImTextMesg(t *testing.T) {
-	t.Log(utils.SendP2PMessage("1", "3", "normal message test"))
+	t.Log(utils.SendP2PMessage("1", "169143", "http://t.cn/R1RNNte"))
 }
 
 func TestImSysMsg(t *testing.T) {

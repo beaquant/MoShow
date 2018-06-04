@@ -23,7 +23,7 @@
   branch = "master"
   name = "github.com/MrSong0607/netease-im"
   packages = ["."]
-  revision = "b020097ab632e06d5b8c61f5ff5fcb79d818a776"
+  revision = "749b9a942dc387329aea73bd08d8823cca83687b"
 
 [[projects]]
   branch = "master"
@@ -59,10 +59,10 @@
   version = "v1.6"
 
 [[projects]]
-  branch = "master"
   name = "github.com/go-sql-driver/mysql"
   packages = ["."]
-  revision = "7413002f368fba928eefaf762c91a2acfeabdf68"
+  revision = "d523deb1b23d913de5bdada721a6071e71283618"
+  version = "v1.4.0"
 
 [[projects]]
   branch = "master"
@@ -151,7 +151,7 @@
     ".",
     "encoding"
   ]
-  revision = "e80398693b09f91acf9cf8ce8ee1acecc4ab2fda"
+  revision = "f18c7fb31ac029bc1a5b2dd0e78f5ffdf7d74c08"
 
 [[projects]]
   name = "github.com/smartystreets/assertions"
@@ -177,7 +177,7 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
-  revision = "ab813273cd59e1333f7ae7bff5d027d4aadf528c"
+  revision = "df8d4716b3472e4a531c33cedbe537dae921a1a9"
 
 [[projects]]
   branch = "master"
