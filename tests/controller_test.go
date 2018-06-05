@@ -7,6 +7,7 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 
 	"MoShow/controllers"
+	"MoShow/utils"
 	"testing"
 )
 
@@ -22,4 +23,9 @@ func TestActive(t *testing.T) {
 	go func() { t.Log(controllers.SendActivity(169143)) }()
 	go func() { t.Log(controllers.SendActivity(170034)) }()
 	time.Sleep(150 * time.Second)
+}
+func TestToken(t *testing.T) {
+	tk := &controllers.Token{}
+	t.Log(tk.Decrypt("iA8aheaDexLkxoijX4Yvz0vq_C52QcSmVCc6BlUpy8WpcDDZdG8s_XpO4pvAyJcIsDrxhjn7mWNJRrQJTGc0CGCMdFsWW9OiDQZAVGL7x40="))
+	t.Log(utils.JSONMarshalToString(tk))
 }

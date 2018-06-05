@@ -4,6 +4,7 @@ import (
 	"MoShow/models"
 	"MoShow/utils"
 	"fmt"
+	"strings"
 
 	"github.com/astaxie/beego"
 )
@@ -34,8 +35,13 @@ func (c *ConfigController) GetCommonConfig() {
 		return
 	}
 
+	if strings.Contains(c.Ctx.Request.UserAgent(), "Android") {
+		val.ForceUpdate = val.AndroidForceUpdate
+	}
+
 	if tk.UserType == models.UserTypeFaker {
 		val.ForceUpdate = nil
+		val.AndroidForceUpdate = nil
 	}
 
 	dto.Data = val

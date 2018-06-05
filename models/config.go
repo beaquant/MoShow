@@ -53,6 +53,7 @@ type CommonConfig struct {
 	VideoUploadMode       int              `json:"video_upload_mode" description:"形象视频上传模式,0:选择,拍摄;1:选择;2:拍摄"` //形象视频上传模式,0:选择,拍摄;1:选择;2:拍摄
 	UserProtocol          string           `json:"user_protocal" description:"用户协议"`                           //用户协议
 	ForceUpdate           *ForceUpdateInfo `json:"force_update,omitempty" description:"强制更新"`                  //强制更新
+	AndroidForceUpdate    *ForceUpdateInfo `json:"android_force_update,omitempty" description:"安卓强制更新"`        //安卓强制更新
 	Share                 ShareInfo        `json:"share" description:"邀请"`                                     //邀请
 	CustomerServiceWechat string           `json:"customer_service_wechat" description:"客服人员微信"`               //客服人员微信
 	CheckStaffWechat      string           `json:"check_staff_wechat" description:"审核人员微信"`                    //审核人员微信

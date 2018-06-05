@@ -509,12 +509,13 @@ func (c *ChatChannel) Run() {
 func (c *ChatChannel) missedDialDeal() {
 	if c.NIMChannelID != 0 { //删除云信通道
 		utils.ImClient.DeleteRoom(strconv.FormatUint(c.NIMChannelID, 10))
-	} else if c.Dst == nil && time.Now().Unix()-c.ChannelStartTime > 5 { //超过5秒主播未接通，增加未接数
+	} else if !c.Inited && time.Now().Unix()-c.ChannelStartTime > 5 { //超过5秒主播未接通，增加未接数
 		ue := models.UserExtra{ID: c.DstID}
 		if ct, _ := ue.GetMissedDialCount(nil); ct > 6 { //未接次数超过6次，状态设为勿扰
 			if err := (&models.UserProfile{ID: c.DstID}).UpdateOnlineStatus(models.OnlineStatusBusy); err != nil {
 				beego.Error("主播强制设置勿扰状态失败", "ID:", c.DstID, err)
 			}
+			utils.SendP2PSysMessage("由于您连续6次未接听，已自动设置为勿扰状态，对方已无法给您拨打视频。可前往个人主页设置状态或重新打开APP", strconv.FormatUint(c.DstID, 10))
 		} else {
 			if err := ue.AddMissedDialCount(nil); err != nil {
 				beego.Error("增加主播未接数失败", "ID:", c.DstID, err)
@@ -825,7 +826,7 @@ func (c *ChatClient) Write() {
 			c.Channel.logger.Infof("[uid:%d,role:%s]发送消息:%s", c.User.ID, c.Role, ms)
 
 			if err := c.Conn.WriteJSON(message); err != nil {
-				c.Channel.logger.Error("[ws(发送消息出错)]:", err, "消息内容", ms)
+				c.Channel.logger.Errorf("[uid:%d,role:%s]发送消息出错:%s 消息内容:%s", c.User.ID, c.Role, err.Error(), ms)
 			}
 		case <-ticker.C:
 			if c.Channel.ChannelStopped() {
@@ -834,7 +835,7 @@ func (c *ChatClient) Write() {
 			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
 
 			if err := c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
-				c.Channel.logger.Warningf("[uid:%d,role:%s]%s", c.User.ID, c.Role, "ping失败")
+				c.Channel.logger.Warningf("[uid:%d,role:%s]%s %s", c.User.ID, c.Role, "ping失败", err.Error())
 			}
 		}
 	}
